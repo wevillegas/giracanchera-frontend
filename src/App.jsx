@@ -32,6 +32,7 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [saved, setSaved] = useState(false);
   const [visit, setVisit] = useState(emptyVisit);
+  const [flyTarget, setFlyTarget] = useState(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -46,6 +47,13 @@ export default function App() {
     return matchesFilter && matchesQuery;
   });
 
+  const searchResults = query.trim()
+    ? stadiums.filter((s) => {
+        const q = query.toLowerCase();
+        return s.name.toLowerCase().includes(q) || s.club.toLowerCase().includes(q);
+      })
+    : [];
+
   const visitedCount = stadiums.filter((s) => s.status === 'visited').length;
   const totalGasto = ['entradas', 'comida', 'estacionamiento', 'transporte']
     .reduce((sum, k) => sum + (Number(visit[k]) || 0), 0);
@@ -53,6 +61,12 @@ export default function App() {
   function openStadium(s) {
     setActiveStadium(s);
     setSheet('stadium');
+  }
+
+  function selectSearchResult(s) {
+    setQuery('');
+    setFlyTarget({ id: s.id, lat: s.lat, lng: s.lng });
+    openStadium(s);
   }
 
   function openStadiumPage(s, from) {
@@ -119,6 +133,9 @@ export default function App() {
           onFilterChange={setFilter}
           onOpenProfile={() => setView('profile')}
           onOpenStadium={openStadium}
+          searchResults={searchResults}
+          onSelectSearchResult={selectSearchResult}
+          flyTarget={flyTarget}
         />
       )}
 

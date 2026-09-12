@@ -17,3 +17,45 @@
 
 .gc-focus:focus-visible { outline: 2px solid #3FB950; outline-offset: 2px; }
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+
+/* ---------- Leaflet, con la paleta de GiraCanchera ---------- */
+.leaflet-container { background: #0D1117; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+/* Oscurece los tiles claros de OpenStreetMap para que combinen con la paleta oscura de la app */
+.gc-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.5);
+}
+
+.leaflet-control-zoom a {
+  background-color: #161B22 !important;
+  color: #F0F6FC !important;
+  border-color: #30363D !important;
+}
+.leaflet-control-zoom a:hover { background-color: #21262d !important; }
+.leaflet-control-attribution {
+  background: rgba(13, 17, 23, 0.75) !important;
+  color: #8B949E !important;
+}
+.leaflet-control-attribution a { color: #8B949E !important; }
+
+.gc-marker { background: transparent !important; border: none !important; }
+.gc-marker span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #0D1117;
+  cursor: pointer;
+}
+
+.gc-marker-label {
+  background: rgba(13, 17, 23, 0.75) !important;
+  border: none !important;
+  color: #F0F6FC !important;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 6px;
+  box-shadow: none !important;
+}
+.gc-marker-label::before { display: none; }

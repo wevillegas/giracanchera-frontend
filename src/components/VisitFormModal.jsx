@@ -5,7 +5,7 @@ export default function VisitFormModal({
   stadium, visit, setVisit, saved, totalGasto, expenseFields, onClose, onSave,
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center gc-overlay" style={{ backgroundColor: rgba('#000000', 0.6) }}>
+    <div className="fixed inset-0 z-[1200] flex items-end justify-center gc-overlay" style={{ backgroundColor: rgba('#000000', 0.6) }}>
       <div className="gc-sheet w-full max-w-md h-full rounded-t-3xl overflow-y-auto gc-hide-scrollbar flex flex-col" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderBottom: 'none' }}>
         <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-4" style={{ backgroundColor: rgba(C.bg, 0.9), backdropFilter: 'blur(10px)', borderBottom: `1px solid ${C.border}` }}>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: C.surface }}>

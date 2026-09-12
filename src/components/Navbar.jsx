@@ -7,10 +7,14 @@ const FILTERS = [
   { key: 'all', label: 'Todos los estadios' },
 ];
 
-export default function Navbar({ query, onQueryChange, filter, onFilterChange, onOpenProfile }) {
+export default function Navbar({
+  query, onQueryChange, filter, onFilterChange, onOpenProfile, searchResults = [], onSelectSearchResult,
+}) {
+  const showResults = query.trim().length > 0;
+
   return (
     <div
-      className="absolute top-0 left-0 right-0 px-4 pt-4 pb-3"
+      className="absolute top-0 left-0 right-0 z-[1000] px-4 pt-4 pb-3"
       style={{ backgroundColor: rgba(C.bg, 0.55), backdropFilter: 'blur(12px)', borderBottom: `1px solid ${rgba(C.border, 0.6)}` }}
     >
       <div className="max-w-2xl mx-auto flex items-center gap-3">
@@ -20,16 +24,48 @@ export default function Navbar({ query, onQueryChange, filter, onFilterChange, o
           </div>
           <span className="text-xl tracking-wide" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>GiraCanchera</span>
         </div>
-        <div className="flex-1 flex items-center gap-2 rounded-full px-3 py-2" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-          <Search size={16} color={C.muted} />
-          <input
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Buscar estadios o clubes..."
-            className="bg-transparent outline-none text-sm flex-1 gc-focus"
-            style={{ color: C.bright }}
-          />
+
+        <div className="relative flex-1">
+          <div className="flex items-center gap-2 rounded-full px-3 py-2" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+            <Search size={16} color={C.muted} />
+            <input
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder="Buscar estadios o clubes..."
+              className="bg-transparent outline-none text-sm flex-1 gc-focus"
+              style={{ color: C.bright }}
+            />
+          </div>
+
+          {showResults && (
+            <div
+              className="absolute left-0 right-0 mt-2 rounded-2xl overflow-hidden max-h-64 overflow-y-auto gc-hide-scrollbar"
+              style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, boxShadow: `0 12px 24px ${rgba('#000000', 0.35)}` }}
+            >
+              {searchResults.length === 0 ? (
+                <div className="px-4 py-3 text-sm" style={{ color: C.muted }}>
+                  Sin resultados para "{query}"
+                </div>
+              ) : (
+                searchResults.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => onSelectSearchResult(s)}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left gc-focus"
+                    style={{ borderTop: `1px solid ${C.border}` }}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium truncate" style={{ color: C.bright }}>{s.name}</span>
+                      <span className="block text-xs truncate" style={{ color: C.muted }}>{s.club} · {s.city}</span>
+                    </span>
+                    <MapPin size={14} color={C.muted} className="shrink-0" />
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
+
         <button onClick={onOpenProfile} className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm gc-focus" style={{ backgroundColor: C.brand, color: C.bright }}>
           NC
         </button>

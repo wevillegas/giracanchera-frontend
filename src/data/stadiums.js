@@ -3,25 +3,29 @@
 export const INITIAL_STADIUMS = [
   {
     id: 1, name: 'La Ciudadela', club: 'San Martín de Tucumán', city: 'Tucumán, Argentina',
-    capacity: 27000, rating: 4.2, reviews: 128, status: 'visited', visits: 2, top: '58%', left: '30%', tone: 'brand',
+    capacity: 27000, rating: 4.2, reviews: 128, status: 'visited', visits: 2, tone: 'brand',
+    lat: -26.8241, lng: -65.2226,
     currency: 'ARS', communityAvg: 8.3, distribution: [2, 5, 15, 38, 40],
     avgExpenses: { entradas: 8000, comida: 6000, estacionamiento: 3000, transporte: 4000 },
   },
   {
     id: 2, name: 'Monumental', club: 'River Plate', city: 'Buenos Aires, Argentina',
-    capacity: 83214, rating: 4.8, reviews: 940, status: 'wishlist', visits: 0, top: '40%', left: '55%', tone: 'gold',
+    capacity: 83214, rating: 4.8, reviews: 940, status: 'wishlist', visits: 0, tone: 'gold',
+    lat: -34.5453, lng: -58.4497,
     currency: 'ARS', communityAvg: 9.1, distribution: [1, 2, 7, 25, 65],
     avgExpenses: { entradas: 25000, comida: 12000, estacionamiento: 8000, transporte: 9000 },
   },
   {
     id: 3, name: 'La Bombonera', club: 'Boca Juniors', city: 'Buenos Aires, Argentina',
-    capacity: 54000, rating: 4.6, reviews: 1023, status: 'visited', visits: 1, top: '47%', left: '59%', tone: 'brand',
+    capacity: 54000, rating: 4.6, reviews: 1023, status: 'visited', visits: 1, tone: 'brand',
+    lat: -34.6356, lng: -58.3648,
     currency: 'ARS', communityAvg: 9.4, distribution: [1, 1, 5, 20, 73],
     avgExpenses: { entradas: 30000, comida: 14000, estacionamiento: 10000, transporte: 10000 },
   },
   {
     id: 4, name: 'Camp Nou', club: 'FC Barcelona', city: 'Barcelona, España',
-    capacity: 99354, rating: 4.9, reviews: 2210, status: 'none', visits: 0, top: '18%', left: '13%', tone: 'muted',
+    capacity: 99354, rating: 4.9, reviews: 2210, status: 'none', visits: 0, tone: 'muted',
+    lat: 41.3809, lng: 2.1228,
     currency: 'EUR', communityAvg: 9.5, distribution: [1, 1, 4, 24, 70],
     avgExpenses: { entradas: 85, comida: 25, estacionamiento: 15, transporte: 12 },
   },

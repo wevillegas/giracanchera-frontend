@@ -7,7 +7,7 @@ export default function StadiumModal({
   stadium, onClose, onOpenStadiumPage, onStartVisit, onToggleWishlist,
 }) {
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center gc-overlay" style={{ backgroundColor: rgba('#000000', 0.55) }} onClick={onClose}>
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center gc-overlay" style={{ backgroundColor: rgba('#000000', 0.55) }} onClick={onClose}>
       <div
         className="gc-sheet w-full max-w-md rounded-t-3xl overflow-hidden"
         style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderBottom: 'none' }}
