@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.gc-hide-scrollbar::-webkit-scrollbar { display: none; }
+.gc-hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes gcSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes gcFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.gc-sheet { animation: gcSlideUp 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
+.gc-overlay { animation: gcFadeIn 0.2s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .gc-sheet, .gc-overlay { animation: none; }
+}
+
+.gc-focus:focus-visible { outline: 2px solid #3FB950; outline-offset: 2px; }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
