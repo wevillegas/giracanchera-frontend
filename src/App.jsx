@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Ticket, UtensilsCrossed, Car, Bus } from 'lucide-react';
 import { C, BODY_FONT } from './theme';
-import { INITIAL_STADIUMS, INITIAL_REVIEWS } from './data/stadiums';
+import { INITIAL_REVIEWS } from './data/stadiums';
+import stadiumService from './services/stadiumService';
 import MapSection from './components/MapSection';
 import ProfileView from './components/ProfileView';
 import StadiumView from './components/StadiumView';
@@ -24,7 +25,9 @@ export default function App() {
   const [cameFrom, setCameFrom] = useState('map');
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
-  const [stadiums, setStadiums] = useState(INITIAL_STADIUMS);
+  const [stadiums, setStadiums] = useState([]);
+  const [stadiumsLoading, setStadiumsLoading] = useState(true);
+  const [stadiumsError, setStadiumsError] = useState(null);
   const [reviews, setReviews] = useState(INITIAL_REVIEWS);
   const [activeStadium, setActiveStadium] = useState(null);
   const [sheet, setSheet] = useState(null); // 'stadium' | 'visit' | null
@@ -39,6 +42,15 @@ export default function App() {
     const t = setTimeout(() => setToast(''), 2600);
     return () => clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    let cancelled = false;
+    stadiumService.getAll()
+      .then((data) => { if (!cancelled) setStadiums(data); })
+      .catch((err) => { if (!cancelled) setStadiumsError(err); })
+      .finally(() => { if (!cancelled) setStadiumsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const filteredStadiums = stadiums.filter((s) => {
     const matchesFilter = filter === 'all' ? true : s.status === filter;
@@ -65,7 +77,7 @@ export default function App() {
 
   function selectSearchResult(s) {
     setQuery('');
-    setFlyTarget({ id: s.id, lat: s.lat, lng: s.lng });
+    setFlyTarget({ id: s.id, lat: s.location.coordinates.lat, lng: s.location.coordinates.lng });
     openStadium(s);
   }
 
@@ -124,7 +136,33 @@ export default function App() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden flex flex-col" style={{ backgroundColor: C.bg, fontFamily: BODY_FONT, color: C.bright }}>
-      {view === 'map' && (
+      {view === 'map' && stadiumsLoading && (
+        <div className="flex-1 flex items-center justify-center" style={{ color: C.muted }}>
+          Cargando estadios...
+        </div>
+      )}
+
+      {view === 'map' && !stadiumsLoading && stadiumsError && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center" style={{ color: C.muted }}>
+          <p>No pudimos conectar con la API de GiraCanchera.</p>
+          <button
+            onClick={() => {
+              setStadiumsLoading(true);
+              setStadiumsError(null);
+              stadiumService.getAll()
+                .then(setStadiums)
+                .catch(setStadiumsError)
+                .finally(() => setStadiumsLoading(false));
+            }}
+            className="px-4 py-2 rounded-xl text-sm font-semibold gc-focus"
+            style={{ backgroundColor: C.brand, color: C.bright }}
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {view === 'map' && !stadiumsLoading && !stadiumsError && (
         <MapSection
           filteredStadiums={filteredStadiums}
           query={query}

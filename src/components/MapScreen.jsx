@@ -3,8 +3,8 @@ import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet';
 import { C, rgba } from '../theme';
 
-const WORLD_CENTER = [0, 0];
-const WORLD_ZOOM = 2;
+const ARGENTINA_CENTER = [-34.6, -58.38];
+const ARGENTINA_ZOOM = 5;
 const FOCUS_ZOOM = 6;
 
 function statusColor(status) {
@@ -35,8 +35,8 @@ function FlyTo({ target }) {
 export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
   return (
     <MapContainer
-      center={WORLD_CENTER}
-      zoom={WORLD_ZOOM}
+      center={ARGENTINA_CENTER}
+      zoom={ARGENTINA_ZOOM}
       scrollWheelZoom
       style={{ width: '100vw', height: '100vh', backgroundColor: C.bg }}
     >
@@ -45,18 +45,20 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {stadiums.map((s) => (
-        <Marker
-          key={s.id}
-          position={[s.lat, s.lng]}
-          icon={buildMarkerIcon(s.status)}
-          eventHandlers={{ click: () => onOpenStadium(s) }}
-        >
-          <Tooltip permanent direction="top" offset={[0, -6]} className="gc-marker-label">
-            {s.name}
-          </Tooltip>
-        </Marker>
-      ))}
+      {stadiums
+        .filter((s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null)
+        .map((s) => (
+          <Marker
+            key={s.id}
+            position={[s.location.coordinates.lat, s.location.coordinates.lng]}
+            icon={buildMarkerIcon(s.status)}
+            eventHandlers={{ click: () => onOpenStadium(s) }}
+          >
+            <Tooltip permanent direction="top" offset={[0, -6]} className="gc-marker-label">
+              {s.name}
+            </Tooltip>
+          </Marker>
+        ))}
       <FlyTo target={flyTarget} />
     </MapContainer>
   );
