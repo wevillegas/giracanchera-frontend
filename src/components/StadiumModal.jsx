@@ -1,16 +1,30 @@
-import { X, Check, Users } from 'lucide-react';
-import { C, rgba, DISPLAY_FONT } from '../theme';
+import { useEffect, useState } from 'react';
+import { X, Check, Users, Wallet } from 'lucide-react';
+import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
+import visitService from '../services/visitService';
+import { computeVisitStats } from '../utils/visitStats';
 import StadiumArt from './StadiumArt';
 import StarRow from './StarRow';
 
 export default function StadiumModal({
   stadium, onClose, onOpenStadiumPage, onStartVisit, onToggleWishlist,
 }) {
+  const [visits, setVisits] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    visitService.getStadiumVisits(stadium.id)
+      .then((data) => { if (!cancelled) setVisits(data); })
+      .catch(() => { if (!cancelled) setVisits([]); });
+    return () => { cancelled = true; };
+  }, [stadium.id]);
+
+  const stats = computeVisitStats(visits);
   return (
-    <div className="fixed inset-0 z-[1100] flex items-end justify-center gc-overlay" style={{ backgroundColor: rgba('#000000', 0.55) }} onClick={onClose}>
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 gc-overlay" style={{ backgroundColor: rgba('#000000', 0.55) }} onClick={onClose}>
       <div
-        className="gc-sheet w-full max-w-md rounded-t-3xl overflow-hidden"
-        style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderBottom: 'none' }}
+        className="w-full max-w-md rounded-3xl overflow-y-auto gc-hide-scrollbar"
+        style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, maxHeight: '90vh' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -48,10 +62,19 @@ export default function StadiumModal({
           </div>
 
           <div className="flex items-center gap-2 mt-2">
-            <StarRow rating={stadium.rating} />
-            <span className="text-sm font-medium" style={{ color: C.bright }}>{stadium.rating}</span>
-            <span className="text-sm" style={{ color: C.muted }}>({stadium.reviews.toLocaleString('es-AR')} reseñas)</span>
+            <StarRow rating={stats.starRating} />
+            <span className="text-sm font-medium" style={{ color: C.bright }}>{stats.avg}</span>
+            <span className="text-sm" style={{ color: C.muted }}>({stats.count.toLocaleString('es-AR')} reseñas)</span>
           </div>
+
+          {stats.count > 0 && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <Wallet size={15} color={C.muted} />
+              <span className="text-sm" style={{ color: C.muted }}>
+                Gasto promedio: <span style={{ color: C.brandBright, fontWeight: 600 }}>{formatMoney(sumExpenses(stats.avgExpenses), stats.currency)}</span>
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center gap-3 mt-5">
             <button

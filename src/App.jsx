@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Ticket, UtensilsCrossed, Car, Bus } from 'lucide-react';
 import { C, BODY_FONT } from './theme';
-import { INITIAL_REVIEWS } from './data/stadiums';
+import { useAuth } from './context/AuthContext';
 import stadiumService from './services/stadiumService';
+import visitService from './services/visitService';
+import userService from './services/userService';
 import MapSection from './components/MapSection';
 import ProfileView from './components/ProfileView';
+import AboutView from './components/AboutView';
 import StadiumView from './components/StadiumView';
 import StadiumModal from './components/StadiumModal';
 import VisitFormModal from './components/VisitFormModal';
+import StadiumPickerModal from './components/StadiumPickerModal';
 import Toast from './components/Toast';
 import BottomNav from './components/BottomNav';
 
@@ -18,9 +22,8 @@ const expenseFields = [
   { key: 'transporte', label: 'Transporte / otros', Icon: Bus },
 ];
 
-const emptyVisit = { date: '', times: 1, score: 8, review: '', entradas: '', comida: '', estacionamiento: '', transporte: '' };
-
 export default function App() {
+  const { token, user } = useAuth();
   const [view, setView] = useState('map'); // 'map' | 'profile' | 'stadium'
   const [cameFrom, setCameFrom] = useState('map');
   const [filter, setFilter] = useState('all');
@@ -28,14 +31,16 @@ export default function App() {
   const [stadiums, setStadiums] = useState([]);
   const [stadiumsLoading, setStadiumsLoading] = useState(true);
   const [stadiumsError, setStadiumsError] = useState(null);
-  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
+  const [reviews, setReviews] = useState([]);
+  const [visitsVersion, setVisitsVersion] = useState(0);
   const [activeStadium, setActiveStadium] = useState(null);
+  const [editingVisit, setEditingVisit] = useState(null);
   const [sheet, setSheet] = useState(null); // 'stadium' | 'visit' | null
   const [profileMode, setProfileMode] = useState('own');
   const [toast, setToast] = useState('');
-  const [saved, setSaved] = useState(false);
-  const [visit, setVisit] = useState(emptyVisit);
   const [flyTarget, setFlyTarget] = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [authModal, setAuthModal] = useState(null); // null | 'login' | 'register'
 
   useEffect(() => {
     if (!toast) return;
@@ -52,6 +57,51 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
+  // Sincroniza el status local ('visited'/'wishlist') con los datos reales
+  // del backend (visitas y wantToVisit del usuario), una vez que estadios y sesión están listos.
+  useEffect(() => {
+    if (!token || !user?._id || stadiums.length === 0) return;
+    let cancelled = false;
+
+    Promise.all([userService.getProfile(), visitService.getUserVisits(user._id)])
+      .then(([profile, visits]) => {
+        if (cancelled) return;
+        const wishlistIds = new Set((profile.wantToVisit || []).map((s) => s._id || s));
+        const visitedIds = new Set(visits.map((v) => v.stadium?._id).filter(Boolean));
+        setStadiums((prev) => prev.map((s) => {
+          if (visitedIds.has(s.id)) return { ...s, status: 'visited' };
+          if (wishlistIds.has(s.id)) return { ...s, status: 'wishlist' };
+          return s;
+        }));
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [token, user?._id, stadiums.length]);
+
+  // Trae las reseñas reales del usuario (para el bloque "Vos" en StadiumView);
+  // se re-corre cada vez que se crea/edita una visita (visitsVersion).
+  useEffect(() => {
+    if (!token || !user?._id) {
+      setReviews([]);
+      return;
+    }
+    let cancelled = false;
+    visitService.getUserVisits(user._id)
+      .then((visits) => {
+        if (cancelled) return;
+        setReviews(visits.map((v) => ({
+          id: v._id,
+          stadium: v.stadium?.name || '',
+          rating: v.rating,
+          excerpt: v.reviewText?.trim() || 'Sin reseña escrita todavía.',
+          date: new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(v.visitDate)),
+        })));
+      })
+      .catch(() => { if (!cancelled) setReviews([]); });
+    return () => { cancelled = true; };
+  }, [token, user?._id, visitsVersion]);
+
   const filteredStadiums = stadiums.filter((s) => {
     const matchesFilter = filter === 'all' ? true : s.status === filter;
     const q = query.toLowerCase();
@@ -66,9 +116,10 @@ export default function App() {
       })
     : [];
 
-  const visitedCount = stadiums.filter((s) => s.status === 'visited').length;
-  const totalGasto = ['entradas', 'comida', 'estacionamiento', 'transporte']
-    .reduce((sum, k) => sum + (Number(visit[k]) || 0), 0);
+  function selectFilterFromElsewhere(f) {
+    setFilter(f);
+    setView('map');
+  }
 
   function openStadium(s) {
     setActiveStadium(s);
@@ -88,50 +139,63 @@ export default function App() {
     setView('stadium');
   }
 
-  function openStadiumFromName(name) {
-    const match = stadiums.find((s) => s.name === name);
+  function openStadiumFromId(id) {
+    const match = stadiums.find((s) => s.id === id);
     if (!match) return;
     openStadiumPage(match, 'profile');
   }
 
   function startVisit(s) {
     setActiveStadium(s);
+    setEditingVisit(null);
     setSheet('visit');
-    setSaved(false);
+  }
+
+  function startEditVisit(visit) {
+    setEditingVisit(visit);
+    setActiveStadium(null);
+    setSheet('visit');
   }
 
   function closeSheet() {
     setSheet(null);
-    setSaved(false);
-    setVisit(emptyVisit);
+    setEditingVisit(null);
   }
 
-  function toggleWishlist(id) {
-    setStadiums((prev) => prev.map((s) => {
-      if (s.id !== id || s.status === 'visited') return s;
-      return { ...s, status: s.status === 'wishlist' ? 'none' : 'wishlist' };
-    }));
-    setActiveStadium((prev) => (prev && prev.id === id
-      ? { ...prev, status: prev.status === 'wishlist' ? 'none' : 'wishlist' }
-      : prev));
-    setToast('Actualizamos tu lista de "Por visitar"');
+  function applyWishlistStatus(id, status) {
+    setStadiums((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+    setActiveStadium((prev) => (prev && prev.id === id ? { ...prev, status } : prev));
   }
 
-  function saveVisit() {
-    setStadiums((prev) => prev.map((s) => (s.id === activeStadium.id
-      ? { ...s, status: 'visited', visits: (s.visits || 0) + 1 }
-      : s)));
-
-    let dateLabel = 'Hoy';
-    if (visit.date) {
-      const d = new Date(`${visit.date}T00:00:00`);
-      dateLabel = new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  async function toggleWishlist(id) {
+    if (!token) {
+      setAuthModal('login');
+      return;
     }
-    setReviews((prev) => [
-      { id: Date.now(), stadium: activeStadium.name, rating: visit.score, excerpt: visit.review || 'Sin reseña escrita todavía.', date: dateLabel },
-      ...prev,
-    ]);
-    setSaved(true);
+
+    const target = stadiums.find((s) => s.id === id);
+    if (!target || target.status === 'visited') return;
+
+    const nextStatus = target.status === 'wishlist' ? 'none' : 'wishlist';
+    applyWishlistStatus(id, nextStatus);
+
+    try {
+      await userService.toggleWantToVisit(id);
+      setToast('Actualizamos tu lista de "Por visitar"');
+    } catch {
+      applyWishlistStatus(id, target.status);
+      setToast('No pudimos actualizar tu lista. Probá de nuevo.');
+    }
+  }
+
+  function handleVisitSaved() {
+    if (!editingVisit && activeStadium) {
+      setStadiums((prev) => prev.map((s) => (s.id === activeStadium.id
+        ? { ...s, status: 'visited', visits: (s.visits || 0) + 1 }
+        : s)));
+    }
+    setToast(editingVisit ? '¡Visita actualizada!' : '¡Visita guardada!');
+    setVisitsVersion((v) => v + 1);
   }
 
   return (
@@ -174,18 +238,59 @@ export default function App() {
           searchResults={searchResults}
           onSelectSearchResult={selectSearchResult}
           flyTarget={flyTarget}
+          onOpenAbout={() => setView('about')}
+          onAuthSuccess={setToast}
+          authModal={authModal}
+          onAuthModalChange={setAuthModal}
+        />
+      )}
+
+      {view === 'about' && (
+        <AboutView
+          onBackToMap={() => setView('map')}
+          navbarProps={{
+            query,
+            onQueryChange: setQuery,
+            filter,
+            onFilterChange: selectFilterFromElsewhere,
+            onOpenProfile: () => setView('profile'),
+            searchResults,
+            onSelectSearchResult: selectSearchResult,
+            onOpenAbout: () => setView('about'),
+            onAuthSuccess: setToast,
+            authModal,
+            onAuthModalChange: setAuthModal,
+          }}
         />
       )}
 
       {view === 'profile' && (
         <ProfileView
-          visitedCount={visitedCount}
-          reviews={reviews}
           stadiums={stadiums}
           profileMode={profileMode}
           onToggleProfileMode={() => setProfileMode((m) => (m === 'own' ? 'friend' : 'own'))}
           onBackToMap={() => setView('map')}
-          onOpenStadiumFromName={openStadiumFromName}
+          onOpenStadiumFromId={openStadiumFromId}
+          onEditVisit={startEditVisit}
+          onToast={setToast}
+          visitsVersion={visitsVersion}
+          onRequireLogin={() => {
+            setView('map');
+            setAuthModal('login');
+          }}
+          navbarProps={{
+            query,
+            onQueryChange: setQuery,
+            filter,
+            onFilterChange: selectFilterFromElsewhere,
+            onOpenProfile: () => setView('profile'),
+            searchResults,
+            onSelectSearchResult: selectSearchResult,
+            onOpenAbout: () => setView('about'),
+            onAuthSuccess: setToast,
+            authModal,
+            onAuthModalChange: setAuthModal,
+          }}
         />
       )}
 
@@ -211,16 +316,28 @@ export default function App() {
         />
       )}
 
-      {sheet === 'visit' && activeStadium && (
+      {sheet === 'visit' && (activeStadium || editingVisit) && (
         <VisitFormModal
           stadium={activeStadium}
-          visit={visit}
-          setVisit={setVisit}
-          saved={saved}
-          totalGasto={totalGasto}
+          editingVisit={editingVisit}
           expenseFields={expenseFields}
           onClose={closeSheet}
-          onSave={saveVisit}
+          onSaved={handleVisitSaved}
+        />
+      )}
+
+      {pickerOpen && (
+        <StadiumPickerModal
+          stadiums={stadiums}
+          onClose={() => setPickerOpen(false)}
+          onSelect={(s) => {
+            setPickerOpen(false);
+            startVisit(s);
+          }}
+          onAddWishlist={(s) => {
+            setPickerOpen(false);
+            toggleWishlist(s.id);
+          }}
         />
       )}
 
@@ -230,14 +347,7 @@ export default function App() {
         view={view}
         onNavigateMap={() => setView('map')}
         onNavigateProfile={() => setView('profile')}
-        onQuickAddVisit={() => {
-          if (activeStadium) {
-            startVisit(activeStadium);
-          } else {
-            setView('map');
-            setToast('Tocá un estadio en el mapa para registrar tu visita');
-          }
-        }}
+        onQuickAddVisit={() => setPickerOpen(true)}
       />
     </div>
   );

@@ -1,13 +1,34 @@
+import { useEffect, useState } from 'react';
 import { ChevronLeft, Check, Users, Star } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
-import { COMMUNITY_REVIEWS } from '../data/stadiums';
+import visitService from '../services/visitService';
+import { computeVisitStats } from '../utils/visitStats';
 import StadiumArt from './StadiumArt';
 import StarRow from './StarRow';
 import ScoreDistribution from './ScoreDistribution';
 
+function formatVisitDate(value) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
+}
+
 export default function StadiumView({
   stadium, reviews, expenseFields, cameFrom, onBack, onStartVisit, onToggleWishlist,
 }) {
+  const [stadiumReviews, setStadiumReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReviewsLoading(true);
+    visitService.getStadiumVisits(stadium.id)
+      .then((data) => { if (!cancelled) setStadiumReviews(data); })
+      .catch(() => { if (!cancelled) setStadiumReviews([]); })
+      .finally(() => { if (!cancelled) setReviewsLoading(false); });
+    return () => { cancelled = true; };
+  }, [stadium.id]);
+
+  const stats = computeVisitStats(stadiumReviews);
   return (
     <div className="flex-1 overflow-y-auto gc-hide-scrollbar">
       <div className="relative h-48">
@@ -57,16 +78,16 @@ export default function StadiumView({
         <div className="mt-7 p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
           <div className="flex items-center gap-4">
             <div className="text-center shrink-0">
-              <span className="text-4xl" style={{ fontFamily: DISPLAY_FONT, color: C.gold }}>{stadium.communityAvg}</span>
+              <span className="text-4xl" style={{ fontFamily: DISPLAY_FONT, color: C.gold }}>{stats.avg}</span>
               <p className="text-xs" style={{ color: C.muted }}>/ 10</p>
             </div>
             <div className="flex-1">
-              <StarRow rating={stadium.rating} size={14} />
-              <p className="text-xs mt-1" style={{ color: C.muted }}>{stadium.reviews.toLocaleString('es-AR')} reseñas de la comunidad</p>
+              <StarRow rating={stats.starRating} size={14} />
+              <p className="text-xs mt-1" style={{ color: C.muted }}>{stats.count.toLocaleString('es-AR')} reseñas de la comunidad</p>
             </div>
           </div>
           <div className="mt-4">
-            <ScoreDistribution distribution={stadium.distribution} />
+            <ScoreDistribution distribution={stats.distribution} />
           </div>
         </div>
 
@@ -75,7 +96,7 @@ export default function StadiumView({
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold" style={{ color: C.bright }}>Gasto promedio por visita</span>
             <span className="text-sm font-semibold" style={{ color: C.brandBright }}>
-              {formatMoney(sumExpenses(stadium.avgExpenses), stadium.currency)}
+              {formatMoney(sumExpenses(stats.avgExpenses), stats.currency)}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -84,7 +105,7 @@ export default function StadiumView({
                 <Icon size={14} color={C.muted} />
                 <div className="flex-1">
                   <p className="text-xs" style={{ color: C.muted }}>{label}</p>
-                  <p className="text-sm font-medium" style={{ color: C.bright }}>{formatMoney(stadium.avgExpenses[key], stadium.currency)}</p>
+                  <p className="text-sm font-medium" style={{ color: C.bright }}>{formatMoney(stats.avgExpenses[key], stats.currency)}</p>
                 </div>
               </div>
             ))}
@@ -107,24 +128,42 @@ export default function StadiumView({
               <p className="text-xs mt-1.5" style={{ color: C.muted }}>{r.date}</p>
             </div>
           ))}
-          {(COMMUNITY_REVIEWS[stadium.id] || []).map((r) => (
-            <div key={r.id} className="p-3.5 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold" style={{ backgroundColor: C.border, color: C.bright }}>
-                    {r.author.charAt(0)}
+          {reviewsLoading ? (
+            <p className="text-sm text-center py-4" style={{ color: C.muted }}>Cargando reseñas...</p>
+          ) : (
+            stadiumReviews.map((r) => {
+              const author = r.user?.username || 'Hincha anónimo';
+              return (
+                <div key={r._id ?? r.id} className="p-3.5 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {r.user?.avatarUrl ? (
+                        <img src={r.user.avatarUrl} alt={author} className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold" style={{ backgroundColor: C.border, color: C.bright }}>
+                          {author.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-sm font-medium" style={{ color: C.bright }}>{author}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star size={12} fill={C.gold} color={C.gold} />
+                      <span className="text-xs font-medium" style={{ color: C.gold }}>{r.rating}/10</span>
+                    </div>
                   </div>
-                  <span className="text-sm font-medium" style={{ color: C.bright }}>{r.author}</span>
+                  {r.reviewText && (
+                    <p className="text-sm mt-1.5 leading-snug" style={{ color: C.muted }}>{r.reviewText}</p>
+                  )}
+                  <p className="text-xs mt-1.5" style={{ color: C.muted }}>{formatVisitDate(r.visitDate)}</p>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Star size={12} fill={C.gold} color={C.gold} />
-                  <span className="text-xs font-medium" style={{ color: C.gold }}>{r.rating}/10</span>
-                </div>
-              </div>
-              <p className="text-sm mt-1.5 leading-snug" style={{ color: C.muted }}>{r.excerpt}</p>
-              <p className="text-xs mt-1.5" style={{ color: C.muted }}>{r.date}</p>
-            </div>
-          ))}
+              );
+            })
+          )}
+          {!reviewsLoading && stadiumReviews.length === 0 && reviews.filter((r) => r.stadium === stadium.name).length === 0 && (
+            <p className="text-sm text-center py-6" style={{ color: C.muted }}>
+              Aún no hay reseñas para este estadio. ¡Sé el primero!
+            </p>
+          )}
         </div>
       </div>
     </div>

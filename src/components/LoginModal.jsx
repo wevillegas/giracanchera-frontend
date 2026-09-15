@@ -3,7 +3,7 @@ import { X, Mail, Lock, AlertCircle } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import { useAuth } from '../context/AuthContext';
 
-export default function LoginModal({ onClose, onSwitchToRegister }) {
+export default function LoginModal({ onClose, onSwitchToRegister, onSuccess }) {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +16,7 @@ export default function LoginModal({ onClose, onSwitchToRegister }) {
     setSubmitting(true);
     try {
       await login(email, password);
+      onSuccess?.('¡Bienvenido de nuevo!');
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.error || 'No pudimos iniciar sesión. Verificá tus credenciales.');
@@ -25,10 +26,10 @@ export default function LoginModal({ onClose, onSwitchToRegister }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[1300] flex items-end justify-center gc-overlay" style={{ backgroundColor: rgba('#000000', 0.6) }} onClick={onClose}>
+    <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4 gc-overlay" style={{ backgroundColor: rgba('#000000', 0.6) }} onClick={onClose}>
       <div
-        className="gc-sheet w-full max-w-md rounded-t-3xl overflow-y-auto gc-hide-scrollbar"
-        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderBottom: 'none' }}
+        className="w-full max-w-md rounded-3xl overflow-y-auto gc-hide-scrollbar"
+        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, maxHeight: '90vh' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-5">

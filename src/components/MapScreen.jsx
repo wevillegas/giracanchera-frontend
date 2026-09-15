@@ -6,6 +6,11 @@ import { C, rgba } from '../theme';
 const ARGENTINA_CENTER = [-34.6, -58.38];
 const ARGENTINA_ZOOM = 5;
 const FOCUS_ZOOM = 6;
+const MIN_ZOOM = 3;
+const WORLD_BOUNDS = [
+  [-90, -180],
+  [90, 180],
+];
 
 function statusColor(status) {
   if (status === 'visited') return C.brandBright;
@@ -37,6 +42,10 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
     <MapContainer
       center={ARGENTINA_CENTER}
       zoom={ARGENTINA_ZOOM}
+      minZoom={MIN_ZOOM}
+      maxBounds={WORLD_BOUNDS}
+      maxBoundsViscosity={1.0}
+      worldCopyJump={false}
       scrollWheelZoom
       style={{ width: '100vw', height: '100vh', backgroundColor: C.bg }}
     >
@@ -44,6 +53,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
         className="gc-tiles"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        noWrap
       />
       {stadiums
         .filter((s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null)

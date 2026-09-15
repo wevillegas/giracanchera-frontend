@@ -59,3 +59,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
   box-shadow: none !important;
 }
 .gc-marker-label::before { display: none; }
+
+.gc-search-box { border: 1px solid #30363D; transition: border-color 0.15s ease; }
+.gc-search-box:focus-within { border-color: #3FB950; }

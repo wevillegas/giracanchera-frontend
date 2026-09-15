@@ -4,7 +4,7 @@ import MapScreen from './MapScreen';
 
 export default function MapSection({
   filteredStadiums, query, onQueryChange, filter, onFilterChange, onOpenProfile, onOpenStadium,
-  searchResults, onSelectSearchResult, flyTarget,
+  searchResults, onSelectSearchResult, flyTarget, onOpenAbout, onAuthSuccess, authModal, onAuthModalChange,
 }) {
   return (
     <div className="relative flex-1 overflow-hidden">
@@ -27,6 +27,10 @@ export default function MapSection({
         onOpenProfile={onOpenProfile}
         searchResults={searchResults}
         onSelectSearchResult={onSelectSearchResult}
+        onOpenAbout={onOpenAbout}
+        onAuthSuccess={onAuthSuccess}
+        authModal={authModal}
+        onAuthModalChange={onAuthModalChange}
       />
     </div>
   );
