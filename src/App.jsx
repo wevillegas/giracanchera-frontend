@@ -36,7 +36,6 @@ export default function App() {
   const [activeStadium, setActiveStadium] = useState(null);
   const [editingVisit, setEditingVisit] = useState(null);
   const [sheet, setSheet] = useState(null); // 'stadium' | 'visit' | null
-  const [profileMode, setProfileMode] = useState('own');
   const [toast, setToast] = useState('');
   const [flyTarget, setFlyTarget] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -267,8 +266,6 @@ export default function App() {
       {view === 'profile' && (
         <ProfileView
           stadiums={stadiums}
-          profileMode={profileMode}
-          onToggleProfileMode={() => setProfileMode((m) => (m === 'own' ? 'friend' : 'own'))}
           onBackToMap={() => setView('map')}
           onOpenStadiumFromId={openStadiumFromId}
           onEditVisit={startEditVisit}

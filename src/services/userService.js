@@ -20,7 +20,24 @@ async function toggleWantToVisit(stadiumId) {
   return data;
 }
 
-const userService = { getProfile, updateProfile, toggleWantToVisit };
+async function getPublicProfile(userId) {
+  const { data } = await api.get(`/users/${userId}`);
+  return data;
+}
+
+async function searchUsers(username) {
+  const { data } = await api.get('/users/search', { params: { username } });
+  return data;
+}
+
+async function addFriend(friendId) {
+  const { data } = await api.post(`/users/friends/${friendId}`);
+  return data;
+}
+
+const userService = {
+  getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, addFriend,
+};
 
 export default userService;
-export { getProfile, updateProfile, toggleWantToVisit };
+export { getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, addFriend };
