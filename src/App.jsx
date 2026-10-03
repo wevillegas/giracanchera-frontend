@@ -9,6 +9,7 @@ import MapSection from './components/MapSection';
 import ProfileView from './components/ProfileView';
 import AboutView from './components/AboutView';
 import StadiumView from './components/StadiumView';
+import VisitView from './components/VisitView';
 import StadiumModal from './components/StadiumModal';
 import VisitFormModal from './components/VisitFormModal';
 import StadiumPickerModal from './components/StadiumPickerModal';
@@ -25,8 +26,10 @@ const expenseFields = [
 
 export default function App() {
   const { token, user } = useAuth();
-  const [view, setView] = useState('map'); // 'map' | 'profile' | 'stadium'
+  const [view, setView] = useState('map'); // 'map' | 'profile' | 'stadium' | 'visit'
   const [cameFrom, setCameFrom] = useState('map');
+  const [activeVisit, setActiveVisit] = useState(null);
+  const [profileTarget, setProfileTarget] = useState(null); // id de otro usuario a mostrar en el perfil; null = el propio // { visit, stadium, from: 'profile' | 'stadium' }
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [stadiums, setStadiums] = useState([]);
@@ -149,6 +152,16 @@ export default function App() {
     openStadium(s);
   }
 
+  // Limpia el usuario elegido al salir del perfil, para que el perfil propio vuelva a abrirse por defecto
+  useEffect(() => {
+    if (view !== 'profile') setProfileTarget(null);
+  }, [view]);
+
+  function openUserProfile(userId) {
+    setProfileTarget(userId === user?._id ? null : userId);
+    setView('profile');
+  }
+
   function openStadiumPage(s, from) {
     setActiveStadium(s);
     setCameFrom(from);
@@ -162,6 +175,15 @@ export default function App() {
     openStadiumPage(match, 'profile');
   }
 
+  // Abre la página de una reseña. Desde el perfil el estadio viene poblado en la visita;
+  // desde la página del estadio viene solo el id, así que usamos el estadio activo.
+  function openVisit(visit, from, stadium = null) {
+    const stadiumId = visit.stadium?._id || visit.stadium || stadium?.id;
+    const match = stadiums.find((s) => s.id === stadiumId) || stadium || null;
+    setActiveVisit({ visit, stadium: match, from });
+    setView('visit');
+  }
+
   function startVisit(s) {
     setActiveStadium(s);
     setEditingVisit(null);
@@ -171,6 +193,12 @@ export default function App() {
   function startEditVisit(visit) {
     setEditingVisit(visit);
     setActiveStadium(null);
+    setSheet('visit');
+  }
+
+  // Editar desde la página de la reseña: no tocamos el estadio activo, así la página del estadio sigue disponible al volver
+  function editVisitFromPage(visit) {
+    setEditingVisit({ ...visit, stadium: activeVisit?.stadium ?? visit.stadium });
     setSheet('visit');
   }
 
@@ -205,11 +233,15 @@ export default function App() {
     }
   }
 
-  function handleVisitSaved() {
+  function handleVisitSaved(saved) {
     if (!editingVisit && activeStadium) {
       setStadiums((prev) => prev.map((s) => (s.id === activeStadium.id
         ? { ...s, status: 'visited', visits: (s.visits || 0) + 1 }
         : s)));
+    }
+    // Si la reseña editada es la que está abierta, refrescamos su página (conservando el estadio poblado)
+    if (editingVisit && saved && activeVisit?.visit._id === editingVisit._id) {
+      setActiveVisit((prev) => ({ ...prev, visit: { ...prev.visit, ...saved, stadium: prev.visit.stadium, user: prev.visit.user } }));
     }
     setToast(editingVisit ? '¡Visita actualizada!' : '¡Visita guardada!');
     setVisitsVersion((v) => v + 1);
@@ -251,6 +283,7 @@ export default function App() {
           filter={filter}
           onFilterChange={setFilter}
           onOpenProfile={() => setView('profile')}
+          onOpenUserProfile={openUserProfile}
           onOpenStadium={openStadium}
           searchResults={searchResults}
           onSelectSearchResult={selectSearchResult}
@@ -273,6 +306,7 @@ export default function App() {
             filter,
             onFilterChange: selectFilterFromElsewhere,
             onOpenProfile: () => setView('profile'),
+            onOpenUserProfile: openUserProfile,
             searchResults,
             onSelectSearchResult: selectSearchResult,
             onGoHome: goToMap,
@@ -291,6 +325,8 @@ export default function App() {
           onBackToMap={goToMap}
           onOpenStadiumFromId={openStadiumFromId}
           onEditVisit={startEditVisit}
+          onOpenVisit={(visit) => openVisit(visit, 'profile')}
+          initialViewUserId={profileTarget}
           onToast={setToast}
           onOpenAbout={() => setView('about')}
           visitsVersion={visitsVersion}
@@ -304,6 +340,34 @@ export default function App() {
             filter,
             onFilterChange: selectFilterFromElsewhere,
             onOpenProfile: () => setView('profile'),
+            onOpenUserProfile: openUserProfile,
+            searchResults,
+            onSelectSearchResult: selectSearchResult,
+            onGoHome: goToMap,
+            onOpenAdmin: () => setView('admin'),
+            onOpenAbout: () => setView('about'),
+            onAuthSuccess: setToast,
+            authModal,
+            onAuthModalChange: setAuthModal,
+          }}
+        />
+      )}
+
+      {view === 'visit' && activeVisit && (
+        <VisitView
+          visit={activeVisit.visit}
+          stadium={activeVisit.stadium}
+          onBack={() => setView(activeVisit.from)}
+          onOpenAuthor={(userId) => openUserProfile(userId)}
+          onEditVisit={editVisitFromPage}
+          onOpenStadium={activeVisit.stadium && activeVisit.from === 'profile' ? () => openStadiumPage(activeVisit.stadium, 'profile') : null}
+          navbarProps={{
+            query,
+            onQueryChange: setQuery,
+            filter,
+            onFilterChange: selectFilterFromElsewhere,
+            onOpenProfile: () => setView('profile'),
+            onOpenUserProfile: openUserProfile,
             searchResults,
             onSelectSearchResult: selectSearchResult,
             onGoHome: goToMap,
@@ -326,6 +390,7 @@ export default function App() {
             filter,
             onFilterChange: selectFilterFromElsewhere,
             onOpenProfile: () => setView('profile'),
+            onOpenUserProfile: openUserProfile,
             searchResults,
             onSelectSearchResult: selectSearchResult,
             onGoHome: goToMap,
@@ -347,12 +412,14 @@ export default function App() {
           onBack={(target) => (target === 'map' ? goToMap() : setView(target))}
           onStartVisit={startVisit}
           onToggleWishlist={toggleWishlist}
+          onOpenVisit={(visit, s) => openVisit(visit, 'stadium', s)}
           navbarProps={{
             query,
             onQueryChange: setQuery,
             filter,
             onFilterChange: selectFilterFromElsewhere,
             onOpenProfile: () => setView('profile'),
+            onOpenUserProfile: openUserProfile,
             searchResults,
             onSelectSearchResult: selectSearchResult,
             onGoHome: goToMap,

@@ -4,6 +4,8 @@ import { C, rgba, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import clubService from '../../services/clubService';
 
+const PROVINCE_OWNER = 'province';
+
 const emptyForm = {
   name: '', capacity: '', city: '', province: '', country: 'Argentina',
   lat: '', lng: '', mainClub: '', imageUrl: '',
@@ -19,7 +21,8 @@ function toFormState(stadium) {
     country: stadium.location?.country || 'Argentina',
     lat: stadium.location?.coordinates?.lat ?? '',
     lng: stadium.location?.coordinates?.lng ?? '',
-    mainClub: stadium.mainClub?._id ?? stadium.mainClub ?? '',
+    // Valor del selector de dueño: 'province', id del club, o '' (sin club)
+    mainClub: stadium.ownerType === 'province' ? PROVINCE_OWNER : (stadium.mainClub?._id ?? stadium.mainClub ?? ''),
     imageUrl: stadium.imageUrl || '',
   };
 }
@@ -65,7 +68,8 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
         country: form.country.trim(),
         coordinates: { lat: Number(form.lat), lng: Number(form.lng) },
       },
-      mainClub: form.mainClub || null,
+      ownerType: form.mainClub === PROVINCE_OWNER ? 'province' : 'club',
+      mainClub: form.mainClub && form.mainClub !== PROVINCE_OWNER ? form.mainClub : null,
       imageUrl: form.imageUrl.trim(),
     };
 
@@ -146,7 +150,7 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: C.muted }}>Club</span>
+              <span className="text-xs font-medium" style={{ color: C.muted }}>Dueño</span>
               <select
                 value={form.mainClub}
                 onChange={(e) => update('mainClub', e.target.value)}
@@ -154,6 +158,7 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
                 style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright, colorScheme: 'dark' }}
               >
                 <option value="" style={{ backgroundColor: C.surface }}>Sin club</option>
+                <option value={PROVINCE_OWNER} style={{ backgroundColor: C.surface }}>Propiedad de la provincia o ciudad</option>
                 {clubs.map((club) => (
                   <option key={club.id ?? club._id} value={club.id ?? club._id} style={{ backgroundColor: C.surface }}>
                     {club.name}
@@ -175,11 +180,11 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: C.muted }}>Provincia</span>
+              <span className="text-xs font-medium" style={{ color: C.muted }}>Provincia (opcional)</span>
               <input
                 value={form.province}
                 onChange={(e) => update('province', e.target.value)}
-                required
+                placeholder="Dejar vacío si está en una ciudad, como CABA"
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
                 style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
               />
@@ -199,7 +204,7 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
 
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: C.muted }}>Latitud, hasta 6 decimales</span>
+              <span className="text-xs font-medium" style={{ color: C.muted }}>Latitud</span>
               <input
                 type="number"
                 step="any"
@@ -211,7 +216,7 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: C.muted }}>Longitud, hasta 6 decimales</span>
+              <span className="text-xs font-medium" style={{ color: C.muted }}>Longitud</span>
               <input
                 type="number"
                 step="any"

@@ -32,9 +32,23 @@ function goalSvg(color = C.bg) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${GOAL_ICON_PATHS.map((d) => `<path d="${d}" />`).join('')}</svg>`;
 }
 
-function buildMarkerIcon(status, logoUrl) {
+// Icono "Landmark" de lucide: estadios sin club (propiedad de la provincia o sin dueño)
+const LANDMARK_ICON_PATHS = [
+  'M10 18v-7',
+  'M11.12 2.198a2 2 0 0 1 1.76.006l7.866 3.847c.476.233.31.949-.22.949H3.574c-.531 0-.696-.715-.22-.949z',
+  'M14 18v-7',
+  'M18 18v-7',
+  'M3 22h18',
+  'M6 18v-7',
+];
+
+function landmarkSvg(color = C.bg) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${LANDMARK_ICON_PATHS.map((d) => `<path d="${d}" />`).join('')}</svg>`;
+}
+
+function buildMarkerIcon(status, logoUrl, hasClub) {
   const bg = statusColor(status);
-  const inner = logoUrl ? `<img src="${logoUrl}" alt="" />` : goalSvg();
+  const inner = logoUrl ? `<img src="${logoUrl}" alt="" />` : hasClub ? goalSvg() : landmarkSvg();
   return L.divIcon({
     className: 'gc-marker',
     html: `<span class="gc-marker-badge" style="background:${bg}">${inner}</span>`,
@@ -105,7 +119,7 @@ function Markers({ stadiums, onOpenStadium }) {
           <Marker
             key={s.id}
             position={[s.location.coordinates.lat, s.location.coordinates.lng]}
-            icon={buildMarkerIcon(s.status, s.clubLogoUrl)}
+            icon={buildMarkerIcon(s.status, s.clubLogoUrl, Boolean(s.mainClubId))}
             eventHandlers={{ click: () => onOpenStadium(s) }}
           >
             <Tooltip permanent direction="top" offset={[0, -18]} className="gc-marker-label">

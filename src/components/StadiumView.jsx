@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, Check, Users, Star } from 'lucide-react';
+import { ChevronLeft, Check, Users, Star, MapPin, Images } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import visitService from '../services/visitService';
@@ -10,7 +10,11 @@ import ScoreDistribution from './ScoreDistribution';
 import Navbar from './Navbar';
 import AdminPagination, { paginate, clampPage } from './admin/AdminPagination';
 
-const REVIEWS_PAGE_SIZE = 5;
+// Cantidad elegida para que la columna de reseñas llegue a la altura de la columna izquierda
+const REVIEWS_PAGE_SIZE = 7;
+
+// Corta la reseña en 3 líneas y pone "..." al final, como en las cards del perfil
+const REVIEW_CLAMP = { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
 
 function formatVisitDate(value) {
   if (!value) return '';
@@ -33,7 +37,7 @@ function Avatar({ url, name, className }) {
 }
 
 export default function StadiumView({
-  stadium, expenseFields, cameFrom, onBack, onStartVisit, onToggleWishlist, navbarProps,
+  stadium, expenseFields, cameFrom, onBack, onStartVisit, onToggleWishlist, onOpenVisit, navbarProps,
 }) {
   const { user: me } = useAuth();
   const [stadiumReviews, setStadiumReviews] = useState([]);
@@ -99,6 +103,9 @@ export default function StadiumView({
                 <p className="text-xl font-semibold truncate" style={{ color: C.bright }}>{stadium.clubName}</p>
               )}
               <p className="text-sm" style={{ color: C.muted }}>{stadium.locationLabel}</p>
+              {stadium.ownerType === 'province' && (
+                <p className="text-sm" style={{ color: C.muted }}>{stadium.province ? `Propiedad de la provincia de ${stadium.province}` : `Propiedad de la ciudad de ${stadium.city}`}</p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5 mt-3">
@@ -161,14 +168,38 @@ export default function StadiumView({
               ))}
             </div>
           </div>
+
+          {/* Mapa con la ubicación del estadio */}
+          {stadium.location?.coordinates?.lat && (
+            <div className="mt-4 p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              <div className="flex items-center gap-2 mb-2">
+                <MapPin size={14} color={C.muted} />
+                <span className="text-sm font-semibold" style={{ color: C.bright }}>Ubicación</span>
+              </div>
+              {stadium.locationLabel && (
+                <p className="text-sm mb-3" style={{ color: C.muted }}>{stadium.locationLabel}</p>
+              )}
+              <div className="relative h-64 rounded-xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+                <iframe
+                  title={`Mapa de ${stadium.name}`}
+                  src={`https://www.google.com/maps?q=${stadium.location.coordinates.lat},${stadium.location.coordinates.lng}&z=16&output=embed`}
+                  className="absolute inset-0 w-full h-full block"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Reseñas: columna propia a la derecha */}
-        <aside className="min-w-0 md:sticky md:top-6 md:max-h-[calc(100vh-3rem)] md:overflow-y-auto gc-hide-scrollbar">
+        <aside className="min-w-0">
           <h2 className="text-lg font-semibold mb-3" style={{ color: C.bright }}>Reseñas</h2>
           <div className="space-y-3">
             {pageReviews.filter(isMine).map((r) => (
-              <div key={`mine-${r._id}`} className="p-3.5 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.brandBright}` }}>
+              <button key={`mine-${r._id}`} onClick={() => onOpenVisit(r, stadium)} className="block w-full text-left p-3.5 rounded-2xl gc-focus gc-tap" style={{ backgroundColor: C.surface, border: `1px solid ${C.brandBright}` }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Avatar url={me?.avatarUrl} name={me?.username || 'Vos'} className="w-6 h-6" />
@@ -180,10 +211,15 @@ export default function StadiumView({
                   </div>
                 </div>
                 {r.reviewText && (
-                  <p className="text-sm mt-1.5 leading-snug" style={{ color: C.muted }}>{r.reviewText}</p>
+                  <p className="text-sm mt-1.5 leading-snug break-words" style={{ color: C.muted, ...REVIEW_CLAMP }}>{r.reviewText}</p>
                 )}
-                <p className="text-xs mt-1.5" style={{ color: C.muted }}>{formatVisitDate(r.visitDate)}</p>
-              </div>
+                <div className="flex items-center justify-between mt-1.5">
+                  <p className="text-xs" style={{ color: C.muted }}>{formatVisitDate(r.visitDate)}</p>
+                  {r.images?.length > 0 && (
+                    <span className="flex items-center gap-1 text-xs" style={{ color: C.muted }} title="Tiene fotos"><Images size={12} /> {r.images.length}</span>
+                  )}
+                </div>
+              </button>
             ))}
             {reviewsLoading ? (
               <p className="text-sm text-center py-4" style={{ color: C.muted }}>Cargando reseñas...</p>
@@ -191,7 +227,7 @@ export default function StadiumView({
               pageReviews.filter((r) => !isMine(r)).map((r) => {
                 const author = r.user?.username || 'Hincha anónimo';
                 return (
-                  <div key={r._id} className="p-3.5 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                  <button key={r._id} onClick={() => onOpenVisit(r, stadium)} className="block w-full text-left p-3.5 rounded-2xl gc-focus gc-tap" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Avatar url={r.user?.avatarUrl} name={author} className="w-6 h-6" />
@@ -203,10 +239,15 @@ export default function StadiumView({
                       </div>
                     </div>
                     {r.reviewText && (
-                      <p className="text-sm mt-1.5 leading-snug" style={{ color: C.muted }}>{r.reviewText}</p>
+                      <p className="text-sm mt-1.5 leading-snug break-words" style={{ color: C.muted, ...REVIEW_CLAMP }}>{r.reviewText}</p>
                     )}
-                    <p className="text-xs mt-1.5" style={{ color: C.muted }}>{formatVisitDate(r.visitDate)}</p>
-                  </div>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <p className="text-xs" style={{ color: C.muted }}>{formatVisitDate(r.visitDate)}</p>
+                      {r.images?.length > 0 && (
+                        <span className="flex items-center gap-1 text-xs" style={{ color: C.muted }} title="Tiene fotos"><Images size={12} /> {r.images.length}</span>
+                      )}
+                    </div>
+                  </button>
                 );
               })
             )}

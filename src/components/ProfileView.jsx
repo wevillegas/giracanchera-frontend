@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, MapPin, Edit3, Users, UserPlus, Star, AlertCircle, Cake, CalendarDays, Heart, Pencil, Trash2, Search, Check } from 'lucide-react';
+import { ChevronLeft, MapPin, Edit3, Users, UserPlus, Star, AlertCircle, Cake, CalendarDays, Landmark, Pencil, Trash2, Search, Check } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
@@ -8,12 +8,18 @@ import StadiumArt from './StadiumArt';
 import EditProfileModal from './EditProfileModal';
 import Navbar from './Navbar';
 import AdminPagination, { paginate, clampPage } from './admin/AdminPagination';
+import { useLogoColors } from '../utils/logoColors';
+
+// Reseñas y estadios (visitados y por visitar) de a 6
+const REVIEWS_PAGE_SIZE = 6;
+const STADIUMS_PAGE_SIZE = 6;
 
 const TABS = [
   { key: 'perfil', label: 'Perfil' },
   { key: 'resenas', label: 'Reseñas' },
   { key: 'visitados', label: 'Visitados' },
   { key: 'porvisitar', label: 'Por visitar' },
+  { key: 'seguidores', label: 'Seguidores' },
   { key: 'seguidos', label: 'Seguidos' },
 ];
 
@@ -41,129 +47,44 @@ function SectionTitle({ children, count }) {
   );
 }
 
-function PosterTile({ tone, uid, name, sub, onClick }) {
+// Card de estadio: escudo del club arriba, nombre y provincia abajo
+function StadiumCard({ stadium, onClick }) {
+  const { name, province, city, country, clubLocation, clubLogoUrl, club, mainClubId } = stadium;
+  // Lugar del club si lo tiene; si no, provincia (o ciudad) y país
+  const place = clubLocation || [province || city, country].filter(Boolean).join(', ');
+  const colors = useLogoColors(clubLogoUrl);
+  // Degradado con los colores del escudo; una capa oscura encima mantiene legible el texto
+  const background = colors
+    ? { backgroundImage: `linear-gradient(${rgba(C.bg, 0.35)}, ${rgba(C.bg, 0.35)}), linear-gradient(135deg, ${rgba(colors[0], 0.8)}, ${rgba(colors[1], 0.8)})` }
+    : {};
   return (
     <button
       onClick={onClick}
-      className="group relative aspect-[2/3] rounded-lg overflow-hidden text-left gc-focus gc-tap"
-      style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+      className="flex flex-col items-center text-center gap-2 p-3 rounded-2xl gc-focus gc-tap"
+      style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, ...background }}
     >
-      <StadiumArt tone={tone} uid={uid} className="absolute inset-0 w-full h-full" />
-      <div className="absolute inset-x-0 bottom-0 p-2 pt-8" style={{ background: `linear-gradient(to top, ${rgba(C.bg, 0.95)}, transparent)` }}>
-        <p className="text-xs font-semibold truncate" style={{ color: C.bright }}>{name}</p>
-        {sub}
+      {clubLogoUrl ? (
+        <img src={clubLogoUrl} alt={club} className="w-16 h-16 object-contain" />
+      ) : mainClubId ? (
+        <div className="w-16 h-16 rounded-full flex items-center justify-center text-sm" style={{ backgroundColor: C.border, color: C.bright, fontFamily: DISPLAY_FONT }}>
+          {initialsOf(club)}
+        </div>
+      ) : (
+        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: C.border, color: C.muted }}>
+          <Landmark size={26} />
+        </div>
+      )}
+      <div className="w-full min-w-0">
+        <p className="text-sm font-semibold truncate" style={{ color: C.bright }}>{name}</p>
+        {place && <p className="text-xs truncate" style={{ color: C.muted }}>{place}</p>}
       </div>
     </button>
   );
 }
 
-function FollowSearchBox({ myFollowingIds, onFollowChanged, onToast }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [togglingId, setTogglingId] = useState(null);
-
-  useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
-    let cancelled = false;
-    setSearching(true);
-    const t = setTimeout(() => {
-      userService.searchUsers(query.trim())
-        .then((data) => { if (!cancelled) setResults(data); })
-        .catch(() => { if (!cancelled) setResults([]); })
-        .finally(() => { if (!cancelled) setSearching(false); });
-    }, 300);
-    return () => { cancelled = true; clearTimeout(t); };
-  }, [query]);
-
-  async function handleToggle(userId) {
-    setTogglingId(userId);
-    try {
-      await userService.toggleFollow(userId);
-      const wasFollowing = myFollowingIds.has(userId);
-      onFollowChanged(userId, !wasFollowing);
-      onToast?.(wasFollowing ? 'Dejaste de seguir' : '¡Ahora lo seguís!');
-    } catch {
-      onToast?.('No pudimos procesar la acción. Probá de nuevo.');
-    } finally {
-      setTogglingId(null);
-    }
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs font-medium gc-focus"
-        style={{ color: C.brandBright }}
-      >
-        <UserPlus size={13} /> Seguir usuarios
-      </button>
-    );
-  }
-
-  return (
-    <div className="rounded-2xl p-3" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}>
-        <Search size={14} color={C.muted} />
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por usuario..."
-          className="bg-transparent outline-none text-sm flex-1 gc-focus"
-          style={{ color: C.bright }}
-        />
-      </div>
-
-      {searching && <p className="text-xs mt-2" style={{ color: C.muted }}>Buscando...</p>}
-
-      {!searching && results.length > 0 && (
-        <div className="mt-2 space-y-1.5">
-          {results.map((u) => {
-            const isFollowing = myFollowingIds.has(u._id);
-            return (
-              <div key={u._id} className="flex items-center gap-2 px-2 py-1.5 rounded-xl" style={{ backgroundColor: C.bg }}>
-                {u.avatarUrl ? (
-                  <img src={u.avatarUrl} alt={u.username} className="w-7 h-7 rounded-full object-cover" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs" style={{ backgroundColor: C.brand, color: C.bright }}>
-                    {initialsOf(u.username)}
-                  </div>
-                )}
-                <span className="text-sm flex-1 truncate" style={{ color: C.bright }}>@{u.username}</span>
-                <button
-                  onClick={() => handleToggle(u._id)}
-                  disabled={togglingId === u._id}
-                  className="flex items-center gap-1 text-xs font-semibold gc-focus"
-                  style={{ color: isFollowing ? C.muted : C.brandBright, opacity: togglingId === u._id ? 0.6 : 1 }}
-                >
-                  {isFollowing ? <><Check size={12} /> Siguiendo</> : 'Seguir'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {!searching && query.trim() && results.length === 0 && (
-        <p className="text-xs mt-2" style={{ color: C.muted }}>No encontramos usuarios con ese nombre.</p>
-      )}
-
-      <button onClick={() => { setOpen(false); setQuery(''); }} className="text-xs mt-2 gc-focus" style={{ color: C.muted }}>
-        Cerrar
-      </button>
-    </div>
-  );
-}
-
 export default function ProfileView({
-  stadiums, onBackToMap, onOpenStadiumFromId, onEditVisit, onToast,
-  visitsVersion, onRequireLogin, navbarProps,
+  stadiums, onBackToMap, onOpenStadiumFromId, onEditVisit, onOpenVisit, onToast,
+  visitsVersion, onRequireLogin, navbarProps, initialViewUserId,
 }) {
   const { token, user, updateUser } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -173,7 +94,7 @@ export default function ProfileView({
   const [visits, setVisits] = useState([]);
   const [visitsLoading, setVisitsLoading] = useState(true);
 
-  const [viewUserId, setViewUserId] = useState(null);
+  const [viewUserId, setViewUserId] = useState(initialViewUserId ?? null);
   const [viewedProfile, setViewedProfile] = useState(null);
   const [viewedVisits, setViewedVisits] = useState([]);
   const [viewedLoading, setViewedLoading] = useState(false);
@@ -305,9 +226,10 @@ export default function ProfileView({
   const joinDate = formatLongDate(displayedProfile?.createdAt);
   const clubStadium = club ? stadiums.find((s) => s.mainClubId === club._id) : null;
   const followingList = displayedProfile?.following || [];
-  const visitedPageSafe = clampPage(visitedPage, visitedStadiumTiles.length);
-  const reviewsPageSafe = clampPage(reviewsPage, displayedVisits.length);
-  const wishPageSafe = clampPage(wishPage, wishlistStadiums.length);
+  const followersList = displayedProfile?.followers || [];
+  const visitedPageSafe = clampPage(visitedPage, visitedStadiumTiles.length, STADIUMS_PAGE_SIZE);
+  const reviewsPageSafe = clampPage(reviewsPage, displayedVisits.length, REVIEWS_PAGE_SIZE);
+  const wishPageSafe = clampPage(wishPage, wishlistStadiums.length, STADIUMS_PAGE_SIZE);
 
   const show = (key) => tab === 'perfil' || tab === key;
 
@@ -323,9 +245,9 @@ export default function ProfileView({
   }
 
   const stats = [
-    { label: 'Estadios', value: visitedCount, Icon: MapPin },
+    { label: 'Estadios', value: visitedCount, Icon: MapPin, onClick: () => setTab('visitados') },
     { label: 'Reseñas', value: displayedVisits.length, Icon: Edit3, onClick: () => setTab('resenas') },
-    { label: 'Seguidores', value: displayedProfile?.followersCount ?? 0, Icon: Users },
+    { label: 'Seguidores', value: displayedProfile?.followersCount ?? 0, Icon: Users, onClick: () => setTab('seguidores') },
     { label: 'Seguidos', value: followingList.length, Icon: UserPlus, onClick: () => setTab('seguidos') },
   ];
 
@@ -460,37 +382,65 @@ export default function ProfileView({
                 ) : (
                   <>
                     <div className="grid grid-cols-2 gap-3">
-                      {paginate(displayedVisits, reviewsPageSafe).map((v, i) => {
+                      {paginate(displayedVisits, reviewsPageSafe, REVIEWS_PAGE_SIZE).map((v, i) => {
                         const stadiumId = v.stadium?._id;
                         return (
-                          <div key={v._id} className="rounded-2xl overflow-hidden" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-                            <StadiumArt tone={i % 2 === 0 ? 'brand' : 'gold'} uid={v._id} className="w-full h-20" />
+                          <div
+                            key={v._id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => onOpenVisit(v)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') onOpenVisit(v); }}
+                            className="rounded-2xl overflow-hidden cursor-pointer gc-focus gc-tap"
+                            style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+                          >
+                            <div className="relative w-full h-36 overflow-hidden flex flex-col items-center justify-center gap-1.5 px-3">
+                              {v.stadium?.imageUrl ? (
+                                <img src={v.stadium.imageUrl} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-sm scale-110" />
+                              ) : (
+                                <StadiumArt tone={i % 2 === 0 ? 'brand' : 'gold'} uid={v._id} className="absolute inset-0 w-full h-full" />
+                              )}
+                              {v.stadium?.mainClub?.logoUrl && (
+                                <>
+                                  <img
+                                    src={v.stadium.mainClub.logoUrl}
+                                    alt={v.stadium.mainClub.name}
+                                    className="relative w-16 h-16 object-contain"
+                                  />
+                                  <span className="relative text-xs font-semibold truncate max-w-full" style={{ color: C.bright, textShadow: `0 1px 4px ${rgba(C.bg, 0.9)}` }}>
+                                    {v.stadium.mainClub.name}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                             <div className="p-3">
                               <button
-                                onClick={() => stadiumId && onOpenStadiumFromId(stadiumId)}
+                                onClick={(e) => { e.stopPropagation(); stadiumId && onOpenStadiumFromId(stadiumId); }}
                                 disabled={!stadiumId}
                                 className="text-sm font-semibold truncate text-left w-full gc-focus"
                                 style={{ color: C.bright, cursor: stadiumId ? 'pointer' : 'default' }}
                               >
                                 {v.stadium?.name || 'Estadio'}
                               </button>
-                              <div className="flex items-center gap-1 mt-1">
-                                <Star size={12} fill={C.gold} color={C.gold} />
-                                <span className="text-xs font-medium" style={{ color: C.gold }}>{v.rating}/10</span>
-                                <span className="text-xs ml-auto" style={{ color: C.muted }}>{formatVisitDate(v.visitDate)}</span>
+                              <div className="block w-full text-left">
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Star size={12} fill={C.gold} color={C.gold} />
+                                  <span className="text-xs font-medium" style={{ color: C.gold }}>{v.rating}/10</span>
+                                  <span className="text-xs ml-auto" style={{ color: C.muted }}>{formatVisitDate(v.visitDate)}</span>
+                                </div>
+                                <p
+                                  className="text-xs mt-2 leading-snug"
+                                  style={{ color: C.muted, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                                >
+                                  {v.reviewText?.trim() || 'Sin reseña escrita todavía.'}
+                                </p>
                               </div>
-                              <p
-                                className="text-xs mt-2 leading-snug"
-                                style={{ color: C.muted, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                              >
-                                {v.reviewText?.trim() || 'Sin reseña escrita todavía.'}
-                              </p>
                               {isOwn && (
                                 <div className="flex items-center gap-3 mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${C.border}` }}>
-                                  <button onClick={() => onEditVisit(v)} className="flex items-center gap-1 text-xs font-medium gc-focus" style={{ color: C.brandBright }}>
+                                  <button onClick={(e) => { e.stopPropagation(); onEditVisit(v); }} className="flex items-center gap-1 text-xs font-medium gc-focus" style={{ color: C.brandBright }}>
                                     <Pencil size={12} /> Editar
                                   </button>
-                                  <button onClick={() => handleDeleteVisit(v._id)} className="flex items-center gap-1 text-xs font-medium gc-focus" style={{ color: '#f85149' }}>
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteVisit(v._id); }} className="flex items-center gap-1 text-xs font-medium gc-focus" style={{ color: '#f85149' }}>
                                     <Trash2 size={12} /> Eliminar
                                   </button>
                                 </div>
@@ -500,7 +450,7 @@ export default function ProfileView({
                         );
                       })}
                     </div>
-                    <AdminPagination page={reviewsPageSafe} total={displayedVisits.length} onChange={setReviewsPage} />
+                    <AdminPagination page={reviewsPageSafe} total={displayedVisits.length} onChange={setReviewsPage} pageSize={REVIEWS_PAGE_SIZE} />
                   </>
                 )}
               </section>
@@ -516,18 +466,15 @@ export default function ProfileView({
                 ) : (
                   <>
                     <div className="grid grid-cols-3 gap-3">
-                      {paginate(visitedStadiumTiles, visitedPageSafe).map((s) => (
-                        <PosterTile
+                      {paginate(visitedStadiumTiles, visitedPageSafe, STADIUMS_PAGE_SIZE).map((s) => (
+                        <StadiumCard
                           key={s.id}
-                          tone={s.tone}
-                          uid={s.id}
-                          name={s.name}
+                          stadium={s}
                           onClick={() => onOpenStadiumFromId(s.id)}
-                          sub={<span className="flex items-center gap-1 text-[11px]" style={{ color: C.muted }}><Check size={11} color={C.brandBright} />{s.club}</span>}
                         />
                       ))}
                     </div>
-                    <AdminPagination page={visitedPageSafe} total={visitedStadiumTiles.length} onChange={setVisitedPage} />
+                    <AdminPagination page={visitedPageSafe} total={visitedStadiumTiles.length} onChange={setVisitedPage} pageSize={STADIUMS_PAGE_SIZE} />
                   </>
                 )}
               </section>
@@ -543,19 +490,45 @@ export default function ProfileView({
                 ) : (
                   <>
                     <div className="grid grid-cols-3 gap-3">
-                      {paginate(wishlistStadiums, wishPageSafe).map((s) => (
-                        <PosterTile
+                      {paginate(wishlistStadiums, wishPageSafe, STADIUMS_PAGE_SIZE).map((s) => (
+                        <StadiumCard
                           key={s.id}
-                          tone={s.tone}
-                          uid={s.id}
-                          name={s.name}
+                          stadium={s}
                           onClick={() => onOpenStadiumFromId(s.id)}
-                          sub={<span className="flex items-center gap-1 text-[11px]" style={{ color: C.muted }}><Heart size={11} fill={C.gold} color={C.gold} />{s.club}</span>}
                         />
                       ))}
                     </div>
-                    <AdminPagination page={wishPageSafe} total={wishlistStadiums.length} onChange={setWishPage} />
+                    <AdminPagination page={wishPageSafe} total={wishlistStadiums.length} onChange={setWishPage} pageSize={STADIUMS_PAGE_SIZE} />
                   </>
+                )}
+              </section>
+            )}
+
+            {tab === 'seguidores' && (
+              <section>
+                <SectionTitle count={followersList.length}>Seguidores</SectionTitle>
+                {followersList.length === 0 ? (
+                  <p className="text-sm" style={{ color: C.muted }}>{isOwn ? 'Todavía no tenés seguidores.' : 'Todavía no tiene seguidores.'}</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {followersList.map((f) => (
+                      <button
+                        key={f._id}
+                        onClick={() => setViewUserId(f._id)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full gc-focus gc-tap"
+                        style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+                      >
+                        {f.avatarUrl ? (
+                          <img src={f.avatarUrl} alt={f.username} className="w-5 h-5 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" style={{ backgroundColor: C.brand, color: C.bright }}>
+                            {initialsOf(f.username || '?')}
+                          </div>
+                        )}
+                        <span className="text-xs" style={{ color: C.bright }}>@{f.username || '...'}</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </section>
             )}
@@ -563,20 +536,6 @@ export default function ProfileView({
             {tab === 'seguidos' && (
               <section>
                 <SectionTitle count={followingList.length}>Siguiendo</SectionTitle>
-                {isOwn && (
-                  <div className="mb-4">
-                    <FollowSearchBox
-                      myFollowingIds={myFollowingIds}
-                      onFollowChanged={(id, nowFollowing) => setProfile((p) => ({
-                        ...p,
-                        following: nowFollowing
-                          ? [...(p.following || []), id]
-                          : (p.following || []).filter((f) => (f._id || f) !== id),
-                      }))}
-                      onToast={onToast}
-                    />
-                  </div>
-                )}
                 {followingList.length === 0 ? (
                   <p className="text-sm" style={{ color: C.muted }}>{isOwn ? 'Todavía no seguís a nadie.' : 'Todavía no sigue a nadie.'}</p>
                 ) : (

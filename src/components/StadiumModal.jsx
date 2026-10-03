@@ -58,7 +58,16 @@ export default function StadiumModal({
 
         <div className="p-5">
           <h2 className="text-3xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{stadium.name}</h2>
-          <p className="text-sm mt-1" style={{ color: C.muted }}>{stadium.club} · {stadium.city}</p>
+          {stadium.clubLogoUrl && (
+            <div className="flex items-center gap-2.5 mt-2">
+              <img src={stadium.clubLogoUrl} alt={stadium.clubName} className="w-10 h-10 object-contain shrink-0" />
+              <span className="text-sm font-semibold truncate" style={{ color: C.bright }}>{stadium.clubName}</span>
+            </div>
+          )}
+          <p className="text-sm mt-1" style={{ color: C.muted }}>{stadium.locationLabel}</p>
+          {stadium.ownerType === 'province' && (
+            <p className="text-sm mt-1" style={{ color: C.muted }}>{stadium.province ? `Propiedad de la provincia de ${stadium.province}` : `Propiedad de la ciudad de ${stadium.city}`}</p>
+          )}
 
           <div className="flex items-center gap-1.5 mt-4">
             <Users size={15} color={C.muted} />

@@ -1,0 +1,257 @@
+import { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil } from 'lucide-react';
+import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
+import { useAuth } from '../context/AuthContext';
+import StadiumArt from './StadiumArt';
+import Navbar from './Navbar';
+
+const EXPENSE_ROWS = [
+  { key: 'ticket', label: 'Entradas', Icon: Ticket },
+  { key: 'food', label: 'Comida', Icon: UtensilsCrossed },
+  { key: 'parking', label: 'Estacionamiento', Icon: Car },
+  { key: 'transport', label: 'Transporte / otros', Icon: Bus },
+];
+
+function formatLongDate(value) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value));
+}
+
+// Visor de fotos dentro de la app: navegación con flechas/teclado, cierra con Esc o clic en el fondo.
+function PhotoModal({ images, index, alt, onIndexChange, onClose }) {
+  const hasMany = images.length > 1;
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onClose();
+      if (hasMany && e.key === 'ArrowRight') onIndexChange((index + 1) % images.length);
+      if (hasMany && e.key === 'ArrowLeft') onIndexChange((index - 1 + images.length) % images.length);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [index, images.length, hasMany, onIndexChange, onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+      style={{ backgroundColor: rgba(C.bg, 0.92) }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <img
+        src={images[index]}
+        alt={alt}
+        onClick={(e) => e.stopPropagation()}
+        className="max-w-full max-h-[85vh] object-contain rounded-xl"
+      />
+      <button onClick={onClose} aria-label="Cerrar" className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.surface, 0.9) }}>
+        <X size={18} color={C.bright} />
+      </button>
+      {hasMany && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); onIndexChange((index - 1 + images.length) % images.length); }}
+            aria-label="Foto anterior"
+            className="absolute left-4 w-10 h-10 rounded-full flex items-center justify-center gc-focus"
+            style={{ backgroundColor: rgba(C.surface, 0.9) }}
+          >
+            <ChevronLeft size={18} color={C.bright} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onIndexChange((index + 1) % images.length); }}
+            aria-label="Foto siguiente"
+            className="absolute right-4 w-10 h-10 rounded-full flex items-center justify-center gc-focus"
+            style={{ backgroundColor: rgba(C.surface, 0.9) }}
+          >
+            <ChevronRight size={18} color={C.bright} />
+          </button>
+          <span className="absolute bottom-4 text-xs" style={{ color: C.muted }}>{index + 1} / {images.length}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenStadium, onEditVisit, onOpenAuthor, navbarProps }) {
+  const { user: me } = useAuth();
+  const [photoIndex, setPhotoIndex] = useState(null);
+  // La visita trae el usuario poblado (desde la página del estadio) o solo el id (desde el perfil)
+  const authorId = typeof visit.user === 'string' ? visit.user : visit.user?._id;
+  const isOwn = Boolean(me?._id) && authorId === me._id;
+  // Usuario poblado (desde el estadio o el perfil); sin poblar solo queda el id
+  const author = typeof visit.user === 'object' ? visit.user : null;
+  const stadium = stadiumData || visit.stadium || {};
+  const match = visit.matchDetails || {};
+  const expenses = visit.expenses || {};
+  const currency = expenses.currency || 'ARS';
+  const hasMatch = match.homeTeam || match.awayTeam || match.score;
+  const images = visit.images || [];
+
+  return (
+    <div className="relative flex-1 overflow-y-auto gc-hide-scrollbar">
+      <Navbar {...navbarProps} />
+      <div className="max-w-5xl mx-auto px-4 pt-32 pb-6">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-sm mb-4 gc-focus gc-tap" style={{ color: C.muted }}>
+          <ChevronLeft size={16} /> Volver
+        </button>
+
+        {/* Card del estadio, en lugar de la foto de portada */}
+        <button
+          onClick={() => onOpenStadium?.()}
+          disabled={!onOpenStadium}
+          className="w-full flex flex-col sm:flex-row gap-4 p-3 rounded-2xl text-left gc-focus gc-tap"
+          style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, cursor: onOpenStadium ? 'pointer' : 'default' }}
+        >
+          <div className="relative w-full sm:w-56 shrink-0 aspect-video rounded-xl overflow-hidden" style={{ backgroundColor: C.bg }}>
+            {stadium.imageUrl
+              ? <img src={stadium.imageUrl} alt={stadium.name} className="w-full h-full object-cover" />
+              : <StadiumArt tone={stadium.tone || 'brand'} uid={`visit-${visit._id}`} className="w-full h-full" />}
+          </div>
+          <div className="min-w-0 flex-1 flex flex-col justify-center">
+            <h1 className="text-3xl leading-none truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{stadium.name || 'Estadio'}</h1>
+            {stadium.clubName && (
+              <div className="flex items-center gap-2 mt-2">
+                {stadium.clubLogoUrl && <img src={stadium.clubLogoUrl} alt={stadium.clubName} className="w-6 h-6 rounded-full object-cover" />}
+                <span className="text-sm font-semibold truncate" style={{ color: C.bright }}>{stadium.clubName}</span>
+              </div>
+            )}
+            {(stadium.locationLabel || stadium.capacity) && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs" style={{ color: C.muted }}>
+                {stadium.locationLabel && <span className="flex items-center gap-1"><MapPin size={12} /> {stadium.locationLabel}</span>}
+                {stadium.capacity && <span className="flex items-center gap-1"><Users size={12} /> {Number(stadium.capacity).toLocaleString('es-AR')}</span>}
+              </div>
+            )}
+            {onOpenStadium && <span className="text-xs mt-2" style={{ color: C.brandBright }}>Ver estadio</span>}
+          </div>
+        </button>
+
+        <div className="grid gap-8 md:grid-cols-[1fr_340px] mt-6">
+          <div className="min-w-0 space-y-4">
+            {author && (
+              <button
+                onClick={() => onOpenAuthor?.(author._id)}
+                disabled={!onOpenAuthor}
+                className="flex items-center gap-2 mb-2 rounded-lg gc-focus gc-tap"
+              >
+                {author.avatarUrl ? (
+                  <img src={author.avatarUrl} alt={author.username} className="w-7 h-7 rounded-full object-cover" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold" style={{ backgroundColor: C.border, color: C.bright }}>
+                    {author.username?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <span className="text-sm font-medium" style={{ color: C.bright }}>{isOwn ? 'Vos' : author.username}</span>
+              </button>
+            )}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <Star size={15} fill={C.gold} color={C.gold} />
+                <span className="text-sm font-semibold" style={{ color: C.gold }}>{visit.rating}/10</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CalendarDays size={15} color={C.muted} />
+                <span className="text-sm" style={{ color: C.muted }}>{formatLongDate(visit.visitDate)}</span>
+              </div>
+              {isOwn && onEditVisit && (
+                <button
+                  onClick={() => onEditVisit(visit)}
+                  className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap"
+                  style={{ border: `1px solid ${C.border}`, color: C.bright }}
+                >
+                  <Pencil size={13} /> Editar reseña
+                </button>
+              )}
+            </div>
+
+            {hasMatch && (
+              <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy size={14} color={C.muted} />
+                  <span className="text-xs uppercase tracking-widest" style={{ color: C.muted }}>Partido</span>
+                </div>
+                <p className="text-lg font-semibold" style={{ color: C.bright }}>
+                  {match.homeTeam || '—'} <span style={{ color: C.muted }}>vs</span> {match.awayTeam || '—'}
+                </p>
+                {match.score && (
+                  <p className="text-sm mt-1" style={{ color: C.muted }}>Resultado: {match.score}</p>
+                )}
+              </div>
+            )}
+
+            <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              <h2 className="text-sm font-semibold mb-2" style={{ color: C.bright }}>Reseña</h2>
+              <p className="text-sm leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]" style={{ color: visit.reviewText?.trim() ? C.bright : C.muted }}>
+                {visit.reviewText?.trim() || (isOwn ? 'Sin reseña escrita todavía.' : 'No se escribió una reseña.')}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Images size={14} color={C.muted} />
+                <h2 className="text-sm font-semibold" style={{ color: C.bright }}>Fotos {images.length > 0 && <span className="font-normal" style={{ color: C.muted }}>{images.length}</span>}</h2>
+              </div>
+              {images.length === 0 ? (
+                <p className="text-sm" style={{ color: C.muted }}>{isOwn ? 'No subiste fotos para esta visita.' : 'No se subieron imágenes para esta visita.'}</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {images.map((src, i) => (
+                    <button key={src} onClick={() => setPhotoIndex(i)} className="block rounded-xl overflow-hidden gc-focus gc-tap" style={{ border: `1px solid ${C.border}` }}>
+                      <img src={src} alt={`Foto ${i + 1} de la visita a ${stadium.name || 'el estadio'}`} className="w-full h-44 object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <aside className="min-w-0 flex flex-col">
+            <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold" style={{ color: C.bright }}>Gasto de la visita</span>
+                <span className="text-sm font-semibold" style={{ color: C.brandBright }}>
+                  {formatMoney(sumExpenses(Object.fromEntries(EXPENSE_ROWS.map(({ key }) => [key, expenses[key] || 0]))), currency)}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {EXPENSE_ROWS.map(({ key, label, Icon }) => (
+                  <div key={key} className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}>
+                    <Icon size={14} color={C.muted} />
+                    <div className="flex-1">
+                      <p className="text-xs" style={{ color: C.muted }}>{label}</p>
+                      <p className="text-sm font-medium" style={{ color: C.bright }}>{formatMoney(expenses[key] || 0, currency)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {stadium.location?.coordinates && (
+              <div className="relative flex-1 min-h-64 mt-4 rounded-2xl overflow-hidden" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                <iframe
+                  title={`Mapa de ${stadium.name || 'el estadio'}`}
+                  src={`https://www.google.com/maps?q=${stadium.location.coordinates.lat},${stadium.location.coordinates.lng}&z=16&output=embed`}
+                  className="absolute inset-0 w-full h-full block"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
+            )}
+          </aside>
+        </div>
+      </div>
+
+      {photoIndex !== null && (
+        <PhotoModal
+          images={images}
+          index={photoIndex}
+          alt={`Foto de la visita a ${stadium.name || 'el estadio'}`}
+          onIndexChange={setPhotoIndex}
+          onClose={() => setPhotoIndex(null)}
+        />
+      )}
+    </div>
+  );
+}

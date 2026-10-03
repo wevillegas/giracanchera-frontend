@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, ChevronDown, User, LogOut, MapPin, ShieldCheck, Info } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import userService from '../services/userService';
 import LoginModal from './LoginModal';
 import RegisterModal from './RegisterModal';
 import LogoutConfirmModal from './LogoutConfirmModal';
@@ -17,13 +18,64 @@ function initialsOf(name = '') {
 }
 
 export default function Navbar({
-  query, onQueryChange, filter, onFilterChange, onOpenProfile, onGoHome, onOpenAdmin, onOpenAbout, searchResults = [], onSelectSearchResult, onAuthSuccess,
+  query, onQueryChange, filter, onFilterChange, onOpenProfile, onOpenUserProfile, onGoHome, onOpenAdmin, onOpenAbout, searchResults = [], onSelectSearchResult, onAuthSuccess,
   authModal, onAuthModalChange,
 }) {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const showResults = query.trim().length > 0;
+  // Buscador compartido: el modo decide si busca estadios (filtra el mapa) o usuarios (abre su perfil)
+  const [searchMode, setSearchMode] = useState('stadiums');
+  const [userQuery, setUserQuery] = useState('');
+  const [userResults, setUserResults] = useState([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const isUsers = searchMode === 'users';
+  const showResults = (isUsers ? userQuery : query).trim().length > 0;
+
+  useEffect(() => {
+    if (!isUsers || !user || !userQuery.trim()) {
+      setUserResults([]);
+      return undefined;
+    }
+    let cancelled = false;
+    setSearchingUsers(true);
+    const t = setTimeout(() => {
+      userService.searchUsers(userQuery.trim())
+        .then((data) => { if (!cancelled) setUserResults(data); })
+        .catch(() => { if (!cancelled) setUserResults([]); })
+        .finally(() => { if (!cancelled) setSearchingUsers(false); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [isUsers, userQuery, user]);
+
+  function renderUserResults() {
+    if (!user) {
+      return <div className="px-4 py-3 text-sm" style={{ color: C.muted }}>Iniciá sesión para buscar usuarios</div>;
+    }
+    if (searchingUsers) {
+      return <div className="px-4 py-3 text-sm" style={{ color: C.muted }}>Buscando...</div>;
+    }
+    if (userResults.length === 0) {
+      return <div className="px-4 py-3 text-sm" style={{ color: C.muted }}>Sin resultados para "{userQuery}"</div>;
+    }
+    return userResults.map((u) => (
+      <button
+        key={u._id}
+        onClick={() => { setUserQuery(''); onOpenUserProfile?.(u._id); }}
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-left gc-focus gc-tap"
+        style={{ borderTop: `1px solid ${C.border}` }}
+      >
+        {u.avatarUrl ? (
+          <img src={u.avatarUrl} alt={u.username} className="w-7 h-7 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
+            {initialsOf(u.username || '?')}
+          </div>
+        )}
+        <span className="text-sm truncate" style={{ color: C.bright }}>@{u.username}</span>
+      </button>
+    ));
+  }
 
   return (
     <>
@@ -33,7 +85,7 @@ export default function Navbar({
     >
       <div className="max-w-[1400px] mx-auto flex items-center gap-3 flex-wrap">
         <button
-          onClick={onGoHome}
+          onClick={() => window.location.reload()}
           className="flex items-center gap-1.5 shrink-0 gc-focus gc-tap rounded-lg"
           style={{ opacity: 1 }}
           aria-label="Ir al mapa"
@@ -47,10 +99,19 @@ export default function Navbar({
         <div className="relative shrink-0 w-64">
           <div className="gc-search-box flex items-center gap-2 rounded-full px-3 py-2" style={{ backgroundColor: C.surface }}>
             <Search size={16} color={C.muted} />
+            <button
+              type="button"
+              onClick={() => setSearchMode(isUsers ? 'stadiums' : 'users')}
+              className="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 gc-focus"
+              style={{ backgroundColor: C.border, color: C.bright }}
+              aria-label="Cambiar entre buscar estadios y usuarios"
+            >
+              {isUsers ? 'Usuarios' : 'Estadios'}
+            </button>
             <input
-              value={query}
-              onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="Buscar estadios o clubes..."
+              value={isUsers ? userQuery : query}
+              onChange={(e) => (isUsers ? setUserQuery(e.target.value) : onQueryChange(e.target.value))}
+              placeholder={isUsers ? 'Buscar usuarios...' : 'Buscar estadios...'}
               className="bg-transparent outline-none text-sm flex-1 min-w-0"
               style={{ color: C.bright }}
             />
@@ -61,7 +122,7 @@ export default function Navbar({
               className="absolute left-0 right-0 mt-2 rounded-2xl overflow-hidden max-h-64 overflow-y-auto gc-hide-scrollbar"
               style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, boxShadow: `0 12px 24px ${rgba('#000000', 0.35)}` }}
             >
-              {searchResults.length === 0 ? (
+              {isUsers ? renderUserResults() : searchResults.length === 0 ? (
                 <div className="px-4 py-3 text-sm" style={{ color: C.muted }}>
                   Sin resultados para "{query}"
                 </div>

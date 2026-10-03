@@ -1,11 +1,20 @@
-import { useState } from 'react';
-import { ChevronLeft, Check, Calendar, Minus, Plus, AlertCircle, ImagePlus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ChevronLeft, Check, Calendar, AlertCircle, ImagePlus, X } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import visitService from '../services/visitService';
+import clubService from '../services/clubService';
+
+const REVIEW_MAX = 300;
 
 function toDateInputValue(value) {
   if (!value) return '';
   return new Date(value).toISOString().slice(0, 10);
+}
+
+// Hoy en hora local, para no dejar elegir una fecha futura
+function todayDateInputValue() {
+  const now = new Date();
+  return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
 }
 
 export default function VisitFormModal({ stadium, editingVisit, expenseFields, onClose, onSaved }) {
@@ -13,9 +22,14 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
   const stadiumName = isEditing ? editingVisit.stadium?.name : stadium?.name;
 
   const [date, setDate] = useState(() => (isEditing ? toDateInputValue(editingVisit.visitDate) : ''));
-  const [times, setTimes] = useState(1);
   const [score, setScore] = useState(() => editingVisit?.rating ?? 8);
   const [review, setReview] = useState(() => editingVisit?.reviewText ?? '');
+  // Partido: club local y visitante que jugaron ese día en el estadio
+  // Al crear, el local arranca como el club dueño del estadio (si tiene); se puede cambiar por cancha neutral
+  const [homeTeam, setHomeTeam] = useState(() => editingVisit?.matchDetails?.homeTeam ?? (isEditing ? '' : stadium?.clubName ?? ''));
+  const [awayTeam, setAwayTeam] = useState(() => editingVisit?.matchDetails?.awayTeam ?? '');
+  const [matchScore, setMatchScore] = useState(() => editingVisit?.matchDetails?.score ?? '');
+  const [clubs, setClubs] = useState([]);
   const [expenses, setExpenses] = useState(() => {
     const source = editingVisit?.expenses || {};
     return {
@@ -26,23 +40,79 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
     };
   });
   const [photos, setPhotos] = useState([]);
+  const [photoError, setPhotoError] = useState('');
+  // Fotos ya guardadas: se pueden quitar; las quitadas se mandan al back para borrarlas
+  const [keptImages, setKeptImages] = useState(() => (isEditing ? editingVisit.images || [] : []));
+  const [removedImages, setRemovedImages] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    clubService.getAll()
+      .then((data) => { if (!cancelled) setClubs(data); })
+      .catch(() => { if (!cancelled) setClubs([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Opciones de los dos selectores; si la visita guardada tiene un club que ya no está en la lista, lo mantenemos
+  const teamOptions = [...new Set([...clubs.map((c) => c.name), homeTeam, awayTeam].filter(Boolean))];
+
   const totalGasto = Object.values(expenses).reduce((sum, v) => sum + (Number(v) || 0), 0);
 
+  // Tope de 4 fotos por visita: cuentan las guardadas que quedan y las nuevas seleccionadas
+  const MAX_PHOTOS = 4;
+  const totalPhotos = keptImages.length + photos.length;
+  const photosFull = totalPhotos >= MAX_PHOTOS;
+
+  // Vistas previas de las fotos nuevas (se liberan al cambiar la lista o desmontar)
+  const [previews, setPreviews] = useState([]);
+  useEffect(() => {
+    const urls = photos.map((file) => URL.createObjectURL(file));
+    setPreviews(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [photos]);
+
+  // Agrega las elegidas a las que ya estaban; si pasan el tope, no se carga ninguna
   function handlePhotosChange(e) {
-    setPhotos(Array.from(e.target.files || []).slice(0, 4));
+    const incoming = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (incoming.length === 0) return;
+    if (totalPhotos + incoming.length > MAX_PHOTOS) {
+      setPhotoError(`Una visita puede tener hasta ${MAX_PHOTOS} fotos. Ya tenés ${totalPhotos} y elegiste ${incoming.length}; no se cargó ninguna.`);
+      return;
+    }
+    setPhotoError('');
+    setPhotos((prev) => [...prev, ...incoming]);
+  }
+
+  function removeNewPhoto(index) {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    setPhotoError('');
+  }
+
+  function removeSavedImage(url) {
+    setKeptImages((prev) => prev.filter((u) => u !== url));
+    setRemovedImages((prev) => [...prev, url]);
   }
 
   async function handleSubmit() {
+    if (homeTeam && awayTeam && homeTeam === awayTeam) {
+      setError('El local y el visitante no pueden ser el mismo club.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
       const formData = new FormData();
       formData.append('rating', score);
       formData.append('reviewText', review);
+      formData.append('matchDetails', JSON.stringify({
+        homeTeam,
+        awayTeam,
+        score: matchScore.trim(),
+      }));
       formData.append('visitDate', date);
       if (!isEditing) formData.append('stadium', stadium.id);
       formData.append('expenses', JSON.stringify({
@@ -53,6 +123,7 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
         currency: 'ARS',
       }));
       photos.forEach((file) => formData.append('photos', file));
+      if (isEditing) formData.append('removeImages', JSON.stringify(removedImages));
 
       const result = isEditing
         ? await visitService.updateVisit(editingVisit._id, formData)
@@ -86,7 +157,7 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
         </div>
 
         {saved ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: rgba(C.brandBright, 0.15) }}>
               <Check size={28} color={C.brandBright} />
             </div>
@@ -108,7 +179,7 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
                 <label className="flex flex-col gap-1.5">
                   <span className="text-xs font-medium" style={{ color: C.muted }}>Fecha de la visita</span>
                   <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
@@ -116,24 +187,13 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
                     <input
                       type="date"
                       value={date}
+                      max={todayDateInputValue()}
                       onChange={(e) => setDate(e.target.value)}
                       className="bg-transparent outline-none text-sm flex-1 gc-focus"
                       style={{ color: C.bright, colorScheme: 'dark' }}
                     />
                   </div>
                 </label>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium" style={{ color: C.muted }}>Veces que fui</span>
-                  <div className="flex items-center justify-between px-3 py-2 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-                    <button onClick={() => setTimes((t) => Math.max(1, t - 1))} className="w-7 h-7 rounded-lg flex items-center justify-center gc-focus" style={{ backgroundColor: C.border }}>
-                      <Minus size={14} color={C.bright} />
-                    </button>
-                    <span className="text-lg font-semibold" style={{ color: C.bright }}>{times}</span>
-                    <button onClick={() => setTimes((t) => t + 1)} className="w-7 h-7 rounded-lg flex items-center justify-center gc-focus" style={{ backgroundColor: C.brand }}>
-                      <Plus size={14} color={C.bright} />
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -157,10 +217,50 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium" style={{ color: C.muted }}>Reseña de tu experiencia</span>
+                <span className="text-xs font-medium" style={{ color: C.muted }}>Partido (opcional)</span>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Local', value: homeTeam, set: setHomeTeam },
+                    { label: 'Visitante', value: awayTeam, set: setAwayTeam },
+                  ].map(({ label, value, set }) => (
+                    <label key={label} className="flex flex-col gap-1.5">
+                      <span className="text-[11px]" style={{ color: C.muted }}>{label}</span>
+                      <select
+                        value={value}
+                        onChange={(e) => set(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
+                        style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright, colorScheme: 'dark' }}
+                      >
+                        <option value="" style={{ backgroundColor: C.surface }}>Elegí un club</option>
+                        {teamOptions.map((name) => (
+                          <option key={name} value={name} style={{ backgroundColor: C.surface }}>{name}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+                <label className="flex flex-col gap-1.5 mt-1">
+                  <span className="text-[11px]" style={{ color: C.muted }}>Resultado (opcional)</span>
+                  <input
+                    value={matchScore}
+                    onChange={(e) => setMatchScore(e.target.value)}
+                    placeholder="Ej: 2-1"
+                    maxLength={20}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
+                    style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
+                  />
+                </label>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium" style={{ color: C.muted }}>Reseña de tu experiencia</span>
+                  <span className="text-xs" style={{ color: review.length >= REVIEW_MAX ? '#f85149' : C.muted }}>{review.length}/{REVIEW_MAX}</span>
+                </div>
                 <textarea
                   value={review}
-                  onChange={(e) => setReview(e.target.value)}
+                  onChange={(e) => setReview(e.target.value.slice(0, REVIEW_MAX))}
+                  maxLength={REVIEW_MAX}
                   placeholder="Contá cómo fue el ambiente, la hinchada, cómo se vio el partido..."
                   rows={5}
                   className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none gc-focus"
@@ -168,16 +268,52 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
                 />
               </div>
 
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium" style={{ color: C.muted }}>Fotos (hasta 4)</span>
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium" style={{ color: C.muted }}>Fotos ({totalPhotos} de {MAX_PHOTOS})</span>
+                {totalPhotos > 0 && (
+                  <div className="grid grid-cols-2 gap-3 mb-1">
+                    {keptImages.map((url, i) => (
+                      <div key={url} className="relative rounded-xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+                        <img src={url} alt={`Foto ${i + 1} guardada`} className="w-full h-28 object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeSavedImage(url)}
+                          aria-label="Quitar foto"
+                          className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center gc-focus"
+                          style={{ backgroundColor: rgba(C.bg, 0.8) }}
+                        >
+                          <X size={14} color={C.bright} />
+                        </button>
+                      </div>
+                    ))}
+                    {previews.map((url, i) => (
+                      <div key={url} className="relative rounded-xl overflow-hidden" style={{ border: `1px solid ${C.brandBright}` }}>
+                        <img src={url} alt={`Foto nueva ${i + 1}`} className="w-full h-28 object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeNewPhoto(i)}
+                          aria-label="Quitar foto nueva"
+                          className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center gc-focus"
+                          style={{ backgroundColor: rgba(C.bg, 0.8) }}
+                        >
+                          <X size={14} color={C.bright} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <label
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-xl ${photosFull ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                  style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+                >
                   <ImagePlus size={15} color={C.muted} />
-                  <span className="text-sm flex-1" style={{ color: photos.length ? C.bright : C.muted }}>
-                    {photos.length ? `${photos.length} foto${photos.length > 1 ? 's' : ''} seleccionada${photos.length > 1 ? 's' : ''}` : 'Elegí fotos de tu visita'}
+                  <span className="text-sm flex-1" style={{ color: C.muted }}>
+                    {photosFull ? 'Llegaste al máximo de fotos' : 'Añadir imagen'}
                   </span>
-                  <input type="file" accept="image/*" multiple onChange={handlePhotosChange} className="hidden" />
-                </div>
-              </label>
+                  <input type="file" accept="image/*" multiple disabled={photosFull} onChange={handlePhotosChange} className="hidden" />
+                </label>
+                {photoError && <p className="text-xs" style={{ color: '#f85149' }}>{photoError}</p>}
+              </div>
 
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">

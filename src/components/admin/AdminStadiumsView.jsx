@@ -18,6 +18,7 @@ export default function AdminStadiumsView({ onToast }) {
   const [query, setQuery] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
   const [provinceFilter, setProvinceFilter] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -32,8 +33,35 @@ export default function AdminStadiumsView({ onToast }) {
       .finally(() => setLoading(false));
   }
 
+  // Filtros en cascada: país → provincia → ciudad. Cada nivel muestra solo lo que existe dentro del nivel anterior.
   const countries = useMemo(() => uniqueSorted(stadiums.map((s) => s.location?.country)), [stadiums]);
-  const provinces = useMemo(() => uniqueSorted(stadiums.map((s) => s.location?.province)), [stadiums]);
+  const provinces = useMemo(() => uniqueSorted(
+    stadiums.filter((s) => s.location?.country === countryFilter).map((s) => s.location?.province)
+  ), [stadiums, countryFilter]);
+  const cities = useMemo(() => uniqueSorted(
+    stadiums
+      .filter((s) => s.location?.country === countryFilter && s.location?.province === provinceFilter)
+      .map((s) => s.location?.city)
+  ), [stadiums, countryFilter, provinceFilter]);
+
+  // Cambiar un filtro mayor limpia los menores, para no quedar con combinaciones que ya no existen
+  function changeCountry(value) {
+    setCountryFilter(value);
+    setProvinceFilter('');
+    setCityFilter('');
+    setPage(1);
+  }
+
+  function changeProvince(value) {
+    setProvinceFilter(value);
+    setCityFilter('');
+    setPage(1);
+  }
+
+  function changeCity(value) {
+    setCityFilter(value);
+    setPage(1);
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -43,9 +71,10 @@ export default function AdminStadiumsView({ onToast }) {
       ].some((field) => field?.toLowerCase().includes(q));
       const matchesCountry = !countryFilter || s.location?.country === countryFilter;
       const matchesProvince = !provinceFilter || s.location?.province === provinceFilter;
-      return matchesText && matchesCountry && matchesProvince;
+      const matchesCity = !cityFilter || s.location?.city === cityFilter;
+      return matchesText && matchesCountry && matchesProvince && matchesCity;
     });
-  }, [stadiums, query, countryFilter, provinceFilter]);
+  }, [stadiums, query, countryFilter, provinceFilter, cityFilter]);
 
   const currentPage = clampPage(page, filtered.length);
   const visible = paginate(filtered, currentPage);
@@ -114,22 +143,33 @@ export default function AdminStadiumsView({ onToast }) {
           style={filterFieldStyle}
         />
         <select
-          value={provinceFilter}
-          onChange={(e) => { setProvinceFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
-          style={filterFieldStyle}
-        >
-          <option value="">Todas las provincias</option>
-          {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <select
           value={countryFilter}
-          onChange={(e) => { setCountryFilter(e.target.value); setPage(1); }}
+          onChange={(e) => changeCountry(e.target.value)}
           className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
           style={filterFieldStyle}
         >
           <option value="">Todos los países</option>
           {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select
+          value={provinceFilter}
+          onChange={(e) => changeProvince(e.target.value)}
+          disabled={!countryFilter}
+          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus disabled:opacity-40"
+          style={filterFieldStyle}
+        >
+          <option value="">{countryFilter ? 'Todas las provincias' : 'Elegí un país primero'}</option>
+          {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select
+          value={cityFilter}
+          onChange={(e) => changeCity(e.target.value)}
+          disabled={!provinceFilter}
+          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus disabled:opacity-40"
+          style={filterFieldStyle}
+        >
+          <option value="">{provinceFilter ? 'Todas las ciudades' : 'Elegí una provincia primero'}</option>
+          {cities.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
 
@@ -149,14 +189,16 @@ export default function AdminStadiumsView({ onToast }) {
                 <img src={s.mainClub.logoUrl} alt={s.mainClub.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
               ) : (
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
-                  {s.mainClub?.name?.charAt(0)?.toUpperCase() || '?'}
+                  {s.mainClub?.name
+                    ? s.mainClub.name.charAt(0).toUpperCase()
+                    : (s.location?.province || s.location?.city || '?').charAt(0).toUpperCase()}
                 </div>
               )}
 
               <div className="min-w-0 flex-1">
                 <span className="block text-sm font-medium truncate" style={{ color: C.bright }}>{s.name}</span>
                 <span className="block text-xs truncate" style={{ color: C.muted }}>
-                  {s.mainClub?.name || 'Sin club'} · {s.location?.city}, {s.location?.country}
+                  {s.ownerType === 'province' ? 'Propiedad de la provincia o ciudad' : (s.mainClub?.name || 'Sin club')} · {s.location?.city}, {s.location?.country}
                 </span>
               </div>
 
