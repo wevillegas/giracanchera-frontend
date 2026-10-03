@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2, Plus, AlertCircle, Users } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import StadiumFormModal from './StadiumFormModal';
+import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminPagination';
+
+function uniqueSorted(values) {
+  return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+}
 
 export default function AdminStadiumsView({ onToast }) {
   const [stadiums, setStadiums] = useState([]);
@@ -10,6 +15,10 @@ export default function AdminStadiumsView({ onToast }) {
   const [error, setError] = useState(null);
   const [formTarget, setFormTarget] = useState(null); // null closed | {} new | stadium editing
   const [formOpen, setFormOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [countryFilter, setCountryFilter] = useState('');
+  const [provinceFilter, setProvinceFilter] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     load();
@@ -22,6 +31,24 @@ export default function AdminStadiumsView({ onToast }) {
       .catch((err) => setError(err))
       .finally(() => setLoading(false));
   }
+
+  const countries = useMemo(() => uniqueSorted(stadiums.map((s) => s.location?.country)), [stadiums]);
+  const provinces = useMemo(() => uniqueSorted(stadiums.map((s) => s.location?.province)), [stadiums]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return stadiums.filter((s) => {
+      const matchesText = !q || [
+        s.name, s.mainClub?.name, s.location?.city, s.location?.province, s.location?.country,
+      ].some((field) => field?.toLowerCase().includes(q));
+      const matchesCountry = !countryFilter || s.location?.country === countryFilter;
+      const matchesProvince = !provinceFilter || s.location?.province === provinceFilter;
+      return matchesText && matchesCountry && matchesProvince;
+    });
+  }, [stadiums, query, countryFilter, provinceFilter]);
+
+  const currentPage = clampPage(page, filtered.length);
+  const visible = paginate(filtered, currentPage);
 
   async function handleDelete(stadium) {
     if (!window.confirm(`¿Eliminar "${stadium.name}"? También se borrarán sus visitas registradas.`)) return;
@@ -77,18 +104,55 @@ export default function AdminStadiumsView({ onToast }) {
         </button>
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-4">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+          placeholder="Buscar por estadio, club, ciudad..."
+          className="flex-1 min-w-[180px] px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+          style={filterFieldStyle}
+        />
+        <select
+          value={provinceFilter}
+          onChange={(e) => { setProvinceFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+          style={filterFieldStyle}
+        >
+          <option value="">Todas las provincias</option>
+          {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select
+          value={countryFilter}
+          onChange={(e) => { setCountryFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+          style={filterFieldStyle}
+        >
+          <option value="">Todos los países</option>
+          {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
       <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
-        {stadiums.length === 0 ? (
+        {visible.length === 0 ? (
           <p className="text-sm text-center py-8" style={{ backgroundColor: C.surface, color: C.muted }}>
-            Todavía no hay estadios cargados.
+            {stadiums.length === 0 ? 'Todavía no hay estadios cargados.' : 'Ningún estadio coincide con los filtros.'}
           </p>
         ) : (
-          stadiums.map((s, i) => (
+          visible.map((s, i) => (
             <div
               key={s._id}
               className="flex items-center gap-3 px-4 py-3"
               style={{ backgroundColor: C.surface, borderTop: i === 0 ? 'none' : `1px solid ${C.border}` }}
             >
+              {s.mainClub?.logoUrl ? (
+                <img src={s.mainClub.logoUrl} alt={s.mainClub.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
+                  {s.mainClub?.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+
               <div className="min-w-0 flex-1">
                 <span className="block text-sm font-medium truncate" style={{ color: C.bright }}>{s.name}</span>
                 <span className="block text-xs truncate" style={{ color: C.muted }}>
@@ -122,6 +186,8 @@ export default function AdminStadiumsView({ onToast }) {
           ))
         )}
       </div>
+
+      <AdminPagination page={currentPage} total={filtered.length} onChange={setPage} />
 
       {formOpen && (
         <StadiumFormModal

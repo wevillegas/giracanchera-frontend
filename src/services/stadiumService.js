@@ -14,6 +14,8 @@ function normalizeStadium(raw) {
   const coords = raw?.location?.coordinates || {};
   return {
     id: raw.id ?? raw._id,
+    mainClubId: raw.mainClub?._id ?? raw.mainClub ?? null,
+    imageUrl: raw.imageUrl ?? '',
     name: raw.name,
     club: raw.club ?? raw.mainClub?.shortName ?? raw.mainClub?.name ?? '',
     clubLogoUrl: raw.clubLogoUrl ?? raw.mainClub?.logoUrl ?? '',

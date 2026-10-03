@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import adminService from '../../services/adminService';
 import AdminUserEditModal from './AdminUserEditModal';
+import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminPagination';
 
 function initialsOf(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
@@ -15,6 +16,9 @@ export default function AdminUsersView({ onToast }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [query, setQuery] = useState('');
+  const [rolFilter, setRolFilter] = useState('all');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,6 +28,18 @@ export default function AdminUsersView({ onToast }) {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return users.filter((u) => {
+      const matchesRol = rolFilter === 'all' || (rolFilter === 'admin') === (u.rol === 'admin');
+      const matchesText = !q || u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+      return matchesRol && matchesText;
+    });
+  }, [users, query, rolFilter]);
+
+  const currentPage = clampPage(page, filtered.length);
+  const visible = paginate(filtered, currentPage);
 
   async function handleDelete(user) {
     if (!window.confirm(`¿Eliminar a @${user.username}? Esta acción no se puede deshacer.`)) return;
@@ -54,8 +70,33 @@ export default function AdminUsersView({ onToast }) {
         <h2 className="text-lg font-semibold" style={{ color: C.bright }}>Usuarios ({users.length})</h2>
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-4">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+          placeholder="Buscar por usuario o email..."
+          className="flex-1 min-w-[180px] px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+          style={filterFieldStyle}
+        />
+        <select
+          value={rolFilter}
+          onChange={(e) => { setRolFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+          style={filterFieldStyle}
+        >
+          <option value="all">Todos</option>
+          <option value="user">Usuarios</option>
+          <option value="admin">Admins</option>
+        </select>
+      </div>
+
       <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
-        {users.map((user, i) => (
+        {visible.length === 0 ? (
+          <p className="text-sm text-center py-8" style={{ backgroundColor: C.surface, color: C.muted }}>
+            Ningún usuario coincide con los filtros.
+          </p>
+        ) : visible.map((user, i) => (
           <div
             key={user._id}
             className="flex items-center gap-3 px-4 py-3"
@@ -112,6 +153,8 @@ export default function AdminUsersView({ onToast }) {
           </div>
         ))}
       </div>
+
+      <AdminPagination page={currentPage} total={filtered.length} onChange={setPage} />
 
       {editingUser && (
         <AdminUserEditModal

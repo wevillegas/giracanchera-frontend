@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, ChevronDown, User, LogOut, MapPin, ShieldCheck } from 'lucide-react';
+import { Search, ChevronDown, User, LogOut, MapPin, ShieldCheck, Info } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import LoginModal from './LoginModal';
@@ -17,7 +17,7 @@ function initialsOf(name = '') {
 }
 
 export default function Navbar({
-  query, onQueryChange, filter, onFilterChange, onOpenProfile, onGoHome, onOpenAdmin, searchResults = [], onSelectSearchResult, onAuthSuccess,
+  query, onQueryChange, filter, onFilterChange, onOpenProfile, onGoHome, onOpenAdmin, onOpenAbout, searchResults = [], onSelectSearchResult, onAuthSuccess,
   authModal, onAuthModalChange,
 }) {
   const { user, logout } = useAuth();
@@ -89,7 +89,7 @@ export default function Navbar({
           {FILTERS.map((f) => (
             <button
               key={f.key}
-              onClick={() => onFilterChange(f.key)}
+              onClick={() => onFilterChange(filter === f.key && f.key !== 'all' ? 'all' : f.key)}
               className="shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium gc-focus gc-tap"
               style={{
                 backgroundColor: filter === f.key ? C.brandBright : rgba(C.surface, 0.9),
@@ -112,9 +112,9 @@ export default function Navbar({
               style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
             >
               {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.username} className="w-7 h-7 rounded-full object-cover shrink-0" style={{ backgroundColor: C.brand }} />
+                <img src={user.avatarUrl} alt={user.username} className="w-10 h-10 rounded-full object-cover shrink-0" style={{ backgroundColor: C.brand }} />
               ) : (
-                <span className="w-7 h-7 rounded-full flex items-center justify-center font-semibold text-xs shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
+                <span className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
                   {initialsOf(user.username || user.nombre || user.email)}
                 </span>
               )}
@@ -150,6 +150,13 @@ export default function Navbar({
                       <ShieldCheck size={15} color={C.muted} /> Panel admin
                     </button>
                   )}
+                  <button
+                    onClick={() => { setMenuOpen(false); setLogoutConfirmOpen(true); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left gc-focus gc-tap"
+                    style={{ color: C.bright, borderTop: `1px solid ${C.border}` }}
+                  >
+                    <LogOut size={15} color={C.muted} /> Cerrar sesión
+                  </button>
                 </div>
               </>
             )}
@@ -173,15 +180,13 @@ export default function Navbar({
           </div>
         )}
 
-        {user && (
-          <button
-            onClick={() => setLogoutConfirmOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap shrink-0"
-            style={{ backgroundColor: 'transparent', color: C.muted }}
-          >
-            <LogOut size={13} /> Cerrar sesión
-          </button>
-        )}
+        <button
+          onClick={() => onOpenAbout?.()}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap shrink-0"
+          style={{ backgroundColor: 'transparent', color: C.muted }}
+        >
+          <Info size={13} /> Acerca de
+        </button>
       </div>
     </div>
 

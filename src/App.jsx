@@ -257,6 +257,7 @@ export default function App() {
           flyTarget={flyTarget}
           onGoHome={goToMap}
           onOpenAdmin={() => setView('admin')}
+          onOpenAbout={() => setView('about')}
           onAuthSuccess={setToast}
           authModal={authModal}
           onAuthModalChange={setAuthModal}
@@ -276,6 +277,7 @@ export default function App() {
             onSelectSearchResult: selectSearchResult,
             onGoHome: goToMap,
             onOpenAdmin: () => setView('admin'),
+            onOpenAbout: () => setView('about'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,
@@ -306,6 +308,7 @@ export default function App() {
             onSelectSearchResult: selectSearchResult,
             onGoHome: goToMap,
             onOpenAdmin: () => setView('admin'),
+            onOpenAbout: () => setView('about'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,
@@ -327,6 +330,7 @@ export default function App() {
             onSelectSearchResult: selectSearchResult,
             onGoHome: goToMap,
             onOpenAdmin: () => setView('admin'),
+            onOpenAbout: () => setView('about'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,

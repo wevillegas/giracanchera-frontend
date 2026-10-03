@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import { Minus, Plus } from 'lucide-react';
 import L from 'leaflet';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
 import { C, rgba } from '../theme';
 
 const ARGENTINA_CENTER = [-34.6, -58.38];
 const ARGENTINA_ZOOM = 5;
 const FOCUS_ZOOM = 6;
 const MIN_ZOOM = 3;
-const LABEL_MIN_ZOOM = ARGENTINA_ZOOM + 5;
 const WORLD_BOUNDS = [
   [-90, -180],
   [90, 180],
@@ -27,11 +28,13 @@ function statusColor(status) {
   return C.muted;
 }
 
+function goalSvg(color = C.bg) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${GOAL_ICON_PATHS.map((d) => `<path d="${d}" />`).join('')}</svg>`;
+}
+
 function buildMarkerIcon(status, logoUrl) {
   const bg = statusColor(status);
-  const inner = logoUrl
-    ? `<img src="${logoUrl}" alt="" />`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="${C.bg}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${GOAL_ICON_PATHS.map((d) => `<path d="${d}" />`).join('')}</svg>`;
+  const inner = logoUrl ? `<img src="${logoUrl}" alt="" />` : goalSvg();
   return L.divIcon({
     className: 'gc-marker',
     html: `<span class="gc-marker-badge" style="background:${bg}">${inner}</span>`,
@@ -40,11 +43,14 @@ function buildMarkerIcon(status, logoUrl) {
   });
 }
 
-function useZoom() {
-  const map = useMap();
-  const [zoom, setZoom] = useState(map.getZoom());
-  useMapEvents({ zoomend: (e) => setZoom(e.target.getZoom()) });
-  return zoom;
+// Grupo de estadios superpuestos: símbolo genérico con la cantidad, sin tapar escudos
+function buildClusterIcon(cluster) {
+  return L.divIcon({
+    className: 'gc-marker',
+    html: `<span class="gc-cluster-badge">${goalSvg('#FFFFFF')}<b>${cluster.getChildCount()}</b></span>`,
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+  });
 }
 
 function FlyTo({ target }) {
@@ -84,24 +90,31 @@ function ZoomControls() {
   );
 }
 
+// El nombre es permanente: el cluster solo quita del mapa los marcadores agrupados,
+// así que el texto aparece únicamente cuando el estadio se ve como marcador individual.
 function Markers({ stadiums, onOpenStadium }) {
-  const zoom = useZoom();
-  const showLabels = zoom >= LABEL_MIN_ZOOM;
-  return stadiums
-    .filter((s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null)
-    .map((s) => (
-      <Marker
-        key={s.id}
-        position={[s.location.coordinates.lat, s.location.coordinates.lng]}
-        icon={buildMarkerIcon(s.status, s.clubLogoUrl)}
-        eventHandlers={{ click: () => onOpenStadium(s) }}
-      >
-        {/* key fuerza el remonte: react-leaflet no sincroniza `permanent` tras la creación del tooltip */}
-        <Tooltip key={showLabels ? 'permanent' : 'hover'} permanent={showLabels} direction="top" offset={[0, -18]} className="gc-marker-label">
-          {s.name}
-        </Tooltip>
-      </Marker>
-    ));
+  return (
+    <MarkerClusterGroup
+      iconCreateFunction={buildClusterIcon}
+      showCoverageOnHover={false}
+      maxClusterRadius={40}
+    >
+      {stadiums
+        .filter((s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null)
+        .map((s) => (
+          <Marker
+            key={s.id}
+            position={[s.location.coordinates.lat, s.location.coordinates.lng]}
+            icon={buildMarkerIcon(s.status, s.clubLogoUrl)}
+            eventHandlers={{ click: () => onOpenStadium(s) }}
+          >
+            <Tooltip permanent direction="top" offset={[0, -18]} className="gc-marker-label">
+              {s.name}
+            </Tooltip>
+          </Marker>
+        ))}
+    </MarkerClusterGroup>
+  );
 }
 
 export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {

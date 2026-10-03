@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2, Plus, AlertCircle, MapPin } from 'lucide-react';
 import { C } from '../../theme';
 import adminService from '../../services/adminService';
 import ClubFormModal from './ClubFormModal';
+import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminPagination';
 
 export default function AdminClubsView({ onToast }) {
   const [clubs, setClubs] = useState([]);
@@ -10,6 +11,9 @@ export default function AdminClubsView({ onToast }) {
   const [error, setError] = useState(null);
   const [formTarget, setFormTarget] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     load();
@@ -22,6 +26,19 @@ export default function AdminClubsView({ onToast }) {
       .catch((err) => setError(err))
       .finally(() => setLoading(false));
   }
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const loc = locationQuery.trim().toLowerCase();
+    return clubs.filter((c) => {
+      const matchesText = !q || c.name?.toLowerCase().includes(q) || c.shortName?.toLowerCase().includes(q);
+      const matchesLocation = !loc || c.location?.toLowerCase().includes(loc);
+      return matchesText && matchesLocation;
+    });
+  }, [clubs, query, locationQuery]);
+
+  const currentPage = clampPage(page, filtered.length);
+  const visible = paginate(filtered, currentPage);
 
   async function handleDelete(club) {
     if (!window.confirm(`¿Eliminar "${club.name}"?`)) return;
@@ -77,13 +94,32 @@ export default function AdminClubsView({ onToast }) {
         </button>
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-4">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+          placeholder="Buscar por nombre o sigla..."
+          className="flex-1 min-w-[180px] px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+          style={filterFieldStyle}
+        />
+        <input
+          type="search"
+          value={locationQuery}
+          onChange={(e) => { setLocationQuery(e.target.value); setPage(1); }}
+          placeholder="Ubicación (ciudad, provincia, país)..."
+          className="flex-1 min-w-[180px] px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+          style={filterFieldStyle}
+        />
+      </div>
+
       <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
-        {clubs.length === 0 ? (
+        {visible.length === 0 ? (
           <p className="text-sm text-center py-8" style={{ backgroundColor: C.surface, color: C.muted }}>
-            Todavía no hay clubes cargados.
+            {clubs.length === 0 ? 'Todavía no hay clubes cargados.' : 'Ningún club coincide con los filtros.'}
           </p>
         ) : (
-          clubs.map((club, i) => (
+          visible.map((club, i) => (
             <div
               key={club._id}
               className="flex items-center gap-3 px-4 py-3"
@@ -130,6 +166,8 @@ export default function AdminClubsView({ onToast }) {
           ))
         )}
       </div>
+
+      <AdminPagination page={currentPage} total={filtered.length} onChange={setPage} />
 
       {formOpen && (
         <ClubFormModal
