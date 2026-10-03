@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, Camera } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import clubService from '../../services/clubService';
@@ -29,7 +29,16 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
   const [clubs, setClubs] = useState([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [preview, setPreview] = useState(stadium?.imageUrl || '');
   const isEditing = Boolean(stadium);
+
+  function handleImageChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setPreview(URL.createObjectURL(file));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +81,9 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
 
     setSubmitting(true);
     try {
+      if (imageFile) {
+        payload.imageUrl = await adminService.uploadStadiumImage(imageFile);
+      }
       const saved = isEditing
         ? await adminService.updateStadium(stadium._id, payload)
         : await adminService.createStadium(payload);
@@ -212,16 +224,22 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
             </label>
           </div>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium" style={{ color: C.muted }}>URL de imagen (opcional)</span>
-            <input
-              value={form.imageUrl}
-              onChange={(e) => update('imageUrl', e.target.value)}
-              placeholder="https://..."
-              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
-              style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
-            />
-          </label>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium" style={{ color: C.muted }}>Foto del estadio (16:9)</span>
+            <label className="relative cursor-pointer gc-focus rounded-xl overflow-hidden aspect-video" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              {preview ? (
+                <img src={preview} alt="Foto del estadio" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: C.muted }}>
+                  Tocá para subir una foto
+                </div>
+              )}
+              <span className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                <Camera size={14} color={C.bright} />
+              </span>
+              <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+            </label>
+          </div>
 
           <button
             type="submit"

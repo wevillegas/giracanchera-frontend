@@ -32,7 +32,11 @@ export default function StadiumModal({
           style={{ cursor: 'pointer' }}
           onClick={() => onOpenStadiumPage(stadium, 'map')}
         >
-          <StadiumArt tone={stadium.tone} uid={stadium.id} className="w-full h-full" />
+          {stadium.imageUrl ? (
+            <img src={stadium.imageUrl} alt={stadium.name} className="w-full h-full object-cover" />
+          ) : (
+            <StadiumArt tone={stadium.tone} uid={stadium.id} className="w-full h-full" />
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center gc-focus"

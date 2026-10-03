@@ -347,7 +347,21 @@ export default function App() {
           onBack={(target) => (target === 'map' ? goToMap() : setView(target))}
           onStartVisit={startVisit}
           onToggleWishlist={toggleWishlist}
-          onOpenAbout={() => setView('about')}
+          navbarProps={{
+            query,
+            onQueryChange: setQuery,
+            filter,
+            onFilterChange: selectFilterFromElsewhere,
+            onOpenProfile: () => setView('profile'),
+            searchResults,
+            onSelectSearchResult: selectSearchResult,
+            onGoHome: goToMap,
+            onOpenAdmin: () => setView('admin'),
+            onOpenAbout: () => setView('about'),
+            onAuthSuccess: setToast,
+            authModal,
+            onAuthModalChange: setAuthModal,
+          }}
         />
       )}
 

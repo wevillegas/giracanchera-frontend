@@ -20,6 +20,13 @@ async function getStadiums() {
   return data;
 }
 
+async function uploadStadiumImage(file) {
+  const formData = new FormData();
+  formData.append('image', file);
+  const { data } = await api.post('/stadiums/image', formData);
+  return data.url;
+}
+
 async function createStadium(payload) {
   const { data } = await api.post('/stadiums', payload);
   return data;
@@ -57,13 +64,13 @@ async function deleteClub(id) {
 
 const adminService = {
   getUsers, updateUser, deleteUser,
-  getStadiums, createStadium, updateStadium, deleteStadium,
+  getStadiums, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
 };
 
 export default adminService;
 export {
   getUsers, updateUser, deleteUser,
-  getStadiums, createStadium, updateStadium, deleteStadium,
+  getStadiums, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
 };
