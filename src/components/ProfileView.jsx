@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, MapPin, Edit3, Users, UserPlus, Star, AlertCircle, Mail, Cake, Heart, Pencil, Trash2, Search, Check } from 'lucide-react';
-import { C, DISPLAY_FONT } from '../theme';
+import { C, rgba, DISPLAY_FONT } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
 import visitService from '../services/visitService';
 import StadiumArt from './StadiumArt';
 import EditProfileModal from './EditProfileModal';
 import Navbar from './Navbar';
+import Footer from './Footer';
 
 function initialsOf(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
@@ -22,12 +23,12 @@ function formatVisitDate(value) {
   return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
 }
 
-function AddFriendBox({ myFriendIds, onFriendAdded, onToast }) {
+function FollowSearchBox({ myFollowingIds, onFollowChanged, onToast }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [addingId, setAddingId] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
 
   useEffect(() => {
     if (!query.trim()) {
@@ -45,16 +46,17 @@ function AddFriendBox({ myFriendIds, onFriendAdded, onToast }) {
     return () => { cancelled = true; clearTimeout(t); };
   }, [query]);
 
-  async function handleAdd(userId) {
-    setAddingId(userId);
+  async function handleToggle(userId) {
+    setTogglingId(userId);
     try {
-      await userService.addFriend(userId);
-      onFriendAdded(userId);
-      onToast?.('¡Ahora son amigos!');
+      await userService.toggleFollow(userId);
+      const wasFollowing = myFollowingIds.has(userId);
+      onFollowChanged(userId, !wasFollowing);
+      onToast?.(wasFollowing ? 'Dejaste de seguir' : '¡Ahora lo seguís!');
     } catch {
-      onToast?.('No pudimos agregar a este usuario. Probá de nuevo.');
+      onToast?.('No pudimos procesar la acción. Probá de nuevo.');
     } finally {
-      setAddingId(null);
+      setTogglingId(null);
     }
   }
 
@@ -65,7 +67,7 @@ function AddFriendBox({ myFriendIds, onFriendAdded, onToast }) {
         className="flex items-center gap-1.5 text-xs font-medium gc-focus"
         style={{ color: C.brandBright }}
       >
-        <UserPlus size={13} /> Agregar amigo
+        <UserPlus size={13} /> Seguir usuarios
       </button>
     );
   }
@@ -89,7 +91,7 @@ function AddFriendBox({ myFriendIds, onFriendAdded, onToast }) {
       {!searching && results.length > 0 && (
         <div className="mt-2 space-y-1.5">
           {results.map((u) => {
-            const isFriend = myFriendIds.has(u._id);
+            const isFollowing = myFollowingIds.has(u._id);
             return (
               <div key={u._id} className="flex items-center gap-2 px-2 py-1.5 rounded-xl" style={{ backgroundColor: C.bg }}>
                 {u.avatarUrl ? (
@@ -100,20 +102,14 @@ function AddFriendBox({ myFriendIds, onFriendAdded, onToast }) {
                   </div>
                 )}
                 <span className="text-sm flex-1 truncate" style={{ color: C.bright }}>@{u.username}</span>
-                {isFriend ? (
-                  <span className="flex items-center gap-1 text-xs" style={{ color: C.muted }}>
-                    <Check size={12} /> Ya son amigos
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => handleAdd(u._id)}
-                    disabled={addingId === u._id}
-                    className="text-xs font-semibold gc-focus"
-                    style={{ color: C.brandBright, opacity: addingId === u._id ? 0.6 : 1 }}
-                  >
-                    Agregar
-                  </button>
-                )}
+                <button
+                  onClick={() => handleToggle(u._id)}
+                  disabled={togglingId === u._id}
+                  className="flex items-center gap-1 text-xs font-semibold gc-focus"
+                  style={{ color: isFollowing ? C.muted : C.brandBright, opacity: togglingId === u._id ? 0.6 : 1 }}
+                >
+                  {isFollowing ? <><Check size={12} /> Siguiendo</> : 'Seguir'}
+                </button>
               </div>
             );
           })}
@@ -132,7 +128,7 @@ function AddFriendBox({ myFriendIds, onFriendAdded, onToast }) {
 }
 
 export default function ProfileView({
-  stadiums, onBackToMap, onOpenStadiumFromId, onEditVisit, onToast,
+  stadiums, onBackToMap, onOpenStadiumFromId, onEditVisit, onToast, onOpenAbout,
   visitsVersion, onRequireLogin, navbarProps,
 }) {
   const { token, user, updateUser } = useAuth();
@@ -143,10 +139,10 @@ export default function ProfileView({
   const [visits, setVisits] = useState([]);
   const [visitsLoading, setVisitsLoading] = useState(true);
 
-  const [viewFriendId, setViewFriendId] = useState(null);
-  const [friendProfile, setFriendProfile] = useState(null);
-  const [friendVisits, setFriendVisits] = useState([]);
-  const [friendLoading, setFriendLoading] = useState(false);
+  const [viewUserId, setViewUserId] = useState(null);
+  const [viewedProfile, setViewedProfile] = useState(null);
+  const [viewedVisits, setViewedVisits] = useState([]);
+  const [viewedLoading, setViewedLoading] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -164,7 +160,7 @@ export default function ProfileView({
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, visitsVersion]);
 
   useEffect(() => {
     if (!user?._id) return;
@@ -180,28 +176,28 @@ export default function ProfileView({
   }, [user?._id, visitsVersion]);
 
   useEffect(() => {
-    if (!viewFriendId) {
-      setFriendProfile(null);
-      setFriendVisits([]);
+    if (!viewUserId) {
+      setViewedProfile(null);
+      setViewedVisits([]);
       return;
     }
 
     let cancelled = false;
-    setFriendLoading(true);
+    setViewedLoading(true);
     Promise.all([
-      userService.getPublicProfile(viewFriendId),
-      visitService.getUserVisits(viewFriendId),
+      userService.getPublicProfile(viewUserId),
+      visitService.getUserVisits(viewUserId),
     ])
       .then(([profileData, visitsData]) => {
         if (cancelled) return;
-        setFriendProfile(profileData);
-        setFriendVisits(visitsData);
+        setViewedProfile(profileData);
+        setViewedVisits(visitsData);
       })
       .catch(() => { if (!cancelled) onToast?.('No pudimos cargar ese perfil.'); })
-      .finally(() => { if (!cancelled) setFriendLoading(false); });
+      .finally(() => { if (!cancelled) setViewedLoading(false); });
 
     return () => { cancelled = true; };
-  }, [viewFriendId, onToast]);
+  }, [viewUserId, onToast]);
 
   async function handleDeleteVisit(visitId) {
     if (!window.confirm('¿Eliminar esta visita de tu bitácora?')) return;
@@ -255,14 +251,17 @@ export default function ProfileView({
     );
   }
 
-  const isOwn = !viewFriendId;
-  const displayedProfile = isOwn ? profile : friendProfile;
-  const displayedVisits = isOwn ? visits : friendVisits;
-  const displayedVisitsLoading = isOwn ? visitsLoading : friendLoading;
-  const myFriendIds = new Set((profile?.friends || []).map((f) => f._id || f));
-  const isAlreadyFriend = !isOwn && myFriendIds.has(viewFriendId);
+  const isOwn = !viewUserId;
+  const displayedProfile = isOwn ? profile : viewedProfile;
+  const displayedVisits = isOwn ? visits : viewedVisits;
+  const displayedVisitsLoading = isOwn ? visitsLoading : viewedLoading;
+  const myFollowingIds = new Set((profile?.following || []).map((f) => f._id || f));
+  const isFollowing = !isOwn && myFollowingIds.has(viewUserId);
 
-  const visitedCount = new Set(displayedVisits.map((v) => v.stadium?._id).filter(Boolean)).size;
+  const visitedCount = displayedProfile?.visitedCount
+    ?? new Set(displayedVisits.map((v) => v.stadium?._id).filter(Boolean)).size;
+  const visitedStadiumIds = new Set((displayedProfile?.visitedStadiums || []).map((s) => s._id || s));
+  const visitedStadiumTiles = stadiums.filter((s) => visitedStadiumIds.has(s.id));
   const wantToVisitIds = new Set((displayedProfile?.wantToVisit || []).map((s) => s._id || s));
   const wishlistStadiums = stadiums.filter((s) => wantToVisitIds.has(s.id));
   const displayName = displayedProfile?.nombre || displayedProfile?.username || 'Sin nombre';
@@ -270,7 +269,7 @@ export default function ProfileView({
   const club = displayedProfile?.clubHincha;
   const birthDate = formatBirthDate(displayedProfile?.fechaNacimiento);
 
-  if (!isOwn && friendLoading) {
+  if (!isOwn && viewedLoading) {
     return (
       <div className="relative flex-1 overflow-y-auto gc-hide-scrollbar">
         <Navbar {...navbarProps} />
@@ -285,21 +284,34 @@ export default function ProfileView({
     <div className="relative flex-1 overflow-y-auto gc-hide-scrollbar">
       <Navbar {...navbarProps} />
       <div className="max-w-2xl mx-auto px-4 pt-32 pb-6">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => (isOwn ? onBackToMap() : setViewFriendId(null))}
-            className="flex items-center gap-1.5 text-sm gc-focus"
-            style={{ color: C.muted }}
-          >
-            <ChevronLeft size={16} /> {isOwn ? 'Mapa' : 'Mi perfil'}
-          </button>
-        </div>
+        <div className="relative -mx-4 px-4 pt-1 pb-2 overflow-hidden">
+          <div
+            className="absolute inset-x-0 top-0 h-32 pointer-events-none"
+            style={{ background: `radial-gradient(ellipse at 50% -20%, ${rgba(C.brandBright, 0.22)}, transparent 70%)` }}
+          />
+          <div className="relative flex items-center justify-between">
+            <button
+              onClick={() => (isOwn ? onBackToMap() : setViewUserId(null))}
+              className="flex items-center gap-1.5 text-sm gc-focus gc-tap"
+              style={{ color: C.muted }}
+            >
+              <ChevronLeft size={16} /> {isOwn ? 'Mapa' : 'Mi perfil'}
+            </button>
+          </div>
 
-        <div className="flex flex-col items-center text-center mt-4">
+          <div className="relative flex flex-col items-center text-center mt-4">
           {displayedProfile?.avatarUrl ? (
-            <img src={displayedProfile.avatarUrl} alt={displayName} className="w-20 h-20 rounded-full object-cover" style={{ backgroundColor: C.surface }} />
+            <img
+              src={displayedProfile.avatarUrl}
+              alt={displayName}
+              className="w-20 h-20 rounded-full object-cover"
+              style={{ backgroundColor: C.surface, boxShadow: `0 0 0 3px ${C.bg}, 0 0 0 5px ${rgba(C.brandBright, 0.35)}` }}
+            />
           ) : (
-            <div className="w-20 h-20 rounded-full flex items-center justify-center text-2xl" style={{ backgroundColor: C.brand, color: C.bright, fontFamily: DISPLAY_FONT }}>
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center text-2xl"
+              style={{ backgroundColor: C.brand, color: C.bright, fontFamily: DISPLAY_FONT, boxShadow: `0 0 0 3px ${C.bg}, 0 0 0 5px ${rgba(C.brandBright, 0.35)}` }}
+            >
               {initialsOf(displayName)}
             </div>
           )}
@@ -338,35 +350,40 @@ export default function ProfileView({
           {isOwn ? (
             <button
               onClick={() => setEditOpen(true)}
-              className="mt-4 px-5 py-2 rounded-xl text-sm font-semibold gc-focus flex items-center gap-1.5"
+              className="mt-4 px-5 py-2 rounded-xl text-sm font-semibold gc-focus gc-tap flex items-center gap-1.5"
               style={{ border: `1px solid ${C.border}`, color: C.bright }}
             >
               <Edit3 size={14} /> Editar perfil
             </button>
           ) : (
             <button
-              onClick={() => !isAlreadyFriend && userService.addFriend(viewFriendId).then(() => {
-                setProfile((p) => ({ ...p, friends: [...(p.friends || []), viewFriendId] }));
-                onToast?.('¡Ahora son amigos!');
-              }).catch(() => onToast?.('No pudimos agregar a este usuario.'))}
-              disabled={isAlreadyFriend}
-              className="mt-4 px-5 py-2 rounded-xl text-sm font-semibold gc-focus flex items-center gap-1.5"
+              onClick={() => userService.toggleFollow(viewUserId).then(() => {
+                setProfile((p) => ({
+                  ...p,
+                  following: isFollowing
+                    ? (p.following || []).filter((f) => (f._id || f) !== viewUserId)
+                    : [...(p.following || []), viewUserId],
+                }));
+                onToast?.(isFollowing ? 'Dejaste de seguir' : '¡Ahora lo seguís!');
+              }).catch(() => onToast?.('No pudimos procesar la acción.'))}
+              className="mt-4 px-5 py-2 rounded-xl text-sm font-semibold gc-focus gc-tap flex items-center gap-1.5"
               style={{
-                backgroundColor: isAlreadyFriend ? 'transparent' : C.brand,
-                border: isAlreadyFriend ? `1px solid ${C.border}` : 'none',
+                backgroundColor: isFollowing ? 'transparent' : C.brand,
+                border: isFollowing ? `1px solid ${C.border}` : 'none',
                 color: C.bright,
               }}
             >
-              {isAlreadyFriend ? <><Check size={15} /> Ya son amigos</> : <><UserPlus size={15} /> Agregar amigo</>}
+              {isFollowing ? <><Check size={15} /> Siguiendo</> : <><UserPlus size={15} /> Seguir</>}
             </button>
           )}
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mt-8">
           {[
             { label: 'Estadios', value: visitedCount, Icon: MapPin },
             { label: 'Reseñas', value: displayedVisits.length, Icon: Edit3 },
-            { label: 'Amigos', value: displayedProfile?.friends?.length ?? 0, Icon: Users },
+            { label: 'Seguidores', value: displayedProfile?.followersCount ?? 0, Icon: Users },
           ].map(({ label, value, Icon }) => (
             <div key={label} className="flex flex-col items-center py-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
               <span className="text-3xl" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>{value}</span>
@@ -379,23 +396,28 @@ export default function ProfileView({
 
         {isOwn && (
           <div className="mt-6">
-            <AddFriendBox
-              myFriendIds={myFriendIds}
-              onFriendAdded={(id) => setProfile((p) => ({ ...p, friends: [...(p.friends || []), id] }))}
+            <FollowSearchBox
+              myFollowingIds={myFollowingIds}
+              onFollowChanged={(id, nowFollowing) => setProfile((p) => ({
+                ...p,
+                following: nowFollowing
+                  ? [...(p.following || []), id]
+                  : (p.following || []).filter((f) => (f._id || f) !== id),
+              }))}
               onToast={onToast}
             />
           </div>
         )}
 
-        {isOwn && (profile?.friends?.length > 0) && (
+        {isOwn && (profile?.following?.length > 0) && (
           <>
-            <h2 className="text-lg font-semibold mt-6 mb-3" style={{ color: C.bright }}>Amigos</h2>
+            <h2 className="text-lg font-semibold mt-6 mb-3" style={{ color: C.bright }}>Siguiendo</h2>
             <div className="flex flex-wrap gap-2">
-              {profile.friends.map((f) => (
+              {profile.following.map((f) => (
                 <button
                   key={f._id || f}
-                  onClick={() => setViewFriendId(f._id || f)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full gc-focus"
+                  onClick={() => setViewUserId(f._id || f)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full gc-focus gc-tap"
                   style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
                 >
                   {f.avatarUrl ? (
@@ -412,7 +434,38 @@ export default function ProfileView({
           </>
         )}
 
-        <h2 className="text-lg font-semibold mt-8 mb-3" style={{ color: C.bright }}>Bitácora</h2>
+        <h2 className="text-lg font-semibold mt-8 mb-3" style={{ color: C.bright }}>
+          Estadios visitados <span style={{ color: C.muted, fontWeight: 500 }}>({visitedStadiumTiles.length})</span>
+        </h2>
+        {visitedStadiumTiles.length === 0 ? (
+          <p className="text-sm" style={{ color: C.muted }}>
+            {isOwn ? 'Todavía no visitaste ningún estadio.' : 'Todavía no visitó ningún estadio.'}
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {visitedStadiumTiles.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => onOpenStadiumFromId(s.id)}
+                className="rounded-2xl overflow-hidden text-left gc-focus gc-tap"
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+              >
+                <StadiumArt tone={s.tone} uid={s.id} className="w-full h-20" />
+                <div className="p-3">
+                  <p className="text-sm font-semibold truncate" style={{ color: C.bright }}>{s.name}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Check size={12} color={C.brandBright} />
+                    <span className="text-xs" style={{ color: C.muted }}>{s.club}</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <h2 className="text-lg font-semibold mt-8 mb-3" style={{ color: C.bright }}>
+          Bitácora <span style={{ color: C.muted, fontWeight: 500 }}>({displayedVisits.length})</span>
+        </h2>
         {displayedVisitsLoading ? (
           <div className="grid grid-cols-2 gap-3 animate-pulse">
             {[0, 1].map((i) => (
@@ -475,7 +528,9 @@ export default function ProfileView({
         </div>
         )}
 
-        <h2 className="text-lg font-semibold mt-8 mb-3" style={{ color: C.bright }}>Por visitar</h2>
+        <h2 className="text-lg font-semibold mt-8 mb-3" style={{ color: C.bright }}>
+          Por visitar <span style={{ color: C.muted, fontWeight: 500 }}>({wishlistStadiums.length})</span>
+        </h2>
         {wishlistStadiums.length === 0 ? (
           <p className="text-sm" style={{ color: C.muted }}>
             {isOwn ? 'Todavía no agregaste estadios a tu lista.' : 'Todavía no agregó estadios a su lista.'}
@@ -501,6 +556,8 @@ export default function ProfileView({
             ))}
           </div>
         )}
+
+        <Footer onOpenAbout={onOpenAbout} />
       </div>
 
       {editOpen && (

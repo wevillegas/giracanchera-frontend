@@ -19,6 +19,7 @@ export function rgba(hex, a) {
 }
 
 export const DISPLAY_FONT = "'Bebas Neue', sans-serif";
+export const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 export const BODY_FONT = "'Inter', system-ui, -apple-system, sans-serif";
 export const CURRENCY_SYMBOL = { ARS: '$', EUR: '€' };
 

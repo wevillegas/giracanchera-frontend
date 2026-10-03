@@ -14,6 +14,7 @@ import VisitFormModal from './components/VisitFormModal';
 import StadiumPickerModal from './components/StadiumPickerModal';
 import Toast from './components/Toast';
 import BottomNav from './components/BottomNav';
+import AdminView from './components/admin/AdminView';
 
 const expenseFields = [
   { key: 'entradas', label: 'Entradas', Icon: Ticket },
@@ -31,6 +32,7 @@ export default function App() {
   const [stadiums, setStadiums] = useState([]);
   const [stadiumsLoading, setStadiumsLoading] = useState(true);
   const [stadiumsError, setStadiumsError] = useState(null);
+  const [stadiumsVersion, setStadiumsVersion] = useState(0);
   const [reviews, setReviews] = useState([]);
   const [visitsVersion, setVisitsVersion] = useState(0);
   const [activeStadium, setActiveStadium] = useState(null);
@@ -47,13 +49,29 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  function loadStadiums({ silent } = {}) {
+    if (!silent) {
+      setStadiumsLoading(true);
+      setStadiumsError(null);
+    }
+    return stadiumService.getAll()
+      .then((data) => {
+        setStadiums(data);
+        setStadiumsVersion((v) => v + 1);
+      })
+      .catch((err) => { if (!silent) setStadiumsError(err); })
+      .finally(() => { if (!silent) setStadiumsLoading(false); });
+  }
+
+  // Lleva de vuelta al mapa y refresca la lista de estadios (el admin puede haber
+  // creado/editado/borrado estadios o clubes desde el panel en otra pestaña del flujo).
+  function goToMap() {
+    setView('map');
+    loadStadiums({ silent: true });
+  }
+
   useEffect(() => {
-    let cancelled = false;
-    stadiumService.getAll()
-      .then((data) => { if (!cancelled) setStadiums(data); })
-      .catch((err) => { if (!cancelled) setStadiumsError(err); })
-      .finally(() => { if (!cancelled) setStadiumsLoading(false); });
-    return () => { cancelled = true; };
+    loadStadiums();
   }, []);
 
   // Sincroniza el status local ('visited'/'wishlist') con los datos reales
@@ -76,7 +94,7 @@ export default function App() {
       .catch(() => {});
 
     return () => { cancelled = true; };
-  }, [token, user?._id, stadiums.length]);
+  }, [token, user?._id, stadiumsVersion]);
 
   // Trae las reseñas reales del usuario (para el bloque "Vos" en StadiumView);
   // se re-corre cada vez que se crea/edita una visita (visitsVersion).
@@ -117,7 +135,7 @@ export default function App() {
 
   function selectFilterFromElsewhere(f) {
     setFilter(f);
-    setView('map');
+    goToMap();
   }
 
   function openStadium(s) {
@@ -237,7 +255,8 @@ export default function App() {
           searchResults={searchResults}
           onSelectSearchResult={selectSearchResult}
           flyTarget={flyTarget}
-          onOpenAbout={() => setView('about')}
+          onGoHome={goToMap}
+          onOpenAdmin={() => setView('admin')}
           onAuthSuccess={setToast}
           authModal={authModal}
           onAuthModalChange={setAuthModal}
@@ -246,7 +265,7 @@ export default function App() {
 
       {view === 'about' && (
         <AboutView
-          onBackToMap={() => setView('map')}
+          onBackToMap={goToMap}
           navbarProps={{
             query,
             onQueryChange: setQuery,
@@ -255,7 +274,8 @@ export default function App() {
             onOpenProfile: () => setView('profile'),
             searchResults,
             onSelectSearchResult: selectSearchResult,
-            onOpenAbout: () => setView('about'),
+            onGoHome: goToMap,
+            onOpenAdmin: () => setView('admin'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,
@@ -266,13 +286,14 @@ export default function App() {
       {view === 'profile' && (
         <ProfileView
           stadiums={stadiums}
-          onBackToMap={() => setView('map')}
+          onBackToMap={goToMap}
           onOpenStadiumFromId={openStadiumFromId}
           onEditVisit={startEditVisit}
           onToast={setToast}
+          onOpenAbout={() => setView('about')}
           visitsVersion={visitsVersion}
           onRequireLogin={() => {
-            setView('map');
+            goToMap();
             setAuthModal('login');
           }}
           navbarProps={{
@@ -283,7 +304,29 @@ export default function App() {
             onOpenProfile: () => setView('profile'),
             searchResults,
             onSelectSearchResult: selectSearchResult,
-            onOpenAbout: () => setView('about'),
+            onGoHome: goToMap,
+            onOpenAdmin: () => setView('admin'),
+            onAuthSuccess: setToast,
+            authModal,
+            onAuthModalChange: setAuthModal,
+          }}
+        />
+      )}
+
+      {view === 'admin' && user?.rol === 'admin' && (
+        <AdminView
+          onBackToMap={goToMap}
+          onToast={setToast}
+          navbarProps={{
+            query,
+            onQueryChange: setQuery,
+            filter,
+            onFilterChange: selectFilterFromElsewhere,
+            onOpenProfile: () => setView('profile'),
+            searchResults,
+            onSelectSearchResult: selectSearchResult,
+            onGoHome: goToMap,
+            onOpenAdmin: () => setView('admin'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,
@@ -297,9 +340,10 @@ export default function App() {
           reviews={reviews}
           expenseFields={expenseFields}
           cameFrom={cameFrom}
-          onBack={setView}
+          onBack={(target) => (target === 'map' ? goToMap() : setView(target))}
           onStartVisit={startVisit}
           onToggleWishlist={toggleWishlist}
+          onOpenAbout={() => setView('about')}
         />
       )}
 
@@ -342,7 +386,7 @@ export default function App() {
 
       <BottomNav
         view={view}
-        onNavigateMap={() => setView('map')}
+        onNavigateMap={goToMap}
         onNavigateProfile={() => setView('profile')}
         onQuickAddVisit={() => setPickerOpen(true)}
       />

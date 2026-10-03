@@ -1,6 +1,7 @@
 import { ChevronLeft, GitBranch, Link2, GraduationCap, Code2 } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import Navbar from './Navbar';
+import Footer from './Footer';
 
 const LINKEDIN_URL = 'https://www.linkedin.com/in/wenceslaojosevillegas/';
 const GITHUB_URL = 'https://github.com/wevillegas';
@@ -84,6 +85,8 @@ export default function AboutView({ onBackToMap, navbarProps }) {
             </a>
           </div>
         </div>
+
+        <Footer onOpenAbout={() => {}} />
       </div>
     </div>
   );

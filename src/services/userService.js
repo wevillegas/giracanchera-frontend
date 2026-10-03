@@ -30,14 +30,14 @@ async function searchUsers(username) {
   return data;
 }
 
-async function addFriend(friendId) {
-  const { data } = await api.post(`/users/friends/${friendId}`);
+async function toggleFollow(userId) {
+  const { data } = await api.post(`/users/follow/${userId}`);
   return data;
 }
 
 const userService = {
-  getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, addFriend,
+  getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, toggleFollow,
 };
 
 export default userService;
-export { getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, addFriend };
+export { getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, toggleFollow };

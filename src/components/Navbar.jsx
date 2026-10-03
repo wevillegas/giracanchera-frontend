@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Search, ChevronDown, User, LogOut, MapPin } from 'lucide-react';
+import { Search, ChevronDown, User, LogOut, MapPin, ShieldCheck } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import LoginModal from './LoginModal';
 import RegisterModal from './RegisterModal';
+import LogoutConfirmModal from './LogoutConfirmModal';
 
 const FILTERS = [
   { key: 'visited', label: 'Mis visitas' },
@@ -16,26 +17,32 @@ function initialsOf(name = '') {
 }
 
 export default function Navbar({
-  query, onQueryChange, filter, onFilterChange, onOpenProfile, searchResults = [], onSelectSearchResult, onOpenAbout, onAuthSuccess,
+  query, onQueryChange, filter, onFilterChange, onOpenProfile, onGoHome, onOpenAdmin, searchResults = [], onSelectSearchResult, onAuthSuccess,
   authModal, onAuthModalChange,
 }) {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const showResults = query.trim().length > 0;
 
   return (
     <>
     <div
-      className="absolute top-0 left-0 right-0 z-[1000] px-4 pt-4 pb-3"
-      style={{ backgroundColor: rgba(C.bg, 0.55), backdropFilter: 'blur(12px)', borderBottom: `1px solid ${rgba(C.border, 0.6)}` }}
+      className="fixed top-0 left-0 right-0 z-[1000] px-4 pt-4 pb-3"
+      style={{ backgroundColor: rgba(C.bg, 0.72), backdropFilter: 'blur(14px)', borderBottom: `1px solid ${rgba(C.border, 0.6)}` }}
     >
       <div className="max-w-[1400px] mx-auto flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          onClick={onGoHome}
+          className="flex items-center gap-1.5 shrink-0 gc-focus gc-tap rounded-lg"
+          style={{ opacity: 1 }}
+          aria-label="Ir al mapa"
+        >
           <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
             GC
           </div>
           <span className="text-xl tracking-wide uppercase shrink-0" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>GiraCanchera</span>
-        </div>
+        </button>
 
         <div className="relative shrink-0 w-64">
           <div className="gc-search-box flex items-center gap-2 rounded-full px-3 py-2" style={{ backgroundColor: C.surface }}>
@@ -63,7 +70,7 @@ export default function Navbar({
                   <button
                     key={s.id}
                     onClick={() => onSelectSearchResult(s)}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left gc-focus"
+                    className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left gc-focus gc-tap"
                     style={{ borderTop: `1px solid ${C.border}` }}
                   >
                     <span className="min-w-0">
@@ -78,20 +85,22 @@ export default function Navbar({
           )}
         </div>
 
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => onFilterChange(f.key)}
-            className="shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors gc-focus"
-            style={{
-              backgroundColor: filter === f.key ? C.brandBright : rgba(C.surface, 0.9),
-              color: filter === f.key ? C.bg : C.muted,
-              border: `1px solid ${filter === f.key ? C.brandBright : C.border}`,
-            }}
-          >
-            {f.label}
-          </button>
-        ))}
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => onFilterChange(f.key)}
+              className="shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium gc-focus gc-tap"
+              style={{
+                backgroundColor: filter === f.key ? C.brandBright : rgba(C.surface, 0.9),
+                color: filter === f.key ? C.bg : C.muted,
+                border: `1px solid ${filter === f.key ? C.brandBright : C.border}`,
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
 
         <div className="flex-1" />
 
@@ -99,7 +108,7 @@ export default function Navbar({
           <div className="relative shrink-0">
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full gc-focus"
+              className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full gc-focus gc-tap"
               style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
             >
               {user.avatarUrl ? (
@@ -115,7 +124,7 @@ export default function Navbar({
                   <span className="text-[11px] truncate w-full" style={{ color: C.muted }}>{user.clubHincha.name}</span>
                 )}
               </span>
-              <ChevronDown size={14} color={C.muted} />
+              <ChevronDown size={14} color={C.muted} style={{ transform: menuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
             </button>
 
             {menuOpen && (
@@ -127,18 +136,20 @@ export default function Navbar({
                 >
                   <button
                     onClick={() => { setMenuOpen(false); onOpenProfile(); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left gc-focus"
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left gc-focus gc-tap"
                     style={{ color: C.bright }}
                   >
                     <User size={15} color={C.muted} /> Mi Perfil
                   </button>
-                  <button
-                    onClick={() => { setMenuOpen(false); logout(); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left gc-focus"
-                    style={{ color: C.bright, borderTop: `1px solid ${C.border}` }}
-                  >
-                    <LogOut size={15} color={C.muted} /> Cerrar sesión
-                  </button>
+                  {user.rol === 'admin' && (
+                    <button
+                      onClick={() => { setMenuOpen(false); onOpenAdmin?.(); }}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left gc-focus gc-tap"
+                      style={{ color: C.bright, borderTop: `1px solid ${C.border}` }}
+                    >
+                      <ShieldCheck size={15} color={C.muted} /> Panel admin
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -147,14 +158,14 @@ export default function Navbar({
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => onAuthModalChange('login')}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold gc-focus"
+              className="px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap"
               style={{ backgroundColor: 'transparent', border: `1px solid ${C.border}`, color: C.bright }}
             >
               Iniciar sesión
             </button>
             <button
               onClick={() => onAuthModalChange('register')}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold gc-focus"
+              className="px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap"
               style={{ backgroundColor: C.brand, color: C.bright }}
             >
               Registrarse
@@ -162,13 +173,15 @@ export default function Navbar({
           </div>
         )}
 
-        <button
-          onClick={onOpenAbout}
-          className="px-3 py-1.5 rounded-full text-xs font-semibold gc-focus shrink-0"
-          style={{ backgroundColor: 'transparent', color: C.muted }}
-        >
-          Acerca de
-        </button>
+        {user && (
+          <button
+            onClick={() => setLogoutConfirmOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap shrink-0"
+            style={{ backgroundColor: 'transparent', color: C.muted }}
+          >
+            <LogOut size={13} /> Cerrar sesión
+          </button>
+        )}
       </div>
     </div>
 
@@ -177,6 +190,12 @@ export default function Navbar({
     )}
     {authModal === 'register' && (
       <RegisterModal onClose={() => onAuthModalChange(null)} onSwitchToLogin={() => onAuthModalChange('login')} onSuccess={onAuthSuccess} />
+    )}
+    {logoutConfirmOpen && (
+      <LogoutConfirmModal
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => { setLogoutConfirmOpen(false); logout(); }}
+      />
     )}
     </>
   );

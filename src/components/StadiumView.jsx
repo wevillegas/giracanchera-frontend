@@ -6,6 +6,7 @@ import { computeVisitStats } from '../utils/visitStats';
 import StadiumArt from './StadiumArt';
 import StarRow from './StarRow';
 import ScoreDistribution from './ScoreDistribution';
+import Footer from './Footer';
 
 function formatVisitDate(value) {
   if (!value) return '';
@@ -13,7 +14,7 @@ function formatVisitDate(value) {
 }
 
 export default function StadiumView({
-  stadium, reviews, expenseFields, cameFrom, onBack, onStartVisit, onToggleWishlist,
+  stadium, reviews, expenseFields, cameFrom, onBack, onStartVisit, onToggleWishlist, onOpenAbout,
 }) {
   const [stadiumReviews, setStadiumReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
@@ -165,6 +166,8 @@ export default function StadiumView({
             </p>
           )}
         </div>
+
+        <Footer onOpenAbout={onOpenAbout} />
       </div>
     </div>
   );
