@@ -49,7 +49,7 @@ export default function LoginModal({ onClose, onSwitchToRegister, onSuccess }) {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium" style={{ color: C.muted }}>Email</span>
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="gc-search-box flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface }}>
               <Mail size={15} color={C.muted} />
               <input
                 type="email"
@@ -57,7 +57,7 @@ export default function LoginModal({ onClose, onSwitchToRegister, onSuccess }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu@email.com"
-                className="bg-transparent outline-none text-sm flex-1 gc-focus"
+                className="bg-transparent outline-none text-sm flex-1 min-w-0"
                 style={{ color: C.bright }}
               />
             </div>
@@ -65,7 +65,7 @@ export default function LoginModal({ onClose, onSwitchToRegister, onSuccess }) {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium" style={{ color: C.muted }}>Contraseña</span>
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="gc-search-box flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface }}>
               <Lock size={15} color={C.muted} />
               <input
                 type="password"
@@ -73,7 +73,7 @@ export default function LoginModal({ onClose, onSwitchToRegister, onSuccess }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="bg-transparent outline-none text-sm flex-1 gc-focus"
+                className="bg-transparent outline-none text-sm flex-1 min-w-0"
                 style={{ color: C.bright }}
               />
             </div>

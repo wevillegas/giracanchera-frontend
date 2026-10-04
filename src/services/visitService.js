@@ -28,7 +28,31 @@ async function getStadiumVisits(stadiumId) {
   return data;
 }
 
-const visitService = { createVisit, updateVisit, deleteVisit, getUserVisits, getStadiumVisits };
+async function toggleLike(visitId) {
+  const { data } = await api.post(`/visits/${visitId}/like`);
+  return data;
+}
+
+async function toggleSave(visitId) {
+  const { data } = await api.post(`/visits/${visitId}/save`);
+  return data;
+}
+
+async function getSavedVisits() {
+  const { data } = await api.get('/visits/saved');
+  return data;
+}
+
+async function getLikedVisits() {
+  const { data } = await api.get('/visits/liked');
+  return data;
+}
+
+const visitService = {
+  createVisit, updateVisit, deleteVisit, getUserVisits, getStadiumVisits, toggleLike, toggleSave, getSavedVisits, getLikedVisits,
+};
 
 export default visitService;
-export { createVisit, updateVisit, deleteVisit, getUserVisits, getStadiumVisits };
+export {
+  createVisit, updateVisit, deleteVisit, getUserVisits, getStadiumVisits, toggleLike, toggleSave, getSavedVisits, getLikedVisits,
+};

@@ -131,14 +131,22 @@ export default function Navbar({
                   <button
                     key={s.id}
                     onClick={() => onSelectSearchResult(s)}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left gc-focus gc-tap"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left gc-focus gc-tap"
                     style={{ borderTop: `1px solid ${C.border}` }}
                   >
+                    <div className="w-12 h-12 shrink-0 flex items-center justify-center">
+                      {s.clubLogoUrl ? (
+                        <img src={s.clubLogoUrl} alt={s.clubName || s.club} className="w-full h-full object-contain" />
+                      ) : (
+                        <div className="w-full h-full rounded-full flex items-center justify-center text-xs font-semibold" style={{ backgroundColor: C.border, color: C.bright }}>
+                          {initialsOf(s.clubName || s.club || '?')}
+                        </div>
+                      )}
+                    </div>
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium truncate" style={{ color: C.bright }}>{s.name}</span>
-                      <span className="block text-xs truncate" style={{ color: C.muted }}>{s.club} · {s.city}</span>
+                      <span className="block text-xl truncate" style={{ color: C.bright, fontFamily: DISPLAY_FONT, letterSpacing: '0.02em', fontWeight: 400 }}>{s.name}</span>
+                      <span className="block text-xs truncate" style={{ color: C.muted }}>{s.clubName || s.club}</span>
                     </span>
-                    <MapPin size={14} color={C.muted} className="shrink-0" />
                   </button>
                 ))
               )}

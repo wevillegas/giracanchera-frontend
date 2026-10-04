@@ -3,6 +3,7 @@ import { ChevronLeft, Check, Calendar, AlertCircle, ImagePlus, X } from 'lucide-
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import visitService from '../services/visitService';
 import clubService from '../services/clubService';
+import ClubPicker from './ClubPicker';
 
 const REVIEW_MAX = 300;
 
@@ -29,6 +30,10 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
   const [homeTeam, setHomeTeam] = useState(() => editingVisit?.matchDetails?.homeTeam ?? (isEditing ? '' : stadium?.clubName ?? ''));
   const [awayTeam, setAwayTeam] = useState(() => editingVisit?.matchDetails?.awayTeam ?? '');
   const [matchScore, setMatchScore] = useState(() => editingVisit?.matchDetails?.score ?? '');
+  // El partido es opcional: si no se marca, la visita se guarda sin datos de partido
+  const [hasMatch, setHasMatch] = useState(() => Boolean(
+    editingVisit?.matchDetails?.homeTeam || editingVisit?.matchDetails?.awayTeam || editingVisit?.matchDetails?.score
+  ));
   const [clubs, setClubs] = useState([]);
   const [expenses, setExpenses] = useState(() => {
     const source = editingVisit?.expenses || {};
@@ -56,8 +61,10 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
     return () => { cancelled = true; };
   }, []);
 
-  // Opciones de los dos selectores; si la visita guardada tiene un club que ya no está en la lista, lo mantenemos
-  const teamOptions = [...new Set([...clubs.map((c) => c.name), homeTeam, awayTeam].filter(Boolean))];
+  // Opciones de los dos selectores (con escudo); si la visita guardada tiene un club que ya no está en la lista, lo mantenemos
+  const logoByName = Object.fromEntries(clubs.map((c) => [c.name, c.logoUrl]));
+  const teamNames = [...new Set([...clubs.map((c) => c.name), homeTeam, awayTeam].filter(Boolean))];
+  const teamOptions = teamNames.map((name) => ({ value: name, label: name, logoUrl: logoByName[name] }));
 
   const totalGasto = Object.values(expenses).reduce((sum, v) => sum + (Number(v) || 0), 0);
 
@@ -98,7 +105,7 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
   }
 
   async function handleSubmit() {
-    if (homeTeam && awayTeam && homeTeam === awayTeam) {
+    if (hasMatch && homeTeam && awayTeam && homeTeam === awayTeam) {
       setError('El local y el visitante no pueden ser el mismo club.');
       return;
     }
@@ -108,11 +115,9 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
       const formData = new FormData();
       formData.append('rating', score);
       formData.append('reviewText', review);
-      formData.append('matchDetails', JSON.stringify({
-        homeTeam,
-        awayTeam,
-        score: matchScore.trim(),
-      }));
+      formData.append('matchDetails', JSON.stringify(hasMatch
+        ? { homeTeam, awayTeam, score: matchScore.trim() }
+        : { homeTeam: '', awayTeam: '', score: '' }));
       formData.append('visitDate', date);
       if (!isEditing) formData.append('stadium', stadium.id);
       formData.append('expenses', JSON.stringify({
@@ -217,25 +222,23 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium" style={{ color: C.muted }}>Partido (opcional)</span>
-                <div className="grid grid-cols-2 gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasMatch}
+                    onChange={(e) => setHasMatch(e.target.checked)}
+                    className="w-4 h-4 accent-[#3FB950]"
+                  />
+                  <span className="text-xs font-medium" style={{ color: C.muted }}>Hubo partido ese día</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3" style={{ opacity: hasMatch ? 1 : 0.4 }}>
                   {[
                     { label: 'Local', value: homeTeam, set: setHomeTeam },
                     { label: 'Visitante', value: awayTeam, set: setAwayTeam },
                   ].map(({ label, value, set }) => (
                     <label key={label} className="flex flex-col gap-1.5">
                       <span className="text-[11px]" style={{ color: C.muted }}>{label}</span>
-                      <select
-                        value={value}
-                        onChange={(e) => set(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
-                        style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright, colorScheme: 'dark' }}
-                      >
-                        <option value="" style={{ backgroundColor: C.surface }}>Elegí un club</option>
-                        {teamOptions.map((name) => (
-                          <option key={name} value={name} style={{ backgroundColor: C.surface }}>{name}</option>
-                        ))}
-                      </select>
+                      <ClubPicker value={value} onChange={set} options={teamOptions} disabled={!hasMatch} />
                     </label>
                   ))}
                 </div>
@@ -244,10 +247,11 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
                   <input
                     value={matchScore}
                     onChange={(e) => setMatchScore(e.target.value)}
+                    disabled={!hasMatch}
                     placeholder="Ej: 2-1"
                     maxLength={20}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
-                    style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus disabled:cursor-not-allowed"
+                    style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright, opacity: hasMatch ? 1 : 0.4 }}
                   />
                 </label>
               </div>

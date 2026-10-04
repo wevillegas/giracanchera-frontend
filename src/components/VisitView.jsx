@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil } from 'lucide-react';
+import { Fragment, useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil, Heart, Bookmark } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import visitService from '../services/visitService';
+import userService from '../services/userService';
+import clubService from '../services/clubService';
+import { Logo } from './ClubPicker';
 import StadiumArt from './StadiumArt';
 import Navbar from './Navbar';
 
@@ -81,6 +85,55 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
   const isOwn = Boolean(me?._id) && authorId === me._id;
   // Usuario poblado (desde el estadio o el perfil); sin poblar solo queda el id
   const author = typeof visit.user === 'object' ? visit.user : null;
+
+  // Me gusta y guardar: solo para reseñas de otros usuarios, y con sesión iniciada
+  const socialEnabled = Boolean(me?._id) && !isOwn;
+  const [liked, setLiked] = useState(() => (visit.likes || []).some((id) => String(id) === String(me?._id)));
+  const [likesCount, setLikesCount] = useState(() => (visit.likes || []).length);
+  const [saved, setSaved] = useState(false);
+  const [socialError, setSocialError] = useState('');
+
+  // Escudos de los clubes del partido (la visita guarda solo el nombre)
+  const [logoByName, setLogoByName] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    clubService.getAll()
+      .then((data) => { if (!cancelled) setLogoByName(Object.fromEntries(data.map((c) => [c.name, c.logoUrl]))); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!socialEnabled) return undefined;
+    let cancelled = false;
+    userService.getProfile()
+      .then((profile) => {
+        if (!cancelled) setSaved((profile.savedVisits || []).some((id) => String(id?._id ?? id) === String(visit._id)));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [socialEnabled, visit._id]);
+
+  async function handleToggleLike() {
+    setSocialError('');
+    try {
+      const result = await visitService.toggleLike(visit._id);
+      setLiked(result.liked);
+      setLikesCount(result.likesCount);
+    } catch (err) {
+      setSocialError(err.response?.data?.message || 'No pudimos registrar el me gusta.');
+    }
+  }
+
+  async function handleToggleSave() {
+    setSocialError('');
+    try {
+      const result = await visitService.toggleSave(visit._id);
+      setSaved(result.saved);
+    } catch (err) {
+      setSocialError(err.response?.data?.message || 'No pudimos guardar la reseña.');
+    }
+  }
   const stadium = stadiumData || visit.stadium || {};
   const match = visit.matchDetails || {};
   const expenses = visit.expenses || {};
@@ -166,15 +219,25 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
 
             {hasMatch && (
               <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <Trophy size={14} color={C.muted} />
                   <span className="text-xs uppercase tracking-widest" style={{ color: C.muted }}>Partido</span>
                 </div>
-                <p className="text-lg font-semibold" style={{ color: C.bright }}>
-                  {match.homeTeam || '—'} <span style={{ color: C.muted }}>vs</span> {match.awayTeam || '—'}
-                </p>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  {[match.homeTeam, match.awayTeam].map((team, i) => (
+                    <Fragment key={i}>
+                      {i === 1 && (
+                        <span className="text-xs font-semibold tracking-[0.3em]" style={{ color: C.gold, fontFamily: DISPLAY_FONT }}>VS</span>
+                      )}
+                      <div className="flex flex-col items-center gap-1.5 min-w-0 w-full">
+                        <Logo url={team ? logoByName[team] : ''} size={56} />
+                        <span className="text-base font-semibold truncate max-w-full" style={{ color: team ? C.bright : C.muted }}>{team || 'Sin equipo'}</span>
+                      </div>
+                    </Fragment>
+                  ))}
+                </div>
                 {match.score && (
-                  <p className="text-sm mt-1" style={{ color: C.muted }}>Resultado: {match.score}</p>
+                  <p className="text-sm mt-3 text-center" style={{ color: C.muted }}>Resultado: <span style={{ color: C.bright, fontWeight: 600 }}>{match.score}</span></p>
                 )}
               </div>
             )}
@@ -185,6 +248,33 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
                 {visit.reviewText?.trim() || (isOwn ? 'Sin reseña escrita todavía.' : 'No se escribió una reseña.')}
               </p>
             </div>
+
+            {(socialEnabled || likesCount > 0) && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleToggleLike}
+                    disabled={!socialEnabled}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap disabled:cursor-default"
+                    style={{ border: `1px solid ${liked ? '#f85149' : C.border}`, color: liked ? '#f85149' : C.bright, backgroundColor: C.surface }}
+                  >
+                    <Heart size={14} fill={liked ? '#f85149' : 'none'} color={liked ? '#f85149' : C.bright} />
+                    {likesCount} me gusta
+                  </button>
+                  {socialEnabled && (
+                    <button
+                      onClick={handleToggleSave}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap"
+                      style={{ border: `1px solid ${saved ? C.gold : C.border}`, color: saved ? C.gold : C.bright, backgroundColor: C.surface }}
+                    >
+                      <Bookmark size={14} fill={saved ? C.gold : 'none'} color={saved ? C.gold : C.bright} />
+                      {saved ? 'Guardada' : 'Guardar'}
+                    </button>
+                  )}
+                </div>
+                {socialError && <p className="text-xs" style={{ color: '#f85149' }}>{socialError}</p>}
+              </div>
+            )}
 
             <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
               <div className="flex items-center gap-2 mb-3">

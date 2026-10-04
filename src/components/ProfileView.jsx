@@ -23,6 +23,37 @@ const TABS = [
   { key: 'seguidos', label: 'Seguidos' },
 ];
 
+// Las reseñas guardadas y las que tienen me gusta son privadas: solo las ve su dueño
+const OWN_ONLY_TABS = [
+  { key: 'megusta', label: 'Me gusta' },
+  { key: 'guardadas', label: 'Guardadas' },
+];
+
+// Card compacta de una reseña en listas privadas (guardadas, me gusta)
+function VisitMiniCard({ visit, onOpen }) {
+  return (
+    <button
+      onClick={() => onOpen(visit)}
+      className="text-left p-3.5 rounded-2xl gc-focus gc-tap"
+      style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold truncate" style={{ color: C.bright }}>{visit.stadium?.name || 'Estadio'}</span>
+        <span className="flex items-center gap-1 shrink-0">
+          <Star size={12} fill={C.gold} color={C.gold} />
+          <span className="text-xs font-medium" style={{ color: C.gold }}>{visit.rating}/10</span>
+        </span>
+      </div>
+      <p className="text-xs mt-1" style={{ color: C.muted }}>
+        de @{visit.user?.username || '...'} · {formatVisitDate(visit.visitDate)}
+      </p>
+      <p className="text-xs mt-2 leading-snug" style={{ color: C.muted, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {visit.reviewText?.trim() || 'Sin reseña escrita.'}
+      </p>
+    </button>
+  );
+}
+
 function initialsOf(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
 }
@@ -100,6 +131,8 @@ export default function ProfileView({
   const [viewedLoading, setViewedLoading] = useState(false);
 
   const [tab, setTab] = useState('perfil');
+  const [savedVisits, setSavedVisits] = useState([]);
+  const [likedVisits, setLikedVisits] = useState([]);
   const [visitedPage, setVisitedPage] = useState(1);
   const [reviewsPage, setReviewsPage] = useState(1);
   const [wishPage, setWishPage] = useState(1);
@@ -170,6 +203,19 @@ export default function ProfileView({
     }
   }
 
+  // Listas privadas: se cargan al abrir su pestaña, solo en el perfil propio.
+  // Va antes de los returns tempranos para que el orden de hooks no cambie.
+  useEffect(() => {
+    if (viewUserId || (tab !== 'guardadas' && tab !== 'megusta')) return undefined;
+    let cancelled = false;
+    const request = tab === 'guardadas' ? visitService.getSavedVisits() : visitService.getLikedVisits();
+    const setList = tab === 'guardadas' ? setSavedVisits : setLikedVisits;
+    request
+      .then((data) => { if (!cancelled) setList(data); })
+      .catch(() => { if (!cancelled) setList([]); });
+    return () => { cancelled = true; };
+  }, [tab, viewUserId]);
+
   if (!token) return null;
 
   if (loading) {
@@ -207,6 +253,7 @@ export default function ProfileView({
   }
 
   const isOwn = !viewUserId;
+
   const displayedProfile = isOwn ? profile : viewedProfile;
   const displayedVisits = isOwn ? visits : viewedVisits;
   const displayedVisitsLoading = isOwn ? visitsLoading : viewedLoading;
@@ -216,9 +263,21 @@ export default function ProfileView({
   const visitedCount = displayedProfile?.visitedCount
     ?? new Set(displayedVisits.map((v) => v.stadium?._id).filter(Boolean)).size;
   const visitedStadiumIds = new Set((displayedProfile?.visitedStadiums || []).map((s) => s._id || s));
-  const visitedStadiumTiles = stadiums.filter((s) => visitedStadiumIds.has(s.id));
-  const wantToVisitIds = new Set((displayedProfile?.wantToVisit || []).map((s) => s._id || s));
-  const wishlistStadiums = stadiums.filter((s) => wantToVisitIds.has(s.id));
+  // Orden por creación, la más nueva primero: visitados según su última reseña, por visitar según cuándo se agregó
+  const lastVisitAt = new Map();
+  displayedVisits.forEach((v) => {
+    const id = v.stadium?._id;
+    const t = new Date(v.createdAt).getTime();
+    if (id && t > (lastVisitAt.get(id) ?? 0)) lastVisitAt.set(id, t);
+  });
+  const visitedStadiumTiles = stadiums
+    .filter((s) => visitedStadiumIds.has(s.id))
+    .sort((a, b) => (lastVisitAt.get(b.id) ?? 0) - (lastVisitAt.get(a.id) ?? 0));
+  // wantToVisit se guarda con push: el último agregado es el último del arreglo
+  const wantOrder = (displayedProfile?.wantToVisit || []).map((s) => String(s._id || s));
+  const wishlistStadiums = stadiums
+    .filter((s) => wantOrder.includes(s.id))
+    .sort((a, b) => wantOrder.indexOf(b.id) - wantOrder.indexOf(a.id));
   const displayName = displayedProfile?.nombre || displayedProfile?.username || 'Sin nombre';
   const bio = displayedProfile?.bio?.trim() || (isOwn ? 'Todavía no escribiste una bio.' : 'Todavía no escribió una bio.');
   const club = displayedProfile?.clubHincha;
@@ -347,7 +406,7 @@ export default function ProfileView({
 
         {/* Pestañas: "Perfil" muestra todo, las demás filtran */}
         <nav className="flex gap-1.5 overflow-x-auto gc-hide-scrollbar mt-6 pb-1">
-          {TABS.map((t) => {
+          {[...TABS, ...(isOwn ? OWN_ONLY_TABS : [])].map((t) => {
             const active = tab === t.key;
             return (
               <button
@@ -503,6 +562,24 @@ export default function ProfileView({
                 )}
               </section>
             )}
+
+            {(tab === 'guardadas' || tab === 'megusta') && isOwn && (() => {
+              const list = tab === 'guardadas' ? savedVisits : likedVisits;
+              return (
+                <section>
+                  <SectionTitle count={list.length}>{tab === 'guardadas' ? 'Reseñas guardadas' : 'Reseñas que te gustaron'}</SectionTitle>
+                  {list.length === 0 ? (
+                    <p className="text-sm" style={{ color: C.muted }}>
+                      {tab === 'guardadas' ? 'Todavía no guardaste ninguna reseña.' : 'Todavía no le diste me gusta a ninguna reseña.'}
+                    </p>
+                  ) : (
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {list.map((v) => <VisitMiniCard key={v._id} visit={v} onOpen={onOpenVisit} />)}
+                    </div>
+                  )}
+                </section>
+              );
+            })()}
 
             {tab === 'seguidores' && (
               <section>

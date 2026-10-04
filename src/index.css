@@ -108,3 +108,17 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
 
 .gc-search-box { border: 1px solid #30363D; transition: border-color 0.15s ease; }
 .gc-search-box:focus-within { border-color: #3FB950; }
+
+/* Autocompletado del navegador: mantiene el fondo y el texto del tema oscuro */
+input:-webkit-autofill, input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #F0F6FC;
+  box-shadow: 0 0 0 1000px #161B22 inset;
+  transition: background-color 9999s ease-out;
+}
+
+/* Los campos de formulario no muestran el contorno verde de foco; el color lo dan sus contenedores */
+input.gc-focus:focus-visible, select.gc-focus:focus-visible, textarea.gc-focus:focus-visible { outline: none; }
+
+/* Borde verde al enfocar cualquier campo; dentro de un contenedor con borde (gc-search-box) lo da el contenedor */
+input:focus, select:focus, textarea:focus { border-color: #3FB950 !important; }
+.gc-search-box input:focus { border-color: transparent !important; }

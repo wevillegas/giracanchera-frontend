@@ -63,7 +63,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium" style={{ color: C.muted }}>Nombre de usuario</span>
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="gc-search-box flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface }}>
               <User size={15} color={C.muted} />
               <input
                 type="text"
@@ -71,7 +71,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Nacho Cortez"
-                className="bg-transparent outline-none text-sm flex-1 gc-focus"
+                className="bg-transparent outline-none text-sm flex-1 min-w-0"
                 style={{ color: C.bright }}
               />
             </div>
@@ -79,7 +79,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium" style={{ color: C.muted }}>Email</span>
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="gc-search-box flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface }}>
               <Mail size={15} color={C.muted} />
               <input
                 type="email"
@@ -87,7 +87,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu@email.com"
-                className="bg-transparent outline-none text-sm flex-1 gc-focus"
+                className="bg-transparent outline-none text-sm flex-1 min-w-0"
                 style={{ color: C.bright }}
               />
             </div>
@@ -95,7 +95,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium" style={{ color: C.muted }}>Contraseña</span>
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="gc-search-box flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface }}>
               <Lock size={15} color={C.muted} />
               <input
                 type="password"
@@ -104,7 +104,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="bg-transparent outline-none text-sm flex-1 gc-focus"
+                className="bg-transparent outline-none text-sm flex-1 min-w-0"
                 style={{ color: C.bright }}
               />
             </div>
@@ -112,13 +112,13 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium" style={{ color: C.muted }}>¿De qué club sos hincha?</span>
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="gc-search-box flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface }}>
               <Shield size={15} color={C.muted} />
               <select
                 value={clubId}
                 onChange={(e) => setClubId(e.target.value)}
                 disabled={clubsLoading}
-                className="bg-transparent outline-none text-sm flex-1 gc-focus"
+                className="bg-transparent outline-none text-sm flex-1 min-w-0"
                 style={{ color: C.bright, colorScheme: 'dark' }}
               >
                 <option value="" style={{ backgroundColor: C.surface }}>

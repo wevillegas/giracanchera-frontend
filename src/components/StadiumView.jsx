@@ -66,29 +66,35 @@ export default function StadiumView({
   return (
     <div className="flex-1 overflow-y-auto gc-hide-scrollbar">
       <Navbar {...navbarProps} />
-      <div className="relative h-[400px] md:h-[460px]">
+      <div className="relative h-[calc(7rem+300px)] md:h-[calc(7rem+320px)] overflow-hidden" style={{ backgroundColor: C.surface }}>
         {stadium.imageUrl ? (
           <>
-            <img src={stadium.imageUrl} alt={stadium.name} className="w-full h-full object-cover" />
+            {/* Fondo: la misma foto desenfocada que llena el espacio sin verse estirada */}
+            <img src={stadium.imageUrl} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-60" />
+            {/* Foto completa, sin recortar ni estirar */}
+            <div className="absolute top-28 inset-x-0 bottom-0 flex items-center justify-center p-4 pb-8">
+              <img src={stadium.imageUrl} alt={stadium.name} className="max-w-full max-h-full object-contain rounded-xl" />
+            </div>
             <div className="absolute inset-x-0 bottom-0 h-24" style={{ background: `linear-gradient(to top, ${C.bg}, transparent)` }} />
           </>
         ) : (
           <StadiumArt tone={stadium.tone} uid={`page-${stadium.id}`} className="w-full h-full" />
         )}
-        <button onClick={() => onBack(cameFrom)} className="absolute top-24 left-4 w-9 h-9 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.bg, 0.6) }}>
+        <button onClick={() => onBack(cameFrom)} className="absolute top-32 left-4 w-9 h-9 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.bg, 0.6) }}>
           <ChevronLeft size={18} color={C.bright} />
         </button>
         {stadium.status === 'visited' && (
-          <div className="absolute top-24 right-4 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.brandBright }}>
+          <div className="absolute top-32 right-4 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.brandBright }}>
             <Check size={12} /> Tenés {myReviews.length} {myReviews.length === 1 ? 'reseña' : 'reseñas'}
           </div>
         )}
         {stadium.status === 'wishlist' && (
-          <div className="absolute top-24 right-4 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.gold }}>
+          <div className="absolute top-32 right-4 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.gold }}>
             En tu lista
           </div>
         )}
       </div>
+
 
 
       <div className="max-w-5xl mx-auto px-4 py-5 grid gap-8 md:grid-cols-[1fr_380px] items-start">

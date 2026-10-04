@@ -245,6 +245,13 @@ export default function App() {
     }
     setToast(editingVisit ? '¡Visita actualizada!' : '¡Visita guardada!');
     setVisitsVersion((v) => v + 1);
+
+    // Reseña nueva: abrimos su página por debajo; el formulario queda encima mostrando la confirmación
+    // y se cierra con "Listo" (closeSheet). Al volver, regresa a la vista de origen.
+    if (!editingVisit && saved) {
+      const from = view === 'stadium' || view === 'profile' ? view : 'map';
+      openVisit(saved, from, activeStadium);
+    }
   }
 
   return (

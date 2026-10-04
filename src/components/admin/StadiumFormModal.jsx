@@ -3,6 +3,7 @@ import { X, AlertCircle, Camera } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import clubService from '../../services/clubService';
+import ClubPicker from '../ClubPicker';
 
 const PROVINCE_OWNER = 'province';
 
@@ -151,20 +152,16 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
 
             <label className="flex flex-col gap-1.5">
               <span className="text-xs font-medium" style={{ color: C.muted }}>Dueño</span>
-              <select
+              <ClubPicker
                 value={form.mainClub}
-                onChange={(e) => update('mainClub', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
-                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright, colorScheme: 'dark' }}
-              >
-                <option value="" style={{ backgroundColor: C.surface }}>Sin club</option>
-                <option value={PROVINCE_OWNER} style={{ backgroundColor: C.surface }}>Propiedad de la provincia o ciudad</option>
-                {clubs.map((club) => (
-                  <option key={club.id ?? club._id} value={club.id ?? club._id} style={{ backgroundColor: C.surface }}>
-                    {club.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => update('mainClub', v)}
+                placeholder="Sin club"
+                options={[
+                  { value: '', label: 'Sin club' },
+                  { value: PROVINCE_OWNER, label: 'Propiedad de la provincia o ciudad' },
+                  ...clubs.map((club) => ({ value: club.id ?? club._id, label: club.name, logoUrl: club.logoUrl })),
+                ]}
+              />
             </label>
           </div>
 
