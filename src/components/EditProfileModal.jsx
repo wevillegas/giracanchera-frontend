@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X, Camera, AlertCircle, Shield, Trash2 } from 'lucide-react';
+import { X, Camera, AlertCircle, Trash2 } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import userService from '../services/userService';
 import clubService from '../services/clubService';
+import ClubPicker from './ClubPicker';
 
 function initialsOf(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
@@ -124,25 +125,13 @@ export default function EditProfileModal({ profile, onClose, onSaved, onAccountD
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium" style={{ color: C.muted }}>¿De qué club sos hincha?</span>
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-              <Shield size={15} color={C.muted} />
-              <select
-                value={clubId}
-                onChange={(e) => setClubId(e.target.value)}
-                disabled={clubsLoading}
-                className="bg-transparent outline-none text-sm flex-1 gc-focus"
-                style={{ color: C.bright, colorScheme: 'dark' }}
-              >
-                <option value="" style={{ backgroundColor: C.surface }}>
-                  {clubsLoading ? 'Cargando clubes...' : 'Sin club'}
-                </option>
-                {clubs.map((club) => (
-                  <option key={club.id ?? club._id} value={club.id ?? club._id} style={{ backgroundColor: C.surface }}>
-                    {club.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <ClubPicker
+              value={clubId}
+              onChange={setClubId}
+              options={[{ value: '', label: 'Sin club' }, ...clubs.map((club) => ({ value: club.id ?? club._id, label: club.name, logoUrl: club.logoUrl }))]}
+              placeholder={clubsLoading ? 'Cargando clubes...' : 'Sin club'}
+              disabled={clubsLoading}
+            />
           </label>
 
           <button

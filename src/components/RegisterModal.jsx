@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X, Mail, Lock, User, Shield, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import clubService from '../services/clubService';
+import ClubPicker from './ClubPicker';
 
 export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
   const { register } = useAuth();
@@ -112,25 +113,13 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium" style={{ color: C.muted }}>¿De qué club sos hincha?</span>
-            <div className="gc-search-box flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface }}>
-              <Shield size={15} color={C.muted} />
-              <select
-                value={clubId}
-                onChange={(e) => setClubId(e.target.value)}
-                disabled={clubsLoading}
-                className="bg-transparent outline-none text-sm flex-1 min-w-0"
-                style={{ color: C.bright, colorScheme: 'dark' }}
-              >
-                <option value="" style={{ backgroundColor: C.surface }}>
-                  {clubsLoading ? 'Cargando clubes...' : 'Elegí tu club'}
-                </option>
-                {clubs.map((club) => (
-                  <option key={club.id ?? club._id} value={club.id ?? club._id} style={{ backgroundColor: C.surface }}>
-                    {club.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <ClubPicker
+              value={clubId}
+              onChange={setClubId}
+              options={clubs.map((club) => ({ value: club.id ?? club._id, label: club.name, logoUrl: club.logoUrl }))}
+              placeholder={clubsLoading ? 'Cargando clubes...' : 'Elegí tu club'}
+              disabled={clubsLoading}
+            />
           </label>
 
           <button

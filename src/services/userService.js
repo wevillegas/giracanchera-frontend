@@ -30,12 +30,6 @@ async function searchUsers(username) {
   return data;
 }
 
-// Visitas anteriores a la app: se reemplaza la lista completa
-async function setPreviousVisits(items) {
-  const { data } = await api.put('/users/me/previous-visits', { items });
-  return data;
-}
-
 // Estadísticas personales (solo el propio usuario)
 async function getMyStats() {
   const { data } = await api.get('/users/me/stats');
@@ -54,7 +48,6 @@ async function toggleFollow(userId) {
 
 const userService = {
   getMyStats,
-  setPreviousVisits,
   deleteAccount,
   getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, toggleFollow,
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, MapPin, Edit3, Users, UserPlus, Star, AlertCircle, Cake, CalendarDays, Landmark, Pencil, Trash2, Search, Check } from 'lucide-react';
+import { ChevronLeft, MapPin, Edit3, Users, UserPlus, Star, AlertCircle, Cake, CalendarDays, Landmark, Pencil, Trash2, Search, Check, X } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
@@ -13,6 +13,8 @@ import { useLogoColors } from '../utils/logoColors';
 // Reseñas y estadios (visitados y por visitar) de a 6
 const REVIEWS_PAGE_SIZE = 6;
 const STADIUMS_PAGE_SIZE = 6;
+// En las pestañas Visitados y Por visitar se muestran de a 9
+const STADIUMS_TAB_PAGE_SIZE = 9;
 
 const TABS = [
   { key: 'perfil', label: 'Perfil' },
@@ -35,9 +37,9 @@ const SPEND_LABELS = { ticket: 'Entradas', food: 'Comida', parking: 'Estacionami
 // Tarjeta de un número en la vista de estadísticas personales
 function StatTile({ label, value }) {
   return (
-    <div className="flex flex-col items-center py-3 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-      <span className="text-xl" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{value}</span>
-      <span className="text-[10px] uppercase tracking-widest mt-0.5" style={{ color: C.muted }}>{label}</span>
+    <div className="flex flex-col items-center justify-center text-center px-2 py-4 rounded-2xl min-h-[88px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+      <span className="text-2xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{value}</span>
+      <span className="text-[10px] uppercase tracking-widest mt-2 leading-tight" style={{ color: C.muted }}>{label}</span>
     </div>
   );
 }
@@ -47,21 +49,84 @@ function VisitMiniCard({ visit, onOpen }) {
   return (
     <button
       onClick={() => onOpen(visit)}
-      className="text-left p-3.5 rounded-2xl gc-focus gc-tap"
+      className="flex flex-col w-full h-full text-left p-3.5 rounded-2xl gc-focus gc-tap"
       style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold truncate" style={{ color: C.bright }}>{visit.stadium?.name || 'Estadio'}</span>
+        <span className="flex items-center gap-2 min-w-0">
+          {visit.stadium?.mainClub?.logoUrl && (
+            <img src={visit.stadium.mainClub.logoUrl} alt={visit.stadium.mainClub.name} className="w-8 h-8 object-contain shrink-0" />
+          )}
+          <span className="text-sm font-semibold truncate" style={{ color: C.bright }}>{visit.stadium?.name || 'Estadio'}</span>
+        </span>
         <span className="flex items-center gap-1 shrink-0">
           <Star size={12} fill={C.gold} color={C.gold} />
           <span className="text-xs font-medium" style={{ color: C.gold }}>{visit.rating}/10</span>
         </span>
       </div>
-      <p className="text-xs mt-1" style={{ color: C.muted }}>
-        de @{visit.user?.username || '...'} · {formatVisitDate(visit.visitDate)}
-      </p>
-      <p className="text-xs mt-2 leading-snug" style={{ color: C.muted, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+      <div className="flex items-center gap-2 mt-2">
+        {visit.user?.avatarUrl ? (
+          <img src={visit.user.avatarUrl} alt={visit.user.username} className="w-6 h-6 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
+            {initialsOf(visit.user?.username || '?')}
+          </div>
+        )}
+        <p className="text-xs truncate" style={{ color: C.muted }}>
+          @{visit.user?.username || '...'} · {formatVisitDate(visit.visitDate)}
+        </p>
+      </div>
+      <p className="text-xs mt-auto pt-2 min-h-[3rem] leading-snug" style={{ color: C.muted, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {visit.reviewText?.trim() || 'Sin reseña escrita.'}
+      </p>
+    </button>
+  );
+}
+
+// Card de un usuario en seguidores y seguidos: foto con escudo, nombre y biografía
+function UserCard({ user, onOpen }) {
+  return (
+    <button
+      onClick={onOpen}
+      className="flex flex-col w-full h-full text-left p-4 rounded-2xl gc-focus gc-tap"
+      style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="relative shrink-0">
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt={user.username} className="w-14 h-14 rounded-full object-cover" />
+          ) : (
+            <div className="w-14 h-14 rounded-full flex items-center justify-center text-base" style={{ backgroundColor: C.brand, color: C.bright }}>
+              {initialsOf(user.username || '?')}
+            </div>
+          )}
+          {user.clubHincha?.logoUrl && (
+            <img
+              src={user.clubHincha.logoUrl}
+              alt={user.clubHincha.name}
+              title={user.clubHincha.name}
+              className="absolute -right-2 -bottom-2 w-8 h-8 p-1 rounded-full object-contain"
+              style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+            />
+          )}
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold truncate" style={{ color: C.bright }}>@{user.username || '...'}</span>
+            {user.followsViewer && (
+              <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
+                Te sigue
+              </span>
+            )}
+          </div>
+          {user.clubHincha?.name && (
+            <p className="text-xs truncate mt-0.5" style={{ color: C.muted }}>{user.clubHincha.name}</p>
+          )}
+        </div>
+      </div>
+      {/* Altura exacta de dos líneas: así el corte nunca deja media línea pintada */}
+      <p className="text-xs mt-3" style={{ color: C.muted, lineHeight: '1.4em', height: '2.8em', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {user.bio?.trim() || 'Sin biografía.'}
       </p>
     </button>
   );
@@ -126,97 +191,6 @@ function StadiumCard({ stadium, onClick }) {
   );
 }
 
-// Editor de visitas anteriores a la app: una fila por estadio, con la cantidad aproximada
-function PreviousVisitsEditor({ stadiums, initialItems, onSaved, onToast }) {
-  const [rows, setRows] = useState(() => initialItems.map((i) => ({ stadium: i.stadiumId, count: String(i.count) })));
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  function updateRow(index, patch) {
-    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
-  }
-
-  async function save() {
-    setError('');
-    const items = rows.filter((r) => r.stadium);
-    if (items.some((r) => !(Number(r.count) >= 1 && Number(r.count) <= 999))) {
-      setError('Cada estadio necesita una cantidad entre 1 y 999.');
-      return;
-    }
-    setSaving(true);
-    try {
-      await userService.setPreviousVisits(items.map((r) => ({ stadium: r.stadium, count: Number(r.count) })));
-      onToast?.('Visitas anteriores guardadas');
-      onSaved?.();
-    } catch (err) {
-      setError(err.response?.data?.message || 'No pudimos guardar. Probá de nuevo.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const inputStyle = { backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright };
-
-  return (
-    <div className="p-4 rounded-2xl space-y-3" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-      <p className="text-xs" style={{ color: C.muted }}>
-        Si fuiste a estadios antes de usar GiraCanchera, anotá aproximadamente cuántas veces. No cuenta como reseña.
-      </p>
-      {rows.map((row, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <select
-            value={row.stadium}
-            onChange={(e) => updateRow(i, { stadium: e.target.value })}
-            className="flex-1 min-w-0 px-3 py-2 rounded-xl text-sm outline-none gc-focus"
-            style={{ ...inputStyle, colorScheme: 'dark' }}
-          >
-            <option value="">Elegí un estadio</option>
-            {stadiums.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <input
-            type="number"
-            min="1"
-            max="999"
-            value={row.count}
-            onChange={(e) => updateRow(i, { count: e.target.value })}
-            className="w-20 px-3 py-2 rounded-xl text-sm outline-none gc-focus"
-            style={inputStyle}
-            aria-label="Cantidad de visitas"
-          />
-          <button
-            type="button"
-            onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
-            className="text-xs gc-focus"
-            style={{ color: '#f85149' }}
-          >
-            Quitar
-          </button>
-        </div>
-      ))}
-      {error && <p className="text-xs" style={{ color: '#f85149' }}>{error}</p>}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setRows((prev) => [...prev, { stadium: '', count: '1' }])}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus"
-          style={{ border: `1px solid ${C.border}`, color: C.bright }}
-        >
-          + Agregar estadio
-        </button>
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus disabled:opacity-40"
-          style={{ backgroundColor: C.brand, color: C.bright }}
-        >
-          {saving ? 'Guardando...' : 'Guardar'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function ProfileView({
   stadiums, onBackToMap, onOpenStadiumFromId, onEditVisit, onOpenVisit, onToast,
   visitsVersion, onRequireLogin, navbarProps, initialViewUserId,
@@ -235,6 +209,7 @@ export default function ProfileView({
   const [viewedLoading, setViewedLoading] = useState(false);
 
   const [tab, setTab] = useState('perfil');
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [savedVisits, setSavedVisits] = useState([]);
   const [likedVisits, setLikedVisits] = useState([]);
   const [myStats, setMyStats] = useState(null);
@@ -401,9 +376,10 @@ export default function ProfileView({
   const clubStadium = club ? stadiums.find((s) => s.mainClubId === club._id) : null;
   const followingList = displayedProfile?.following || [];
   const followersList = displayedProfile?.followers || [];
-  const visitedPageSafe = clampPage(visitedPage, visitedStadiumTiles.length, STADIUMS_PAGE_SIZE);
+  const stadiumPageSize = tab === 'perfil' ? STADIUMS_PAGE_SIZE : STADIUMS_TAB_PAGE_SIZE;
+  const visitedPageSafe = clampPage(visitedPage, visitedStadiumTiles.length, stadiumPageSize);
   const reviewsPageSafe = clampPage(reviewsPage, displayedVisits.length, REVIEWS_PAGE_SIZE);
-  const wishPageSafe = clampPage(wishPage, wishlistStadiums.length, STADIUMS_PAGE_SIZE);
+  const wishPageSafe = clampPage(wishPage, wishlistStadiums.length, stadiumPageSize);
 
   const show = (key) => tab === 'perfil' || tab === key;
 
@@ -428,6 +404,34 @@ export default function ProfileView({
   return (
     <div className="relative flex-1 overflow-y-auto gc-hide-scrollbar">
       <Navbar {...navbarProps} />
+
+      {/* Visor de la foto de perfil: se cierra con la X o tocando afuera del círculo */}
+      {photoOpen && displayedProfile?.avatarUrl && (
+        <div
+          className="fixed inset-0 z-[1300] flex items-center justify-center p-4 gc-overlay"
+          style={{ backgroundColor: rgba('#000000', 0.75) }}
+          onClick={() => setPhotoOpen(false)}
+        >
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={displayedProfile.avatarUrl}
+              alt={displayName}
+              className="w-[min(80vw,20rem)] h-[min(80vw,20rem)] rounded-full object-cover"
+              style={{ backgroundColor: C.surface, border: `2px solid ${C.border}` }}
+            />
+            <button
+              type="button"
+              onClick={() => setPhotoOpen(false)}
+              aria-label="Cerrar foto"
+              className="absolute -top-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center gc-focus gc-tap"
+              style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+            >
+              <X size={18} color={C.bright} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-4 pt-32 pb-6">
         <button
           onClick={() => (isOwn ? onBackToMap() : setViewUserId(null))}
@@ -442,7 +446,9 @@ export default function ProfileView({
           <div className="flex items-center gap-4 min-w-0 flex-1">
             <div className="relative shrink-0">
               {displayedProfile?.avatarUrl ? (
-                <img src={displayedProfile.avatarUrl} alt={displayName} className="w-28 h-28 rounded-full object-cover" style={{ backgroundColor: C.surface }} />
+                <button type="button" onClick={() => setPhotoOpen(true)} className="block rounded-full gc-focus gc-tap" aria-label="Ver foto de perfil">
+                  <img src={displayedProfile.avatarUrl} alt={displayName} className="w-28 h-28 rounded-full object-cover" style={{ backgroundColor: C.surface }} />
+                </button>
               ) : (
                 <div className="w-28 h-28 rounded-full flex items-center justify-center text-3xl" style={{ backgroundColor: C.brand, color: C.bright, fontFamily: DISPLAY_FONT }}>
                   {initialsOf(displayName)}
@@ -648,7 +654,7 @@ export default function ProfileView({
                 ) : (
                   <>
                     <div className="grid grid-cols-3 gap-3">
-                      {paginate(visitedStadiumTiles, visitedPageSafe, STADIUMS_PAGE_SIZE).map((s) => (
+                      {paginate(visitedStadiumTiles, visitedPageSafe, stadiumPageSize).map((s) => (
                         <StadiumCard
                           key={s.id}
                           stadium={s}
@@ -656,7 +662,7 @@ export default function ProfileView({
                         />
                       ))}
                     </div>
-                    <AdminPagination page={visitedPageSafe} total={visitedStadiumTiles.length} onChange={setVisitedPage} pageSize={STADIUMS_PAGE_SIZE} />
+                    <AdminPagination page={visitedPageSafe} total={visitedStadiumTiles.length} onChange={setVisitedPage} pageSize={stadiumPageSize} />
                   </>
                 )}
               </section>
@@ -672,7 +678,7 @@ export default function ProfileView({
                 ) : (
                   <>
                     <div className="grid grid-cols-3 gap-3">
-                      {paginate(wishlistStadiums, wishPageSafe, STADIUMS_PAGE_SIZE).map((s) => (
+                      {paginate(wishlistStadiums, wishPageSafe, stadiumPageSize).map((s) => (
                         <StadiumCard
                           key={s.id}
                           stadium={s}
@@ -680,7 +686,7 @@ export default function ProfileView({
                         />
                       ))}
                     </div>
-                    <AdminPagination page={wishPageSafe} total={wishlistStadiums.length} onChange={setWishPage} pageSize={STADIUMS_PAGE_SIZE} />
+                    <AdminPagination page={wishPageSafe} total={wishlistStadiums.length} onChange={setWishPage} pageSize={stadiumPageSize} />
                   </>
                 )}
               </section>
@@ -714,42 +720,39 @@ export default function ProfileView({
                 )}
                 {myStats && myStats.visits > 0 && (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                       <StatTile label="Visitas" value={myStats.visits} />
                       <StatTile label="Estadios distintos" value={myStats.stadiums} />
                       <StatTile label="Puntaje promedio" value={`${myStats.avgRating}/10`} />
                       <StatTile label="Partidos cargados" value={myStats.matches} />
-                      <StatTile label="Visitas antes de la app" value={myStats.previous?.total ?? 0} />
                       <StatTile label={myStats.clubMatches ? `Partidos de ${myStats.clubMatches.clubName}` : 'Partidos de tu club'} value={myStats.clubMatches?.count ?? '—'} />
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-3">
-                      <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-                        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: C.muted }}>Estadio favorito</p>
+                      <div className="p-5 rounded-2xl text-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                        <p className="text-[10px] uppercase tracking-widest mb-4" style={{ color: C.muted }}>Estadio favorito</p>
                         {myStats.favoriteStadium ? (
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-col items-center">
                             {myStats.favoriteStadium.clubLogoUrl ? (
-                              <img src={myStats.favoriteStadium.clubLogoUrl} alt={myStats.favoriteStadium.clubName} className="w-14 h-14 object-contain shrink-0" />
+                              <img src={myStats.favoriteStadium.clubLogoUrl} alt={myStats.favoriteStadium.clubName} className="w-24 h-24 object-contain" />
                             ) : (
-                              <div className="w-14 h-14 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: C.border, color: C.muted }}>
+                              <div className="w-24 h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: C.border, color: C.muted }}>
                                 <Landmark size={22} />
                               </div>
                             )}
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold truncate" style={{ color: C.bright }}>{myStats.favoriteStadium.name}</p>
-                              {myStats.favoriteStadium.clubName && (
-                                <p className="text-xs truncate" style={{ color: C.bright }}>{myStats.favoriteStadium.clubName}</p>
-                              )}
-                              <p className="text-xs truncate" style={{ color: C.muted }}>
-                                {[myStats.favoriteStadium.city, myStats.favoriteStadium.province, myStats.favoriteStadium.country].filter(Boolean).join(', ')}
-                              </p>
-                            </div>
+                            <p className="text-2xl leading-none mt-3 max-w-full truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{myStats.favoriteStadium.name}</p>
+                            {myStats.favoriteStadium.clubName && (
+                              <p className="text-xs mt-0.5 truncate max-w-full" style={{ color: C.bright }}>{myStats.favoriteStadium.clubName}</p>
+                            )}
+                            <p className="text-xs mt-0.5 truncate max-w-full" style={{ color: C.muted }}>
+                              {[myStats.favoriteStadium.city, myStats.favoriteStadium.province, myStats.favoriteStadium.country].filter(Boolean).join(', ')}
+                            </p>
                           </div>
                         ) : (
                           <p className="text-sm font-semibold" style={{ color: C.bright }}>—</p>
                         )}
                         {myStats.favoriteStadium && (
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs" style={{ color: C.muted }}>
+                          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-4 pt-4 text-xs" style={{ color: C.muted, borderTop: `1px solid ${C.border}` }}>
                             <span><span style={{ color: C.bright }}>{myStats.favoriteStadium.visits}</span> {myStats.favoriteStadium.visits === 1 ? 'visita' : 'visitas'}</span>
                             {myStats.favoriteStadium.capacity != null && (
                               <span>Capacidad: <span style={{ color: C.bright }}>{Number(myStats.favoriteStadium.capacity).toLocaleString('es-AR')}</span></span>
@@ -761,13 +764,11 @@ export default function ProfileView({
                         )}
                       </div>
 
-                      <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-xs uppercase tracking-widest" style={{ color: C.muted }}>Gasto</p>
-                          <p className="text-sm font-semibold" style={{ color: C.brandBright }}>{formatMoney(myStats.totalSpent)}</p>
-                        </div>
-                        <p className="text-xs mb-3" style={{ color: C.muted }}>Promedio por visita con gastos: {formatMoney(myStats.avgSpent)}</p>
-                        <div className="space-y-2">
+                      <div className="p-5 rounded-2xl text-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                        <p className="text-[10px] uppercase tracking-widest" style={{ color: C.muted }}>Gasto total</p>
+                        <p className="text-2xl leading-none mt-2 mb-1" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>{formatMoney(myStats.totalSpent)}</p>
+                        <p className="text-xs mb-5" style={{ color: C.muted }}>Promedio por visita con gastos: {formatMoney(myStats.avgSpent)}</p>
+                        <div className="space-y-3 text-left">
                           {Object.entries(SPEND_LABELS).map(([key, label]) => {
                             const value = myStats.spendByField[key] || 0;
                             const max = Math.max(1, ...Object.values(myStats.spendByField));
@@ -803,16 +804,6 @@ export default function ProfileView({
                     </button>
                   </div>
                 )}
-                <div className="mt-6">
-                  <p className="text-sm font-semibold mb-2" style={{ color: C.bright }}>Visitas antes de la app</p>
-                  <PreviousVisitsEditor
-                    key={JSON.stringify(myStats?.previous?.items || [])}
-                    stadiums={stadiums}
-                    initialItems={myStats?.previous?.items || []}
-                    onToast={onToast}
-                    onSaved={() => userService.getMyStats().then(setMyStats).catch(() => {})}
-                  />
-                </div>
                 <p className="text-xs mt-6" style={{ color: C.muted }}>Estas estadísticas son privadas: solo las ves vos.</p>
               </section>
             )}
@@ -823,23 +814,9 @@ export default function ProfileView({
                 {followersList.length === 0 ? (
                   <p className="text-sm" style={{ color: C.muted }}>{isOwn ? 'Todavía no tenés seguidores.' : 'Todavía no tiene seguidores.'}</p>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     {followersList.map((f) => (
-                      <button
-                        key={f._id}
-                        onClick={() => setViewUserId(f._id)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full gc-focus gc-tap"
-                        style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
-                      >
-                        {f.avatarUrl ? (
-                          <img src={f.avatarUrl} alt={f.username} className="w-5 h-5 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" style={{ backgroundColor: C.brand, color: C.bright }}>
-                            {initialsOf(f.username || '?')}
-                          </div>
-                        )}
-                        <span className="text-xs" style={{ color: C.bright }}>@{f.username || '...'}</span>
-                      </button>
+                      <UserCard key={f._id} user={f} onOpen={() => setViewUserId(f._id)} />
                     ))}
                   </div>
                 )}
@@ -852,23 +829,9 @@ export default function ProfileView({
                 {followingList.length === 0 ? (
                   <p className="text-sm" style={{ color: C.muted }}>{isOwn ? 'Todavía no seguís a nadie.' : 'Todavía no sigue a nadie.'}</p>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     {followingList.map((f) => (
-                      <button
-                        key={f._id || f}
-                        onClick={() => setViewUserId(f._id || f)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full gc-focus gc-tap"
-                        style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
-                      >
-                        {f.avatarUrl ? (
-                          <img src={f.avatarUrl} alt={f.username} className="w-5 h-5 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" style={{ backgroundColor: C.brand, color: C.bright }}>
-                            {initialsOf(f.username || '?')}
-                          </div>
-                        )}
-                        <span className="text-xs" style={{ color: C.bright }}>@{f.username || '...'}</span>
-                      </button>
+                      <UserCard key={f._id || f} user={f} onOpen={() => setViewUserId(f._id || f)} />
                     ))}
                   </div>
                 )}
