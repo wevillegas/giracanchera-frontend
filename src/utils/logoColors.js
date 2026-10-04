@@ -36,7 +36,8 @@ function extractColors(url) {
           const max = Math.max(r, g, b);
           const min = Math.min(r, g, b);
           if (max - min < 30) continue;
-          const key = [r, g, b].map((v) => Math.round(v / 32) * 32).join(',');
+          // Redondea a bloques de 32, sin pasar de 255 (un 256 rompía el hex y oscurecía el color)
+          const key = [r, g, b].map((v) => Math.min(255, Math.round(v / 32) * 32)).join(',');
           buckets.set(key, (buckets.get(key) || 0) + 1);
         }
 
