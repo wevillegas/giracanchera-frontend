@@ -38,6 +38,21 @@ async function toggleSave(visitId) {
   return data;
 }
 
+async function reportVisit(visitId, reason) {
+  const { data } = await api.post(`/visits/${visitId}/report`, { reason });
+  return data;
+}
+
+async function getReports() {
+  const { data } = await api.get('/visits/reports');
+  return data;
+}
+
+async function resolveReport(reportId, action) {
+  const { data } = await api.patch(`/visits/reports/${reportId}`, { action });
+  return data;
+}
+
 async function getSavedVisits() {
   const { data } = await api.get('/visits/saved');
   return data;
@@ -49,10 +64,12 @@ async function getLikedVisits() {
 }
 
 const visitService = {
+  reportVisit, getReports, resolveReport,
   createVisit, updateVisit, deleteVisit, getUserVisits, getStadiumVisits, toggleLike, toggleSave, getSavedVisits, getLikedVisits,
 };
 
 export default visitService;
 export {
+  reportVisit, getReports, resolveReport,
   createVisit, updateVisit, deleteVisit, getUserVisits, getStadiumVisits, toggleLike, toggleSave, getSavedVisits, getLikedVisits,
 };

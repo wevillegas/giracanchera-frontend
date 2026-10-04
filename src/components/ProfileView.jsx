@@ -117,7 +117,7 @@ export default function ProfileView({
   stadiums, onBackToMap, onOpenStadiumFromId, onEditVisit, onOpenVisit, onToast,
   visitsVersion, onRequireLogin, navbarProps, initialViewUserId,
 }) {
-  const { token, user, updateUser } = useAuth();
+  const { token, user, updateUser, logout } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -715,6 +715,7 @@ export default function ProfileView({
       {editOpen && (
         <EditProfileModal
           profile={profile}
+          onAccountDeleted={logout}
           onClose={() => setEditOpen(false)}
           onSaved={(updated) => {
             // merge: el endpoint de edición no devuelve visitedStadiums ni contadores

@@ -30,12 +30,18 @@ async function searchUsers(username) {
   return data;
 }
 
+async function deleteAccount(password) {
+  const { data } = await api.delete('/users/me', { data: { password } });
+  return data;
+}
+
 async function toggleFollow(userId) {
   const { data } = await api.post(`/users/follow/${userId}`);
   return data;
 }
 
 const userService = {
+  deleteAccount,
   getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, toggleFollow,
 };
 

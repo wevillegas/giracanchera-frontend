@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Camera, AlertCircle, Shield } from 'lucide-react';
+import { X, Camera, AlertCircle, Shield, Trash2 } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import userService from '../services/userService';
 import clubService from '../services/clubService';
@@ -8,8 +8,26 @@ function initialsOf(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
 }
 
-export default function EditProfileModal({ profile, onClose, onSaved }) {
+export default function EditProfileModal({ profile, onClose, onSaved, onAccountDeleted }) {
   const [bio, setBio] = useState(profile?.bio || '');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await userService.deleteAccount(deletePassword);
+      onAccountDeleted?.();
+      onClose();
+    } catch (err) {
+      setDeleteError(err.response?.data?.message || 'No pudimos eliminar la cuenta. Probá de nuevo.');
+    } finally {
+      setDeleting(false);
+    }
+  }
   const [clubId, setClubId] = useState(profile?.clubHincha?.id ?? profile?.clubHincha?._id ?? '');
   const [clubs, setClubs] = useState([]);
   const [clubsLoading, setClubsLoading] = useState(true);
@@ -136,6 +154,37 @@ export default function EditProfileModal({ profile, onClose, onSaved }) {
             {submitting ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </form>
+
+        <div className="px-5 pb-6 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+          {!deleteOpen ? (
+            <button onClick={() => setDeleteOpen(true)} className="flex items-center gap-1.5 text-xs font-medium gc-focus" style={{ color: '#f85149' }}>
+              <Trash2 size={13} /> Eliminar mi cuenta
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs" style={{ color: C.muted }}>
+                Se borran tu cuenta, tus reseñas, fotos y listas. Esta acción no se puede deshacer. Para confirmar, ingresá tu contraseña.
+              </p>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Tu contraseña"
+                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
+              />
+              {deleteError && <p className="text-xs" style={{ color: '#f85149' }}>{deleteError}</p>}
+              <button
+                onClick={handleDeleteAccount}
+                disabled={!deletePassword || deleting}
+                className="w-full py-2.5 rounded-xl font-semibold text-sm gc-focus disabled:opacity-40"
+                style={{ backgroundColor: '#f85149', color: C.bright }}
+              >
+                {deleting ? 'Eliminando...' : 'Eliminar cuenta definitivamente'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil, Heart, Bookmark } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil, Heart, Bookmark, Flag } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import visitService from '../services/visitService';
@@ -92,6 +92,9 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
   const [likesCount, setLikesCount] = useState(() => (visit.likes || []).length);
   const [saved, setSaved] = useState(false);
   const [socialError, setSocialError] = useState('');
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [reportDone, setReportDone] = useState('');
 
   // Escudos de los clubes del partido (la visita guarda solo el nombre)
   const [logoByName, setLogoByName] = useState({});
@@ -122,6 +125,18 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
       setLikesCount(result.likesCount);
     } catch (err) {
       setSocialError(err.response?.data?.message || 'No pudimos registrar el me gusta.');
+    }
+  }
+
+  async function handleReport() {
+    setSocialError('');
+    try {
+      const result = await visitService.reportVisit(visit._id, reportText.trim());
+      setReportDone(result.message);
+      setReportOpen(false);
+      setReportText('');
+    } catch (err) {
+      setSocialError(err.response?.data?.message || 'No pudimos enviar la denuncia.');
     }
   }
 
@@ -272,6 +287,40 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
                     </button>
                   )}
                 </div>
+                {socialEnabled && (
+                  <div className="space-y-2">
+                    {!reportOpen && !reportDone && (
+                      <button onClick={() => setReportOpen(true)} className="flex items-center gap-1.5 text-xs font-medium gc-focus" style={{ color: C.muted }}>
+                        <Flag size={12} /> Reportar reseña
+                      </button>
+                    )}
+                    {reportOpen && (
+                      <div className="space-y-2">
+                        <textarea
+                          value={reportText}
+                          onChange={(e) => setReportText(e.target.value.slice(0, 300))}
+                          maxLength={300}
+                          rows={2}
+                          placeholder="Contá por qué la reseña no corresponde"
+                          className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none gc-focus"
+                          style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleReport}
+                            disabled={!reportText.trim()}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus disabled:opacity-40"
+                            style={{ backgroundColor: C.brand, color: C.bright }}
+                          >
+                            Enviar denuncia
+                          </button>
+                          <button onClick={() => setReportOpen(false)} className="text-xs" style={{ color: C.muted }}>Cancelar</button>
+                        </div>
+                      </div>
+                    )}
+                    {reportDone && <p className="text-xs" style={{ color: C.brandBright }}>{reportDone}</p>}
+                  </div>
+                )}
                 {socialError && <p className="text-xs" style={{ color: '#f85149' }}>{socialError}</p>}
               </div>
             )}

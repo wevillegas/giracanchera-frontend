@@ -125,10 +125,14 @@ export default function AdminUsersView({ onToast }) {
               <span className="block text-xs truncate" style={{ color: C.muted }}>{user.email}</span>
             </div>
 
-            {user.clubHincha?.shortName && (
-              <span className="hidden sm:block text-xs shrink-0" style={{ color: C.muted, fontFamily: DISPLAY_FONT }}>
-                {user.clubHincha.shortName}
-              </span>
+            {user.clubHincha?.name && (
+              user.clubHincha.logoUrl ? (
+                <img src={user.clubHincha.logoUrl} alt={user.clubHincha.name} title={user.clubHincha.name} className="hidden sm:block w-7 h-7 object-contain shrink-0" />
+              ) : (
+                <span className="hidden sm:flex w-7 h-7 rounded-full items-center justify-center text-[11px] font-semibold shrink-0" title={user.clubHincha.name} style={{ backgroundColor: C.border, color: C.bright }}>
+                  {user.clubHincha.name.charAt(0).toUpperCase()}
+                </span>
+              )
             )}
 
             <div className="flex items-center gap-1 shrink-0">

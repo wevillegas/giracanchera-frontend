@@ -100,7 +100,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
               <input
                 type="password"
                 required
-                minLength={6}
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
