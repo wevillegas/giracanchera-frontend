@@ -126,6 +126,97 @@ function StadiumCard({ stadium, onClick }) {
   );
 }
 
+// Editor de visitas anteriores a la app: una fila por estadio, con la cantidad aproximada
+function PreviousVisitsEditor({ stadiums, initialItems, onSaved, onToast }) {
+  const [rows, setRows] = useState(() => initialItems.map((i) => ({ stadium: i.stadiumId, count: String(i.count) })));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  function updateRow(index, patch) {
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  async function save() {
+    setError('');
+    const items = rows.filter((r) => r.stadium);
+    if (items.some((r) => !(Number(r.count) >= 1 && Number(r.count) <= 999))) {
+      setError('Cada estadio necesita una cantidad entre 1 y 999.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await userService.setPreviousVisits(items.map((r) => ({ stadium: r.stadium, count: Number(r.count) })));
+      onToast?.('Visitas anteriores guardadas');
+      onSaved?.();
+    } catch (err) {
+      setError(err.response?.data?.message || 'No pudimos guardar. Probá de nuevo.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inputStyle = { backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright };
+
+  return (
+    <div className="p-4 rounded-2xl space-y-3" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+      <p className="text-xs" style={{ color: C.muted }}>
+        Si fuiste a estadios antes de usar GiraCanchera, anotá aproximadamente cuántas veces. No cuenta como reseña.
+      </p>
+      {rows.map((row, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <select
+            value={row.stadium}
+            onChange={(e) => updateRow(i, { stadium: e.target.value })}
+            className="flex-1 min-w-0 px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+            style={{ ...inputStyle, colorScheme: 'dark' }}
+          >
+            <option value="">Elegí un estadio</option>
+            {stadiums.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <input
+            type="number"
+            min="1"
+            max="999"
+            value={row.count}
+            onChange={(e) => updateRow(i, { count: e.target.value })}
+            className="w-20 px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+            style={inputStyle}
+            aria-label="Cantidad de visitas"
+          />
+          <button
+            type="button"
+            onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
+            className="text-xs gc-focus"
+            style={{ color: '#f85149' }}
+          >
+            Quitar
+          </button>
+        </div>
+      ))}
+      {error && <p className="text-xs" style={{ color: '#f85149' }}>{error}</p>}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setRows((prev) => [...prev, { stadium: '', count: '1' }])}
+          className="px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus"
+          style={{ border: `1px solid ${C.border}`, color: C.bright }}
+        >
+          + Agregar estadio
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus disabled:opacity-40"
+          style={{ backgroundColor: C.brand, color: C.bright }}
+        >
+          {saving ? 'Guardando...' : 'Guardar'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfileView({
   stadiums, onBackToMap, onOpenStadiumFromId, onEditVisit, onOpenVisit, onToast,
   visitsVersion, onRequireLogin, navbarProps, initialViewUserId,
@@ -628,14 +719,42 @@ export default function ProfileView({
                       <StatTile label="Estadios distintos" value={myStats.stadiums} />
                       <StatTile label="Puntaje promedio" value={`${myStats.avgRating}/10`} />
                       <StatTile label="Partidos cargados" value={myStats.matches} />
+                      <StatTile label="Visitas antes de la app" value={myStats.previous?.total ?? 0} />
+                      <StatTile label={myStats.clubMatches ? `Partidos de ${myStats.clubMatches.clubName}` : 'Partidos de tu club'} value={myStats.clubMatches?.count ?? '—'} />
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-3">
                       <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
                         <p className="text-xs uppercase tracking-widest mb-2" style={{ color: C.muted }}>Estadio favorito</p>
-                        <p className="text-sm font-semibold" style={{ color: C.bright }}>{myStats.favoriteStadium?.name || '—'}</p>
+                        {myStats.favoriteStadium ? (
+                          <div className="flex items-center gap-3">
+                            {myStats.favoriteStadium.clubLogoUrl ? (
+                              <img src={myStats.favoriteStadium.clubLogoUrl} alt={myStats.favoriteStadium.clubName} className="w-14 h-14 object-contain shrink-0" />
+                            ) : (
+                              <div className="w-14 h-14 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: C.border, color: C.muted }}>
+                                <Landmark size={22} />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold truncate" style={{ color: C.bright }}>{myStats.favoriteStadium.name}</p>
+                              {myStats.favoriteStadium.clubName && (
+                                <p className="text-xs truncate" style={{ color: C.bright }}>{myStats.favoriteStadium.clubName}</p>
+                              )}
+                              <p className="text-xs truncate" style={{ color: C.muted }}>
+                                {[myStats.favoriteStadium.city, myStats.favoriteStadium.province, myStats.favoriteStadium.country].filter(Boolean).join(', ')}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm font-semibold" style={{ color: C.bright }}>—</p>
+                        )}
                         {myStats.favoriteStadium && (
-                          <p className="text-xs mt-1" style={{ color: C.muted }}>{myStats.favoriteStadium.visits} {myStats.favoriteStadium.visits === 1 ? 'visita' : 'visitas'}</p>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs" style={{ color: C.muted }}>
+                            <span><span style={{ color: C.bright }}>{myStats.favoriteStadium.visits}</span> {myStats.favoriteStadium.visits === 1 ? 'visita' : 'visitas'}</span>
+                            {myStats.favoriteStadium.capacity != null && (
+                              <span>Capacidad: <span style={{ color: C.bright }}>{Number(myStats.favoriteStadium.capacity).toLocaleString('es-AR')}</span></span>
+                            )}
+                          </div>
                         )}
                         {myStats.topMonth && (
                           <p className="text-xs mt-3" style={{ color: C.muted }}>Mes con más visitas: <span style={{ color: C.bright }}>{myStats.topMonth.month}</span> ({myStats.topMonth.visits})</p>
@@ -669,6 +788,31 @@ export default function ProfileView({
                     </div>
                   </div>
                 )}
+                {user?.rol === 'admin' && (
+                  <div className="mt-6 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold" style={{ color: C.bright }}>Analíticas de la plataforma</p>
+                      <p className="text-xs mt-0.5" style={{ color: C.muted }}>Usuarios, reseñas, denuncias y estadios de toda la comunidad.</p>
+                    </div>
+                    <button
+                      onClick={() => navbarProps?.onOpenAdmin?.()}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap shrink-0"
+                      style={{ backgroundColor: C.brand, color: C.bright }}
+                    >
+                      Ver en el panel
+                    </button>
+                  </div>
+                )}
+                <div className="mt-6">
+                  <p className="text-sm font-semibold mb-2" style={{ color: C.bright }}>Visitas antes de la app</p>
+                  <PreviousVisitsEditor
+                    key={JSON.stringify(myStats?.previous?.items || [])}
+                    stadiums={stadiums}
+                    initialItems={myStats?.previous?.items || []}
+                    onToast={onToast}
+                    onSaved={() => userService.getMyStats().then(setMyStats).catch(() => {})}
+                  />
+                </div>
                 <p className="text-xs mt-6" style={{ color: C.muted }}>Estas estadísticas son privadas: solo las ves vos.</p>
               </section>
             )}

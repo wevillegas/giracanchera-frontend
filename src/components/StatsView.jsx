@@ -4,6 +4,8 @@ import { C, rgba, DISPLAY_FONT, formatMoney } from '../theme';
 import statsService from '../services/statsService';
 import Navbar from './Navbar';
 import { Logo } from './ClubPicker';
+import AdminStatsView from './admin/AdminStatsView';
+import { useAuth } from '../context/AuthContext';
 
 const Section = ({ title, children }) => (
   <section className="mt-10">
@@ -30,6 +32,7 @@ function RankRow({ position, title, subtitle, logoUrl, value, last }) {
 }
 
 export default function StatsView({ onBackToMap, navbarProps }) {
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(false);
 
@@ -152,6 +155,13 @@ export default function StatsView({ onBackToMap, navbarProps }) {
               </div>
             </Section>
           </>
+        )}
+
+        {user?.rol === 'admin' && (
+          <Section title="Analíticas internas">
+            <p className="text-xs mb-3" style={{ color: C.muted }}>Solo lo ves vos, como admin. Son datos de operación de la plataforma.</p>
+            <AdminStatsView />
+          </Section>
         )}
 
         <p className="flex items-center gap-1.5 text-xs mt-10" style={{ color: C.muted }}>
