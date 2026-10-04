@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, ChevronDown, User, LogOut, MapPin, ShieldCheck, Info } from 'lucide-react';
+import { Search, ChevronDown, User, LogOut, MapPin, ShieldCheck, Info, Activity } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
@@ -18,7 +18,7 @@ function initialsOf(name = '') {
 }
 
 export default function Navbar({
-  query, onQueryChange, filter, onFilterChange, onOpenProfile, onOpenUserProfile, onGoHome, onOpenAdmin, onOpenAbout, searchResults = [], onSelectSearchResult, onAuthSuccess,
+  query, onQueryChange, filter, onFilterChange, onOpenProfile, onOpenUserProfile, onGoHome, onOpenAdmin, onOpenAbout, onOpenStats, searchResults = [], onSelectSearchResult, onAuthSuccess,
   authModal, onAuthModalChange,
 }) {
   const { user, logout } = useAuth();
@@ -248,6 +248,14 @@ export default function Navbar({
             </button>
           </div>
         )}
+
+        <button
+          onClick={() => onOpenStats?.()}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap shrink-0"
+          style={{ backgroundColor: 'transparent', color: C.muted }}
+        >
+          <Activity size={13} /> Estadísticas
+        </button>
 
         <button
           onClick={() => onOpenAbout?.()}

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil, Heart, Bookmark, Flag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil, Heart, Bookmark, Flag, Trash2 } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import visitService from '../services/visitService';
@@ -77,7 +77,7 @@ function PhotoModal({ images, index, alt, onIndexChange, onClose }) {
   );
 }
 
-export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenStadium, onEditVisit, onOpenAuthor, navbarProps }) {
+export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenStadium, onEditVisit, onDeleteVisit, onOpenAuthor, navbarProps }) {
   const { user: me } = useAuth();
   const [photoIndex, setPhotoIndex] = useState(null);
   // La visita trae el usuario poblado (desde la página del estadio) o solo el id (desde el perfil)
@@ -228,6 +228,15 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
                   style={{ border: `1px solid ${C.border}`, color: C.bright }}
                 >
                   <Pencil size={13} /> Editar reseña
+                </button>
+              )}
+              {isOwn && onDeleteVisit && (
+                <button
+                  onClick={() => onDeleteVisit(visit)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap"
+                  style={{ border: '1px solid #f85149', color: '#f85149' }}
+                >
+                  <Trash2 size={13} /> Eliminar reseña
                 </button>
               )}
             </div>

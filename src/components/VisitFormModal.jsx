@@ -6,6 +6,14 @@ import clubService from '../services/clubService';
 import ClubPicker from './ClubPicker';
 
 const REVIEW_MAX = 300;
+// Tope por rubro de gasto (en pesos)
+const EXPENSE_MAX = 2000000;
+
+// Corta el valor al tope mientras se escribe, sin dejar pasar más de EXPENSE_MAX
+function clampExpense(raw) {
+  if (raw === '') return '';
+  return String(Math.min(Number(raw), EXPENSE_MAX));
+}
 
 function toDateInputValue(value) {
   if (!value) return '';
@@ -105,6 +113,10 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
   }
 
   async function handleSubmit() {
+    if (Object.values(expenses).some((v) => Number(v) > EXPENSE_MAX)) {
+      setError(`Ningún gasto puede superar $${EXPENSE_MAX.toLocaleString('es-AR')}.`);
+      return;
+    }
     if (hasMatch && homeTeam && awayTeam && homeTeam === awayTeam) {
       setError('El local y el visitante no pueden ser el mismo club.');
       return;
@@ -335,8 +347,9 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
                           type="number"
                           min="0"
                           inputMode="numeric"
+                          max={EXPENSE_MAX}
                           value={expenses[key]}
-                          onChange={(e) => setExpenses((prev) => ({ ...prev, [key]: e.target.value }))}
+                          onChange={(e) => setExpenses((prev) => ({ ...prev, [key]: clampExpense(e.target.value) }))}
                           placeholder="0"
                           className="bg-transparent outline-none text-sm flex-1 w-full gc-focus"
                           style={{ color: C.bright }}

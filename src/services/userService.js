@@ -30,6 +30,12 @@ async function searchUsers(username) {
   return data;
 }
 
+// Estadísticas personales (solo el propio usuario)
+async function getMyStats() {
+  const { data } = await api.get('/users/me/stats');
+  return data;
+}
+
 async function deleteAccount(password) {
   const { data } = await api.delete('/users/me', { data: { password } });
   return data;
@@ -41,6 +47,7 @@ async function toggleFollow(userId) {
 }
 
 const userService = {
+  getMyStats,
   deleteAccount,
   getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, toggleFollow,
 };

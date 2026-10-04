@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, MapPin, Edit3, Users, UserPlus, Star, AlertCircle, Cake, CalendarDays, Landmark, Pencil, Trash2, Search, Check } from 'lucide-react';
-import { C, rgba, DISPLAY_FONT } from '../theme';
+import { C, rgba, DISPLAY_FONT, formatMoney } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
 import visitService from '../services/visitService';
@@ -25,9 +25,22 @@ const TABS = [
 
 // Las reseñas guardadas y las que tienen me gusta son privadas: solo las ve su dueño
 const OWN_ONLY_TABS = [
+  { key: 'estadisticas', label: 'Mis estadísticas' },
   { key: 'megusta', label: 'Me gusta' },
   { key: 'guardadas', label: 'Guardadas' },
 ];
+
+const SPEND_LABELS = { ticket: 'Entradas', food: 'Comida', parking: 'Estacionamiento', transport: 'Transporte' };
+
+// Tarjeta de un número en la vista de estadísticas personales
+function StatTile({ label, value }) {
+  return (
+    <div className="flex flex-col items-center py-3 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+      <span className="text-xl" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{value}</span>
+      <span className="text-[10px] uppercase tracking-widest mt-0.5" style={{ color: C.muted }}>{label}</span>
+    </div>
+  );
+}
 
 // Card compacta de una reseña en listas privadas (guardadas, me gusta)
 function VisitMiniCard({ visit, onOpen }) {
@@ -133,6 +146,7 @@ export default function ProfileView({
   const [tab, setTab] = useState('perfil');
   const [savedVisits, setSavedVisits] = useState([]);
   const [likedVisits, setLikedVisits] = useState([]);
+  const [myStats, setMyStats] = useState(null);
   const [visitedPage, setVisitedPage] = useState(1);
   const [reviewsPage, setReviewsPage] = useState(1);
   const [wishPage, setWishPage] = useState(1);
@@ -213,6 +227,16 @@ export default function ProfileView({
     request
       .then((data) => { if (!cancelled) setList(data); })
       .catch(() => { if (!cancelled) setList([]); });
+    return () => { cancelled = true; };
+  }, [tab, viewUserId]);
+
+  // Estadísticas personales: se cargan al abrir la pestaña, solo en el perfil propio
+  useEffect(() => {
+    if (viewUserId || tab !== 'estadisticas') return undefined;
+    let cancelled = false;
+    userService.getMyStats()
+      .then((data) => { if (!cancelled) setMyStats(data); })
+      .catch(() => { if (!cancelled) setMyStats(false); });
     return () => { cancelled = true; };
   }, [tab, viewUserId]);
 
@@ -471,6 +495,14 @@ export default function ProfileView({
                                   </span>
                                 </>
                               )}
+                              {!v.stadium?.mainClub && (
+                                <div className="relative text-center px-3 min-w-0 max-w-full" style={{ textShadow: `0 1px 4px ${rgba(C.bg, 0.9)}` }}>
+                                  <p className="text-lg truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>{v.stadium?.name || 'Estadio'}</p>
+                                  <p className="text-xs truncate" style={{ color: C.bright }}>
+                                    {[v.stadium?.location?.province || v.stadium?.location?.city, v.stadium?.location?.country].filter(Boolean).join(', ')}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                             <div className="p-3">
                               <button
@@ -580,6 +612,66 @@ export default function ProfileView({
                 </section>
               );
             })()}
+
+            {tab === 'estadisticas' && isOwn && (
+              <section>
+                <SectionTitle>Mis estadísticas</SectionTitle>
+                {myStats === null && <p className="text-sm" style={{ color: C.muted }}>Cargando estadísticas...</p>}
+                {myStats === false && <p className="text-sm" style={{ color: C.muted }}>No pudimos cargar tus estadísticas.</p>}
+                {myStats && myStats.visits === 0 && (
+                  <p className="text-sm" style={{ color: C.muted }}>Todavía no registraste visitas. Cuando cargues una, vas a ver acá tus números.</p>
+                )}
+                {myStats && myStats.visits > 0 && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <StatTile label="Visitas" value={myStats.visits} />
+                      <StatTile label="Estadios distintos" value={myStats.stadiums} />
+                      <StatTile label="Puntaje promedio" value={`${myStats.avgRating}/10`} />
+                      <StatTile label="Partidos cargados" value={myStats.matches} />
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: C.muted }}>Estadio favorito</p>
+                        <p className="text-sm font-semibold" style={{ color: C.bright }}>{myStats.favoriteStadium?.name || '—'}</p>
+                        {myStats.favoriteStadium && (
+                          <p className="text-xs mt-1" style={{ color: C.muted }}>{myStats.favoriteStadium.visits} {myStats.favoriteStadium.visits === 1 ? 'visita' : 'visitas'}</p>
+                        )}
+                        {myStats.topMonth && (
+                          <p className="text-xs mt-3" style={{ color: C.muted }}>Mes con más visitas: <span style={{ color: C.bright }}>{myStats.topMonth.month}</span> ({myStats.topMonth.visits})</p>
+                        )}
+                      </div>
+
+                      <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs uppercase tracking-widest" style={{ color: C.muted }}>Gasto</p>
+                          <p className="text-sm font-semibold" style={{ color: C.brandBright }}>{formatMoney(myStats.totalSpent)}</p>
+                        </div>
+                        <p className="text-xs mb-3" style={{ color: C.muted }}>Promedio por visita con gastos: {formatMoney(myStats.avgSpent)}</p>
+                        <div className="space-y-2">
+                          {Object.entries(SPEND_LABELS).map(([key, label]) => {
+                            const value = myStats.spendByField[key] || 0;
+                            const max = Math.max(1, ...Object.values(myStats.spendByField));
+                            return (
+                              <div key={key}>
+                                <div className="flex justify-between text-xs" style={{ color: C.muted }}>
+                                  <span>{label}</span>
+                                  <span style={{ color: C.bright }}>{formatMoney(value)}</span>
+                                </div>
+                                <div className="h-1.5 rounded-full mt-1" style={{ backgroundColor: C.bg }}>
+                                  <div className="h-full rounded-full" style={{ width: `${(value / max) * 100}%`, backgroundColor: C.brandBright }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs mt-6" style={{ color: C.muted }}>Estas estadísticas son privadas: solo las ves vos.</p>
+              </section>
+            )}
 
             {tab === 'seguidores' && (
               <section>

@@ -2,7 +2,7 @@ import Navbar from './Navbar';
 import MapScreen from './MapScreen';
 
 export default function MapSection({
-  filteredStadiums, query, onQueryChange, filter, onFilterChange, onOpenProfile, onOpenUserProfile, onOpenStadium,
+  filteredStadiums, query, onQueryChange, filter, onFilterChange, onOpenProfile, onOpenUserProfile, onOpenStats, onOpenStadium,
   searchResults, onSelectSearchResult, flyTarget, onGoHome, onOpenAdmin, onOpenAbout, onAuthSuccess, authModal, onAuthModalChange,
 }) {
   return (
@@ -16,6 +16,7 @@ export default function MapSection({
         onFilterChange={onFilterChange}
         onOpenProfile={onOpenProfile}
         onOpenUserProfile={onOpenUserProfile}
+        onOpenStats={onOpenStats}
         searchResults={searchResults}
         onSelectSearchResult={onSelectSearchResult}
         onGoHome={onGoHome}

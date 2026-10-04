@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { ChevronLeft, Users, LandPlot, Shield, Flag } from 'lucide-react';
+import { ChevronLeft, Users, LandPlot, Shield, Flag, Activity } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import Navbar from '../Navbar';
 import AdminUsersView from './AdminUsersView';
 import AdminStadiumsView from './AdminStadiumsView';
 import AdminClubsView from './AdminClubsView';
 import AdminReportsView from './AdminReportsView';
+import AdminStatsView from './AdminStatsView';
 
 const TABS = [
   { key: 'users', label: 'Usuarios', Icon: Users },
   { key: 'stadiums', label: 'Estadios', Icon: LandPlot },
   { key: 'clubs', label: 'Clubes', Icon: Shield },
   { key: 'reports', label: 'Reportes', Icon: Flag },
+  { key: 'analytics', label: 'Analíticas', Icon: Activity },
 ];
 
 export default function AdminView({ onBackToMap, onToast, navbarProps }) {
@@ -50,6 +52,7 @@ export default function AdminView({ onBackToMap, onToast, navbarProps }) {
         {tab === 'stadiums' && <AdminStadiumsView onToast={onToast} />}
         {tab === 'clubs' && <AdminClubsView onToast={onToast} />}
         {tab === 'reports' && <AdminReportsView onToast={onToast} />}
+        {tab === 'analytics' && <AdminStatsView />}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import userService from './services/userService';
 import MapSection from './components/MapSection';
 import ProfileView from './components/ProfileView';
 import AboutView from './components/AboutView';
+import StatsView from './components/StatsView';
 import StadiumView from './components/StadiumView';
 import VisitView from './components/VisitView';
 import StadiumModal from './components/StadiumModal';
@@ -196,6 +197,20 @@ export default function App() {
     setSheet('visit');
   }
 
+  // Eliminar desde la página de la reseña: pide confirmación y vuelve a la vista de origen
+  async function deleteVisitFromPage(visit) {
+    if (!window.confirm('¿Eliminar esta reseña? Se borran también sus fotos.')) return;
+    try {
+      await visitService.deleteVisit(visit._id);
+      setActiveVisit(null);
+      setVisitsVersion((v) => v + 1);
+      setToast('Reseña eliminada');
+      setView(activeVisit?.from || 'profile');
+    } catch (err) {
+      setToast(err.response?.data?.message || 'No pudimos eliminar la reseña. Probá de nuevo.');
+    }
+  }
+
   // Editar desde la página de la reseña: no tocamos el estadio activo, así la página del estadio sigue disponible al volver
   function editVisitFromPage(visit) {
     setEditingVisit({ ...visit, stadium: activeVisit?.stadium ?? visit.stadium });
@@ -298,9 +313,33 @@ export default function App() {
           onGoHome={goToMap}
           onOpenAdmin={() => setView('admin')}
           onOpenAbout={() => setView('about')}
+          onOpenStats={() => setView('stats')}
           onAuthSuccess={setToast}
           authModal={authModal}
           onAuthModalChange={setAuthModal}
+        />
+      )}
+
+      {view === 'stats' && (
+        <StatsView
+          onBackToMap={goToMap}
+          navbarProps={{
+            query,
+            onQueryChange: setQuery,
+            filter,
+            onFilterChange: selectFilterFromElsewhere,
+            onOpenProfile: () => setView('profile'),
+            onOpenUserProfile: openUserProfile,
+            searchResults,
+            onSelectSearchResult: selectSearchResult,
+            onGoHome: goToMap,
+            onOpenAdmin: () => setView('admin'),
+            onOpenAbout: () => setView('about'),
+            onOpenStats: () => setView('stats'),
+            onAuthSuccess: setToast,
+            authModal,
+            onAuthModalChange: setAuthModal,
+          }}
         />
       )}
 
@@ -319,6 +358,7 @@ export default function App() {
             onGoHome: goToMap,
             onOpenAdmin: () => setView('admin'),
             onOpenAbout: () => setView('about'),
+            onOpenStats: () => setView('stats'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,
@@ -336,6 +376,7 @@ export default function App() {
           initialViewUserId={profileTarget}
           onToast={setToast}
           onOpenAbout={() => setView('about')}
+          onOpenStats={() => setView('stats')}
           visitsVersion={visitsVersion}
           onRequireLogin={() => {
             goToMap();
@@ -353,6 +394,7 @@ export default function App() {
             onGoHome: goToMap,
             onOpenAdmin: () => setView('admin'),
             onOpenAbout: () => setView('about'),
+            onOpenStats: () => setView('stats'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,
@@ -367,6 +409,7 @@ export default function App() {
           onBack={() => setView(activeVisit.from)}
           onOpenAuthor={(userId) => openUserProfile(userId)}
           onEditVisit={editVisitFromPage}
+          onDeleteVisit={deleteVisitFromPage}
           onOpenStadium={activeVisit.stadium && activeVisit.from === 'profile' ? () => openStadiumPage(activeVisit.stadium, 'profile') : null}
           navbarProps={{
             query,
@@ -380,6 +423,7 @@ export default function App() {
             onGoHome: goToMap,
             onOpenAdmin: () => setView('admin'),
             onOpenAbout: () => setView('about'),
+            onOpenStats: () => setView('stats'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,
@@ -403,6 +447,7 @@ export default function App() {
             onGoHome: goToMap,
             onOpenAdmin: () => setView('admin'),
             onOpenAbout: () => setView('about'),
+            onOpenStats: () => setView('stats'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,
@@ -432,6 +477,7 @@ export default function App() {
             onGoHome: goToMap,
             onOpenAdmin: () => setView('admin'),
             onOpenAbout: () => setView('about'),
+            onOpenStats: () => setView('stats'),
             onAuthSuccess: setToast,
             authModal,
             onAuthModalChange: setAuthModal,
