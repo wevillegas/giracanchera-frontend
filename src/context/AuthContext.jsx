@@ -50,6 +50,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    // Invalida el token en el servidor; si falla (sin red), igual cerramos la sesión local
+    authService.logout().catch(() => {});
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);

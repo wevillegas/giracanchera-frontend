@@ -10,12 +10,16 @@ async function register(userData) {
   return data;
 }
 
+async function logout() {
+  await api.post('/auth/logout');
+}
+
 async function getProfile() {
   const { data } = await api.get('/auth/me');
   return data.user ?? data;
 }
 
-const authService = { login, register, getProfile };
+const authService = { login, register, logout, getProfile };
 
 export default authService;
-export { login, register, getProfile };
+export { login, register, logout, getProfile };

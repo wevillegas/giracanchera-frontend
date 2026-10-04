@@ -46,9 +46,14 @@ function landmarkSvg(color = C.bg) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${LANDMARK_ICON_PATHS.map((d) => `<path d="${d}" />`).join('')}</svg>`;
 }
 
+// Escapa texto antes de meterlo en el HTML del marcador (la URL del escudo viene de la base)
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+}
+
 function buildMarkerIcon(status, logoUrl, hasClub) {
   const bg = statusColor(status);
-  const inner = logoUrl ? `<img src="${logoUrl}" alt="" />` : hasClub ? goalSvg() : landmarkSvg();
+  const inner = logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="" />` : hasClub ? goalSvg() : landmarkSvg();
   return L.divIcon({
     className: 'gc-marker',
     html: `<span class="gc-marker-badge" style="background:${bg}">${inner}</span>`,
