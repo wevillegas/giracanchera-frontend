@@ -1,3 +1,4 @@
+import ConfirmModal from '../ConfirmModal';
 import { useEffect, useState } from 'react';
 import { X, AlertCircle, Camera } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../../theme';
@@ -56,8 +57,14 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  async function handleSubmit(e) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  function handleSubmit(e) {
     e.preventDefault();
+    setConfirmOpen(true);
+  }
+
+  async function save() {
     setError('');
 
     const payload = {
@@ -117,6 +124,15 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
           </button>
         </div>
 
+        {confirmOpen && (
+          <ConfirmModal
+            title="¿Guardar cambios en el estadio?"
+            message="Los cambios se ven en el mapa para todos los usuarios."
+            confirmLabel="Guardar cambios"
+            onConfirm={() => { setConfirmOpen(false); save(); }}
+            onCancel={() => setConfirmOpen(false)}
+          />
+        )}
         <form onSubmit={handleSubmit} className="px-5 pb-6 pt-4 space-y-4">
           {error && (
             <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-sm" style={{ backgroundColor: rgba('#f85149', 0.12), border: `1px solid ${rgba('#f85149', 0.4)}`, color: '#f85149' }}>

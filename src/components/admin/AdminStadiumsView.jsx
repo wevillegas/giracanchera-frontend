@@ -1,3 +1,4 @@
+import ConfirmModal from '../ConfirmModal';
 import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2, Plus, AlertCircle, Users } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
@@ -15,6 +16,7 @@ export default function AdminStadiumsView({ onToast }) {
   const [error, setError] = useState(null);
   const [formTarget, setFormTarget] = useState(null); // null closed | {} new | stadium editing
   const [formOpen, setFormOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
   const [query, setQuery] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
   const [provinceFilter, setProvinceFilter] = useState('');
@@ -79,8 +81,12 @@ export default function AdminStadiumsView({ onToast }) {
   const currentPage = clampPage(page, filtered.length);
   const visible = paginate(filtered, currentPage);
 
-  async function handleDelete(stadium) {
-    if (!window.confirm(`¿Eliminar "${stadium.name}"? También se borrarán sus visitas registradas.`)) return;
+  function handleDelete(stadium) {
+    setPendingDelete(stadium);
+  }
+
+  async function confirmDelete(stadium) {
+    setPendingDelete(null);
     try {
       await adminService.deleteStadium(stadium._id);
       setStadiums((prev) => prev.filter((s) => s._id !== stadium._id));
@@ -231,6 +237,16 @@ export default function AdminStadiumsView({ onToast }) {
 
       <AdminPagination page={currentPage} total={filtered.length} onChange={setPage} />
 
+      {pendingDelete && (
+        <ConfirmModal
+          danger
+          title={`¿Eliminar "${pendingDelete.name}"?`}
+          message="También se borrarán sus visitas registradas."
+          confirmLabel="Eliminar"
+          onConfirm={() => confirmDelete(pendingDelete)}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
       {formOpen && (
         <StadiumFormModal
           stadium={formTarget}

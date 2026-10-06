@@ -1,3 +1,4 @@
+import logoIcon from '../assets/giracanchera-icono.svg';
 import { useEffect, useState } from 'react';
 import { X, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
@@ -48,7 +49,10 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-5">
-          <h2 className="text-3xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>Crear cuenta</h2>
+          <div className="flex items-center gap-2.5">
+            <img src={logoIcon} alt="" className="w-8 h-8 object-contain shrink-0" />
+            <h2 className="text-3xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>Crear cuenta</h2>
+          </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: C.surface }}>
             <X size={16} color={C.bright} />
           </button>

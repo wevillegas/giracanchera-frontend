@@ -1,6 +1,8 @@
+import logoIcon from '../assets/giracanchera-icono.svg';
 import { useEffect, useState } from 'react';
 import { ChevronLeft, Activity, MapPin, Star, Users, Flag, Wallet, Shield } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney } from '../theme';
+import { isAdminRole } from '../utils/roles';
 import statsService from '../services/statsService';
 import Navbar from './Navbar';
 import { Logo } from './ClubPicker';
@@ -60,7 +62,10 @@ export default function StatsView({ onBackToMap, navbarProps }) {
           style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
         >
           <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 85% 0%, ${rgba(C.brandBright, 0.18)}, transparent 60%)` }} />
-          <h1 className="relative text-4xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>Estadísticas</h1>
+          <div className="relative flex items-center gap-3">
+            <img src={logoIcon} alt="" className="w-12 h-12 object-contain shrink-0" />
+            <h1 className="text-4xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>Estadísticas</h1>
+          </div>
           <p className="relative text-sm mt-2 max-w-md" style={{ color: C.muted }}>
             Lo que está pasando en la comunidad de GiraCanchera, con datos de todos los hinchas.
           </p>
@@ -157,7 +162,7 @@ export default function StatsView({ onBackToMap, navbarProps }) {
           </>
         )}
 
-        {user?.rol === 'admin' && (
+        {isAdminRole(user?.rol) && (
           <Section title="Analíticas internas">
             <p className="text-xs mb-3" style={{ color: C.muted }}>Solo lo ves vos, como admin. Son datos de operación de la plataforma.</p>
             <AdminStatsView />

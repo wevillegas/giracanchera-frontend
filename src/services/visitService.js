@@ -18,6 +18,12 @@ async function deleteVisit(visitId) {
   return data;
 }
 
+// Admin: borra cualquier reseña indicando el motivo (queda en la auditoría)
+async function adminDeleteVisit(visitId, reason) {
+  const { data } = await api.delete(`/visits/admin/${visitId}`, { data: { reason } });
+  return data;
+}
+
 async function getUserVisits(userId) {
   const { data } = await api.get(`/visits/user/${userId}`);
   return data;
@@ -65,7 +71,7 @@ async function getLikedVisits() {
 
 const visitService = {
   reportVisit, getReports, resolveReport,
-  createVisit, updateVisit, deleteVisit, getUserVisits, getStadiumVisits, toggleLike, toggleSave, getSavedVisits, getLikedVisits,
+  createVisit, updateVisit, deleteVisit, adminDeleteVisit, getUserVisits, getStadiumVisits, toggleLike, toggleSave, getSavedVisits, getLikedVisits,
 };
 
 export default visitService;

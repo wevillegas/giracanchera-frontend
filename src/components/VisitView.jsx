@@ -1,7 +1,9 @@
+import ConfirmModal from './ConfirmModal';
 import { Fragment, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil, Heart, Bookmark, Flag, Trash2 } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { isAdminRole } from '../utils/roles';
 import visitService from '../services/visitService';
 import userService from '../services/userService';
 import clubService from '../services/clubService';
@@ -77,7 +79,7 @@ function PhotoModal({ images, index, alt, onIndexChange, onClose }) {
   );
 }
 
-export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenStadium, onEditVisit, onDeleteVisit, onOpenAuthor, navbarProps }) {
+export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenStadium, onEditVisit, onDeleteVisit, onAdminDeleteVisit, onOpenAuthor, navbarProps }) {
   const { user: me } = useAuth();
   const [photoIndex, setPhotoIndex] = useState(null);
   // La visita trae el usuario poblado (desde la página del estadio) o solo el id (desde el perfil)
@@ -95,6 +97,28 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
   const [reportOpen, setReportOpen] = useState(false);
   const [reportText, setReportText] = useState('');
   const [reportDone, setReportDone] = useState('');
+  const [adminDeleteOpen, setAdminDeleteOpen] = useState(false);
+  const [adminDeleteReason, setAdminDeleteReason] = useState('');
+  const [adminDeleteError, setAdminDeleteError] = useState('');
+  const [adminDeleting, setAdminDeleting] = useState(false);
+  const [ownDeleteOpen, setOwnDeleteOpen] = useState(false);
+  const canAdminDelete = Boolean(onAdminDeleteVisit) && isAdminRole(me?.rol) && !isOwn;
+
+  async function handleAdminDelete() {
+    const reason = adminDeleteReason.trim();
+    if (reason.length < 5) {
+      setAdminDeleteError('Escribí un motivo de al menos 5 caracteres.');
+      return;
+    }
+    setAdminDeleting(true);
+    setAdminDeleteError('');
+    try {
+      await onAdminDeleteVisit(visit, reason);
+    } catch (err) {
+      setAdminDeleteError(err.response?.data?.message || 'No pudimos eliminar la reseña. Probá de nuevo.');
+      setAdminDeleting(false);
+    }
+  }
 
   // Escudos de los clubes del partido (la visita guarda solo el nombre)
   const [logoByName, setLogoByName] = useState({});
@@ -232,14 +256,61 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
               )}
               {isOwn && onDeleteVisit && (
                 <button
-                  onClick={() => onDeleteVisit(visit)}
+                  onClick={() => setOwnDeleteOpen(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap"
                   style={{ border: '1px solid #f85149', color: '#f85149' }}
                 >
                   <Trash2 size={13} /> Eliminar reseña
                 </button>
               )}
+              {ownDeleteOpen && (
+                <ConfirmModal
+                  danger
+                  title="¿Eliminar tu reseña?"
+                  message="Se borran también sus fotos. No se puede deshacer."
+                  confirmLabel="Eliminar"
+                  onConfirm={() => { setOwnDeleteOpen(false); onDeleteVisit(visit); }}
+                  onCancel={() => setOwnDeleteOpen(false)}
+                />
+              )}
+              {canAdminDelete && !adminDeleteOpen && (
+                <button
+                  onClick={() => setAdminDeleteOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap"
+                  style={{ border: '1px solid #f85149', color: '#f85149' }}
+                >
+                  <Trash2 size={13} /> Eliminar como admin
+                </button>
+              )}
             </div>
+
+            {canAdminDelete && adminDeleteOpen && (
+              <div className="p-4 rounded-2xl space-y-2" style={{ backgroundColor: C.surface, border: '1px solid #f85149' }}>
+                <p className="text-xs font-semibold" style={{ color: '#f85149' }}>Eliminar esta reseña</p>
+                <p className="text-xs" style={{ color: C.muted }}>Se borran también sus fotos y denuncias. Queda registrado en la auditoría con el motivo.</p>
+                <textarea
+                  value={adminDeleteReason}
+                  onChange={(e) => setAdminDeleteReason(e.target.value.slice(0, 300))}
+                  maxLength={300}
+                  rows={2}
+                  placeholder="Motivo (obligatorio)"
+                  className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none gc-focus"
+                  style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, color: C.bright }}
+                />
+                {adminDeleteError && <p className="text-xs" style={{ color: '#f85149' }}>{adminDeleteError}</p>}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleAdminDelete}
+                    disabled={adminDeleting || adminDeleteReason.trim().length < 5}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus disabled:opacity-40"
+                    style={{ backgroundColor: '#f85149', color: C.bright }}
+                  >
+                    {adminDeleting ? 'Eliminando...' : 'Confirmar eliminación'}
+                  </button>
+                  <button onClick={() => { setAdminDeleteOpen(false); setAdminDeleteError(''); }} className="text-xs" style={{ color: C.muted }}>Cancelar</button>
+                </div>
+              </div>
+            )}
 
             {hasMatch && (
               <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>

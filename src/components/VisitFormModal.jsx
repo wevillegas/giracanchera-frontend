@@ -1,3 +1,4 @@
+import ConfirmModal from './ConfirmModal';
 import { useEffect, useState } from 'react';
 import { ChevronLeft, Check, Calendar, AlertCircle, ImagePlus, X } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
@@ -112,7 +113,14 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
     setRemovedImages((prev) => [...prev, url]);
   }
 
-  async function handleSubmit() {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  function handleSubmit() {
+    if (isEditing) setConfirmOpen(true);
+    else save();
+  }
+
+  async function save() {
     if (Object.values(expenses).some((v) => Number(v) > EXPENSE_MAX)) {
       setError(`Ningún gasto puede superar $${EXPENSE_MAX.toLocaleString('es-AR')}.`);
       return;
@@ -162,6 +170,15 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
 
   return (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 gc-overlay" style={{ backgroundColor: rgba('#000000', 0.6) }}>
+      {confirmOpen && (
+        <ConfirmModal
+          title="¿Guardar cambios en la reseña?"
+          message="La reseña se actualiza para todos los que la vean."
+          confirmLabel="Guardar"
+          onConfirm={() => { setConfirmOpen(false); save(); }}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
       <div className="w-full max-w-md rounded-3xl overflow-y-auto gc-hide-scrollbar flex flex-col" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, maxHeight: '90vh' }}>
         <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-4" style={{ backgroundColor: rgba(C.bg, 0.9), backdropFilter: 'blur(10px)', borderBottom: `1px solid ${C.border}` }}>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: C.surface }}>

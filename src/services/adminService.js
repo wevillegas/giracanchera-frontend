@@ -62,10 +62,16 @@ async function deleteClub(id) {
   return data;
 }
 
+async function getAuditLogs({ page = 1, entity = '' } = {}) {
+  const { data } = await api.get('/audit', { params: { page, entity: entity || undefined } });
+  return data;
+}
+
 const adminService = {
   getUsers, updateUser, deleteUser,
   getStadiums, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
+  getAuditLogs,
 };
 
 export default adminService;
@@ -73,4 +79,5 @@ export {
   getUsers, updateUser, deleteUser,
   getStadiums, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
+  getAuditLogs,
 };

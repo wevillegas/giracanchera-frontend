@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Ticket, UtensilsCrossed, Car, Bus } from 'lucide-react';
 import { C, BODY_FONT } from './theme';
+import { isAdminRole } from './utils/roles';
 import { useAuth } from './context/AuthContext';
 import stadiumService from './services/stadiumService';
 import visitService from './services/visitService';
@@ -137,8 +138,17 @@ export default function App() {
       })
     : [];
 
-  function selectFilterFromElsewhere(f) {
+  // Filtros que muestran datos propios: sin sesión abren el login en vez de mostrar una lista vacía
+  function applyFilter(f) {
+    if ((f === 'visited' || f === 'wishlist') && !token) {
+      setAuthModal('login');
+      return;
+    }
     setFilter(f);
+  }
+
+  function selectFilterFromElsewhere(f) {
+    applyFilter(f);
     goToMap();
   }
 
@@ -185,13 +195,22 @@ export default function App() {
     setView('visit');
   }
 
+  // Cargar una reseña requiere sesión: sin usuario abre el login y no el formulario
   function startVisit(s) {
+    if (!token) {
+      setAuthModal('login');
+      return;
+    }
     setActiveStadium(s);
     setEditingVisit(null);
     setSheet('visit');
   }
 
   function startEditVisit(visit) {
+    if (!token) {
+      setAuthModal('login');
+      return;
+    }
     setEditingVisit(visit);
     setActiveStadium(null);
     setSheet('visit');
@@ -199,7 +218,6 @@ export default function App() {
 
   // Eliminar desde la página de la reseña: pide confirmación y vuelve a la vista de origen
   async function deleteVisitFromPage(visit) {
-    if (!window.confirm('¿Eliminar esta reseña? Se borran también sus fotos.')) return;
     try {
       await visitService.deleteVisit(visit._id);
       setActiveVisit(null);
@@ -209,6 +227,15 @@ export default function App() {
     } catch (err) {
       setToast(err.response?.data?.message || 'No pudimos eliminar la reseña. Probá de nuevo.');
     }
+  }
+
+  // Admin: borra la reseña con motivo. La confirmación y el motivo los pide VisitView
+  async function adminDeleteVisitFromPage(visit, reason) {
+    await visitService.adminDeleteVisit(visit._id, reason);
+    setActiveVisit(null);
+    setVisitsVersion((v) => v + 1);
+    setToast('Reseña eliminada');
+    setView(activeVisit?.from || 'profile');
   }
 
   // Editar desde la página de la reseña: no tocamos el estadio activo, así la página del estadio sigue disponible al volver
@@ -303,7 +330,7 @@ export default function App() {
           query={query}
           onQueryChange={setQuery}
           filter={filter}
-          onFilterChange={setFilter}
+          onFilterChange={applyFilter}
           onOpenProfile={() => setView('profile')}
           onOpenUserProfile={openUserProfile}
           onOpenStadium={openStadium}
@@ -410,7 +437,8 @@ export default function App() {
           onOpenAuthor={(userId) => openUserProfile(userId)}
           onEditVisit={editVisitFromPage}
           onDeleteVisit={deleteVisitFromPage}
-          onOpenStadium={activeVisit.stadium && activeVisit.from === 'profile' ? () => openStadiumPage(activeVisit.stadium, 'profile') : null}
+          onAdminDeleteVisit={adminDeleteVisitFromPage}
+          onOpenStadium={activeVisit.stadium ? () => openStadiumPage(activeVisit.stadium, activeVisit.from === 'profile' ? 'profile' : 'map') : null}
           navbarProps={{
             query,
             onQueryChange: setQuery,
@@ -431,7 +459,7 @@ export default function App() {
         />
       )}
 
-      {view === 'admin' && user?.rol === 'admin' && (
+      {view === 'admin' && isAdminRole(user?.rol) && (
         <AdminView
           onBackToMap={goToMap}
           onToast={setToast}
@@ -526,7 +554,7 @@ export default function App() {
         view={view}
         onNavigateMap={goToMap}
         onNavigateProfile={() => setView('profile')}
-        onQuickAddVisit={() => setPickerOpen(true)}
+        onQuickAddVisit={() => (token ? setPickerOpen(true) : setAuthModal('login'))}
       />
     </div>
   );

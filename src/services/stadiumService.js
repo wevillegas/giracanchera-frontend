@@ -21,6 +21,7 @@ function normalizeStadium(raw) {
     clubLogoUrl: raw.clubLogoUrl ?? raw.mainClub?.logoUrl ?? '',
     city: buildCityLabel(raw),
     province: raw.location?.province ?? '',
+    cityName: raw.location?.city ?? '',
     country: raw.location?.country ?? '',
     ownerType: raw.ownerType ?? 'club',
     clubName: raw.mainClub?.name ?? '',

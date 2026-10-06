@@ -1,3 +1,4 @@
+import ConfirmModal from '../ConfirmModal';
 import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2, Plus, AlertCircle, MapPin } from 'lucide-react';
 import { C } from '../../theme';
@@ -11,6 +12,7 @@ export default function AdminClubsView({ onToast }) {
   const [error, setError] = useState(null);
   const [formTarget, setFormTarget] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
   const [query, setQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -40,8 +42,12 @@ export default function AdminClubsView({ onToast }) {
   const currentPage = clampPage(page, filtered.length);
   const visible = paginate(filtered, currentPage);
 
-  async function handleDelete(club) {
-    if (!window.confirm(`¿Eliminar "${club.name}"?`)) return;
+  function handleDelete(club) {
+    setPendingDelete(club);
+  }
+
+  async function confirmDelete(club) {
+    setPendingDelete(null);
     try {
       await adminService.deleteClub(club._id);
       setClubs((prev) => prev.filter((c) => c._id !== club._id));
@@ -169,6 +175,16 @@ export default function AdminClubsView({ onToast }) {
 
       <AdminPagination page={currentPage} total={filtered.length} onChange={setPage} />
 
+      {pendingDelete && (
+        <ConfirmModal
+          danger
+          title={`¿Eliminar "${pendingDelete.name}"?`}
+          message="Los usuarios de este club pierden su escudo."
+          confirmLabel="Eliminar"
+          onConfirm={() => confirmDelete(pendingDelete)}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
       {formOpen && (
         <ClubFormModal
           club={formTarget}

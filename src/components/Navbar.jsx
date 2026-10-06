@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Search, ChevronDown, User, LogOut, MapPin, ShieldCheck, Info, Activity } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
+import { isAdminRole } from '../utils/roles';
 import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
 import LoginModal from './LoginModal';
 import RegisterModal from './RegisterModal';
+import logoIcon from '../assets/giracanchera-icono.svg';
 import LogoutConfirmModal from './LogoutConfirmModal';
 
 const FILTERS = [
@@ -90,10 +92,8 @@ export default function Navbar({
           style={{ opacity: 1 }}
           aria-label="Ir al mapa"
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
-            GC
-          </div>
-          <span className="text-xl tracking-wide uppercase shrink-0" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>GiraCanchera</span>
+          <img src={logoIcon} alt="" className="w-8 h-8 object-contain shrink-0" />
+          <span className="text-xl tracking-wide uppercase shrink-0" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>Gira<span style={{ color: C.brandBright }}>Canchera</span></span>
         </button>
 
         <div className="relative shrink-0 w-64">
@@ -210,7 +210,7 @@ export default function Navbar({
                   >
                     <User size={15} color={C.muted} /> Mi Perfil
                   </button>
-                  {user.rol === 'admin' && (
+                  {isAdminRole(user.rol) && (
                     <button
                       onClick={() => { setMenuOpen(false); onOpenAdmin?.(); }}
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left gc-focus gc-tap"

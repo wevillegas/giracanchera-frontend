@@ -1,3 +1,4 @@
+import ConfirmModal from '../ConfirmModal';
 import { useEffect, useState } from 'react';
 import { AlertCircle, Check, Trash2 } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
@@ -26,8 +27,17 @@ export default function AdminReportsView({ onToast }) {
 
   useEffect(() => { load(); }, []);
 
-  async function resolve(report, action) {
-    if (action === 'remove_review' && !window.confirm('¿Eliminar esta reseña? También se borran sus fotos y denuncias.')) return;
+  const [pendingRemove, setPendingRemove] = useState(null);
+
+  function resolve(report, action) {
+    if (action === 'remove_review') {
+      setPendingRemove(report);
+      return;
+    }
+    runResolve(report, action);
+  }
+
+  async function runResolve(report, action) {
     setBusyId(report._id);
     try {
       const result = await visitService.resolveReport(report._id, action);
@@ -86,6 +96,16 @@ export default function AdminReportsView({ onToast }) {
           </div>
         </div>
       ))}
+      {pendingRemove && (
+        <ConfirmModal
+          danger
+          title="¿Quitar esta reseña?"
+          message="También se borran sus fotos y todas sus denuncias."
+          confirmLabel="Quitar reseña"
+          onConfirm={() => { const r = pendingRemove; setPendingRemove(null); runResolve(r, 'remove_review'); }}
+          onCancel={() => setPendingRemove(null)}
+        />
+      )}
     </div>
   );
 }

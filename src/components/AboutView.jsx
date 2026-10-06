@@ -1,3 +1,4 @@
+import logoIcon from '../assets/giracanchera-icono.svg';
 import {
   ChevronLeft, GitBranch, Link2, Code2, MapPin, Star, Wallet, ListChecks, Users, Heart, Flag, Database, Server, User,
 } from 'lucide-react';
@@ -68,9 +69,7 @@ export default function AboutView({ onBackToMap, navbarProps }) {
             style={{ background: `radial-gradient(circle at 85% 0%, ${rgba(C.brandBright, 0.18)}, transparent 60%)` }}
           />
           <div className="relative flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
-              GC
-            </div>
+            <img src={logoIcon} alt="Logo de GiraCanchera" className="w-14 h-14 object-contain shrink-0" />
             <div className="min-w-0">
               <h1 className="text-4xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>GiraCanchera</h1>
               <p className="text-sm mt-1" style={{ color: C.muted }}>Tu bitácora de estadios de fútbol</p>

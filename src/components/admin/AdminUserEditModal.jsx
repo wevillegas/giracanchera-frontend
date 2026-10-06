@@ -1,10 +1,14 @@
+import ConfirmModal from '../ConfirmModal';
 import { useEffect, useState } from 'react';
 import { X, AlertCircle, Shield } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import clubService from '../../services/clubService';
+import { useAuth } from '../../context/AuthContext';
+import { isSuperAdmin } from '../../utils/roles';
 
 export default function AdminUserEditModal({ user, onClose, onSaved }) {
+  const { user: me } = useAuth();
   const [nombre, setNombre] = useState(user.nombre || '');
   const [username, setUsername] = useState(user.username || '');
   const [email, setEmail] = useState(user.email || '');
@@ -22,8 +26,14 @@ export default function AdminUserEditModal({ user, onClose, onSaved }) {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSubmit(e) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  function handleSubmit(e) {
     e.preventDefault();
+    setConfirmOpen(true);
+  }
+
+  async function save() {
     setError('');
     setSubmitting(true);
     try {
@@ -53,6 +63,15 @@ export default function AdminUserEditModal({ user, onClose, onSaved }) {
           </button>
         </div>
 
+        {confirmOpen && (
+          <ConfirmModal
+            title="¿Guardar cambios de este usuario?"
+            message="Vas a modificar los datos y el rol de este usuario."
+            confirmLabel="Guardar cambios"
+            onConfirm={() => { setConfirmOpen(false); save(); }}
+            onCancel={() => setConfirmOpen(false)}
+          />
+        )}
         <form onSubmit={handleSubmit} className="px-5 pb-6 pt-4 space-y-4">
           {error && (
             <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-sm" style={{ backgroundColor: rgba('#f85149', 0.12), border: `1px solid ${rgba('#f85149', 0.4)}`, color: '#f85149' }}>
@@ -104,6 +123,9 @@ export default function AdminUserEditModal({ user, onClose, onSaved }) {
             >
               <option value="user" style={{ backgroundColor: C.surface }}>Usuario</option>
               <option value="admin" style={{ backgroundColor: C.surface }}>Administrador</option>
+              {(isSuperAdmin(me?.rol) || rol === 'superadmin') && (
+                <option value="superadmin" style={{ backgroundColor: C.surface }}>Superadministrador</option>
+              )}
             </select>
           </label>
 

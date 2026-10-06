@@ -1,6 +1,8 @@
+import ConfirmModal from './ConfirmModal';
 import { useEffect, useState } from 'react';
 import { ChevronLeft, MapPin, Edit3, Users, UserPlus, Star, AlertCircle, Cake, CalendarDays, Landmark, Pencil, Trash2, Search, Check, X } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney } from '../theme';
+import { isAdminRole } from '../utils/roles';
 import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
 import visitService from '../services/visitService';
@@ -12,6 +14,7 @@ import { useLogoColors } from '../utils/logoColors';
 
 // Reseñas y estadios (visitados y por visitar) de a 6
 const REVIEWS_PAGE_SIZE = 6;
+const LIST_PAGE_SIZE = 8; // Me gusta, Guardadas, Seguidores y Seguidos
 const STADIUMS_PAGE_SIZE = 6;
 // En las pestañas Visitados y Por visitar se muestran de a 9
 const STADIUMS_TAB_PAGE_SIZE = 9;
@@ -215,6 +218,9 @@ export default function ProfileView({
   const [myStats, setMyStats] = useState(null);
   const [visitedPage, setVisitedPage] = useState(1);
   const [reviewsPage, setReviewsPage] = useState(1);
+  const [savedPage, setSavedPage] = useState(1);
+  const [followersPage, setFollowersPage] = useState(1);
+  const [followingPage, setFollowingPage] = useState(1);
   const [wishPage, setWishPage] = useState(1);
 
   useEffect(() => {
@@ -272,8 +278,14 @@ export default function ProfileView({
     return () => { cancelled = true; };
   }, [viewUserId, onToast]);
 
-  async function handleDeleteVisit(visitId) {
-    if (!window.confirm('¿Eliminar esta visita de tu bitácora?')) return;
+  const [visitToDelete, setVisitToDelete] = useState(null);
+
+  function handleDeleteVisit(visitId) {
+    setVisitToDelete(visitId);
+  }
+
+  async function confirmDeleteVisit(visitId) {
+    setVisitToDelete(null);
     try {
       await visitService.deleteVisit(visitId);
       setVisits((prev) => prev.filter((v) => v._id !== visitId));
@@ -285,6 +297,9 @@ export default function ProfileView({
 
   // Listas privadas: se cargan al abrir su pestaña, solo en el perfil propio.
   // Va antes de los returns tempranos para que el orden de hooks no cambie.
+  // Al cambiar de pestaña vuelve a la primera página de la lista
+  useEffect(() => { setSavedPage(1); setFollowersPage(1); setFollowingPage(1); }, [tab]);
+
   useEffect(() => {
     if (viewUserId || (tab !== 'guardadas' && tab !== 'megusta')) return undefined;
     let cancelled = false;
@@ -376,6 +391,8 @@ export default function ProfileView({
   const clubStadium = club ? stadiums.find((s) => s.mainClubId === club._id) : null;
   const followingList = displayedProfile?.following || [];
   const followersList = displayedProfile?.followers || [];
+  const followersPageSafe = clampPage(followersPage, followersList.length, LIST_PAGE_SIZE);
+  const followingPageSafe = clampPage(followingPage, followingList.length, LIST_PAGE_SIZE);
   const stadiumPageSize = tab === 'perfil' ? STADIUMS_PAGE_SIZE : STADIUMS_TAB_PAGE_SIZE;
   const visitedPageSafe = clampPage(visitedPage, visitedStadiumTiles.length, stadiumPageSize);
   const reviewsPageSafe = clampPage(reviewsPage, displayedVisits.length, REVIEWS_PAGE_SIZE);
@@ -628,6 +645,16 @@ export default function ProfileView({
                                   <button onClick={(e) => { e.stopPropagation(); onEditVisit(v); }} className="flex items-center gap-1 text-xs font-medium gc-focus" style={{ color: C.brandBright }}>
                                     <Pencil size={12} /> Editar
                                   </button>
+                                  {visitToDelete === v._id && (
+                                    <ConfirmModal
+                                      danger
+                                      title="¿Eliminar esta visita de tu bitácora?"
+                                      message="Se borra solo de tu bitácora; la reseña no aparece más en tu perfil."
+                                      confirmLabel="Eliminar"
+                                      onConfirm={() => confirmDeleteVisit(visitToDelete)}
+                                      onCancel={() => setVisitToDelete(null)}
+                                    />
+                                  )}
                                   <button onClick={(e) => { e.stopPropagation(); handleDeleteVisit(v._id); }} className="flex items-center gap-1 text-xs font-medium gc-focus" style={{ color: '#f85149' }}>
                                     <Trash2 size={12} /> Eliminar
                                   </button>
@@ -694,6 +721,7 @@ export default function ProfileView({
 
             {(tab === 'guardadas' || tab === 'megusta') && isOwn && (() => {
               const list = tab === 'guardadas' ? savedVisits : likedVisits;
+              const savedPageSafe = clampPage(savedPage, list.length, LIST_PAGE_SIZE);
               return (
                 <section>
                   <SectionTitle count={list.length}>{tab === 'guardadas' ? 'Reseñas guardadas' : 'Reseñas que te gustaron'}</SectionTitle>
@@ -703,8 +731,11 @@ export default function ProfileView({
                     </p>
                   ) : (
                     <div className="grid md:grid-cols-2 gap-3">
-                      {list.map((v) => <VisitMiniCard key={v._id} visit={v} onOpen={onOpenVisit} />)}
+                      {paginate(list, savedPageSafe, LIST_PAGE_SIZE).map((v) => <VisitMiniCard key={v._id} visit={v} onOpen={onOpenVisit} />)}
                     </div>
+                  )}
+                  {list.length > LIST_PAGE_SIZE && (
+                    <AdminPagination page={savedPageSafe} total={list.length} onChange={setSavedPage} pageSize={LIST_PAGE_SIZE} />
                   )}
                 </section>
               );
@@ -789,7 +820,7 @@ export default function ProfileView({
                     </div>
                   </div>
                 )}
-                {user?.rol === 'admin' && (
+                {isAdminRole(user?.rol) && (
                   <div className="mt-6 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold" style={{ color: C.bright }}>Analíticas de la plataforma</p>
@@ -815,10 +846,13 @@ export default function ProfileView({
                   <p className="text-sm" style={{ color: C.muted }}>{isOwn ? 'Todavía no tenés seguidores.' : 'Todavía no tiene seguidores.'}</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
-                    {followersList.map((f) => (
+                    {paginate(followersList, followersPageSafe, LIST_PAGE_SIZE).map((f) => (
                       <UserCard key={f._id} user={f} onOpen={() => setViewUserId(f._id)} />
                     ))}
                   </div>
+                )}
+                {followersList.length > LIST_PAGE_SIZE && (
+                  <AdminPagination page={followersPageSafe} total={followersList.length} onChange={setFollowersPage} pageSize={LIST_PAGE_SIZE} />
                 )}
               </section>
             )}
@@ -830,10 +864,13 @@ export default function ProfileView({
                   <p className="text-sm" style={{ color: C.muted }}>{isOwn ? 'Todavía no seguís a nadie.' : 'Todavía no sigue a nadie.'}</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
-                    {followingList.map((f) => (
+                    {paginate(followingList, followingPageSafe, LIST_PAGE_SIZE).map((f) => (
                       <UserCard key={f._id || f} user={f} onOpen={() => setViewUserId(f._id || f)} />
                     ))}
                   </div>
+                )}
+                {followingList.length > LIST_PAGE_SIZE && (
+                  <AdminPagination page={followingPageSafe} total={followingList.length} onChange={setFollowingPage} pageSize={LIST_PAGE_SIZE} />
                 )}
               </section>
             )}

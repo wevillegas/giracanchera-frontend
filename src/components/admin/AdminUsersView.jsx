@@ -1,10 +1,12 @@
+import ConfirmModal from '../ConfirmModal';
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Trash2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, Star, AlertCircle } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import adminService from '../../services/adminService';
 import AdminUserEditModal from './AdminUserEditModal';
 import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminPagination';
+import { isAdminRole } from '../../utils/roles';
 
 function initialsOf(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
@@ -19,6 +21,7 @@ export default function AdminUsersView({ onToast }) {
   const [query, setQuery] = useState('');
   const [rolFilter, setRolFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,7 +35,7 @@ export default function AdminUsersView({ onToast }) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return users.filter((u) => {
-      const matchesRol = rolFilter === 'all' || (rolFilter === 'admin') === (u.rol === 'admin');
+      const matchesRol = rolFilter === 'all' || (rolFilter === 'admin') === isAdminRole(u.rol);
       const matchesText = !q || u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
       return matchesRol && matchesText;
     });
@@ -41,8 +44,12 @@ export default function AdminUsersView({ onToast }) {
   const currentPage = clampPage(page, filtered.length);
   const visible = paginate(filtered, currentPage);
 
-  async function handleDelete(user) {
-    if (!window.confirm(`¿Eliminar a @${user.username}? Esta acción no se puede deshacer.`)) return;
+  function handleDelete(user) {
+    setPendingDelete(user);
+  }
+
+  async function confirmDelete(user) {
+    setPendingDelete(null);
     try {
       await adminService.deleteUser(user._id);
       setUsers((prev) => prev.filter((u) => u._id !== user._id));
@@ -51,6 +58,14 @@ export default function AdminUsersView({ onToast }) {
       onToast?.(err.response?.data?.message || 'No pudimos eliminar el usuario.');
     }
   }
+
+  // Un admin no puede tocar a otro admin (el back lo valida igual)
+  // Un admin no toca a otros admins ni a superadmins; un superadmin toca a todos menos a otros superadmins
+  const isLockedBy = (user) => {
+    if (user._id === me?._id) return false;
+    if (user.rol === 'superadmin') return true;
+    return me?.rol !== 'superadmin' && user.rol === 'admin';
+  };
 
   if (loading) {
     return <p className="text-sm" style={{ color: C.muted }}>Cargando usuarios...</p>;
@@ -113,10 +128,16 @@ export default function AdminUsersView({ onToast }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-medium truncate" style={{ color: C.bright }}>@{user.username}</span>
-                {user.rol === 'admin' && (
-                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ backgroundColor: C.brand, color: C.bright }}>
-                    <ShieldCheck size={10} /> Admin
-                  </span>
+                {isAdminRole(user.rol) && (
+                  user.rol === 'superadmin' ? (
+                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ backgroundColor: C.gold, color: C.bg }}>
+                      <Star size={10} fill="currentColor" /> Superadmin
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ backgroundColor: C.brand, color: C.bright }}>
+                      <Star size={10} fill="currentColor" /> Admin
+                    </span>
+                  )
                 )}
                 {user._id === me?._id && (
                   <span className="text-[10px]" style={{ color: C.muted }}>(vos)</span>
@@ -138,18 +159,21 @@ export default function AdminUsersView({ onToast }) {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => setEditingUser(user)}
+                disabled={isLockedBy(user)}
                 aria-label="Editar usuario"
-                className="w-8 h-8 rounded-full flex items-center justify-center gc-focus gc-tap"
+                title={isLockedBy(user) ? 'No podés editar a otro administrador' : undefined}
+                className="w-8 h-8 rounded-full flex items-center justify-center gc-focus gc-tap disabled:opacity-30"
                 style={{ color: C.brandBright }}
               >
                 <Pencil size={14} />
               </button>
               <button
                 onClick={() => handleDelete(user)}
-                disabled={user._id === me?._id}
+                disabled={user._id === me?._id || isLockedBy(user)}
                 aria-label="Eliminar usuario"
+                title={isLockedBy(user) ? 'No podés eliminar a otro administrador' : undefined}
                 className="w-8 h-8 rounded-full flex items-center justify-center gc-focus gc-tap"
-                style={{ color: user._id === me?._id ? C.border : '#f85149' }}
+                style={{ color: user._id === me?._id || isLockedBy(user) ? C.border : '#f85149' }}
               >
                 <Trash2 size={14} />
               </button>
@@ -160,6 +184,16 @@ export default function AdminUsersView({ onToast }) {
 
       <AdminPagination page={currentPage} total={filtered.length} onChange={setPage} />
 
+      {pendingDelete && (
+        <ConfirmModal
+          danger
+          title={`¿Eliminar a @${pendingDelete.username}?`}
+          message="Esta acción no se puede deshacer."
+          confirmLabel="Eliminar"
+          onConfirm={() => confirmDelete(pendingDelete)}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
       {editingUser && (
         <AdminUserEditModal
           user={editingUser}
