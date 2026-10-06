@@ -8,6 +8,7 @@ import LoginModal from './LoginModal';
 import RegisterModal from './RegisterModal';
 import logoIcon from '../assets/giracanchera-icono.svg';
 import LogoutConfirmModal from './LogoutConfirmModal';
+import { Logo } from './ClubPicker';
 
 const FILTERS = [
   { key: 'visited', label: 'Mis visitas' },
@@ -135,13 +136,7 @@ export default function Navbar({
                     style={{ borderTop: `1px solid ${C.border}` }}
                   >
                     <div className="w-12 h-12 shrink-0 flex items-center justify-center">
-                      {s.clubLogoUrl ? (
-                        <img src={s.clubLogoUrl} alt={s.clubName || s.club} className="w-full h-full object-contain" />
-                      ) : (
-                        <div className="w-full h-full rounded-full flex items-center justify-center text-xs font-semibold" style={{ backgroundColor: C.border, color: C.bright }}>
-                          {initialsOf(s.clubName || s.club || '?')}
-                        </div>
-                      )}
+                      <Logo url={s.clubLogoUrl} size={44} />
                     </div>
                     <span className="min-w-0">
                       <span className="block text-xl truncate" style={{ color: C.bright, fontFamily: DISPLAY_FONT, letterSpacing: '0.02em', fontWeight: 400 }}>{s.name}</span>

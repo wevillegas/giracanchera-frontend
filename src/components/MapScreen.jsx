@@ -8,7 +8,7 @@ import { C, rgba } from '../theme';
 
 const ARGENTINA_CENTER = [-34.6, -58.38];
 const ARGENTINA_ZOOM = 5;
-const FOCUS_ZOOM = 6;
+const FOCUS_ZOOM = 15; // nivel de calle: se ve el estadio, no solo la zona
 const MIN_ZOOM = 3;
 const WORLD_BOUNDS = [
   [-90, -180],

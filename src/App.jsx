@@ -157,10 +157,11 @@ export default function App() {
     setSheet('stadium');
   }
 
+  // Elegir un resultado solo mueve el mapa al estadio (con zoom). La reseña se abre después, desde el botón +
   function selectSearchResult(s) {
     setQuery('');
+    setView('map');
     setFlyTarget({ id: s.id, lat: s.location.coordinates.lat, lng: s.location.coordinates.lng });
-    openStadium(s);
   }
 
   // Limpia el usuario elegido al salir del perfil, para que el perfil propio vuelva a abrirse por defecto
