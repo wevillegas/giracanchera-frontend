@@ -1,5 +1,5 @@
 import ConfirmModal from './ConfirmModal';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil, Heart, Bookmark, Flag, Trash2 } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import { useAuth } from '../context/AuthContext';
@@ -26,49 +26,80 @@ function formatLongDate(value) {
 // Visor de fotos dentro de la app: navegación con flechas/teclado, cierra con Esc o clic en el fondo.
 function PhotoModal({ images, index, alt, onIndexChange, onClose }) {
   const hasMany = images.length > 1;
+  const touchStartX = useRef(null);
+  const wheelLocked = useRef(false);
+  const [direction, setDirection] = useState('right');
 
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape') onClose();
-      if (hasMany && e.key === 'ArrowRight') onIndexChange((index + 1) % images.length);
-      if (hasMany && e.key === 'ArrowLeft') onIndexChange((index - 1 + images.length) % images.length);
+      if (hasMany && e.key === 'ArrowRight') { setDirection('right'); onIndexChange((index + 1) % images.length); }
+      if (hasMany && e.key === 'ArrowLeft') { setDirection('left'); onIndexChange((index - 1 + images.length) % images.length); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [index, images.length, hasMany, onIndexChange, onClose]);
+
+  function goNext() { setDirection('right'); onIndexChange((index + 1) % images.length); }
+  function goPrev() { setDirection('left'); onIndexChange((index - 1 + images.length) % images.length); }
+
+  function handleTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+  function handleTouchEnd(e) {
+    if (!hasMany || touchStartX.current == null) return;
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(diff) < 50) return;
+    if (diff < 0) goNext(); else goPrev();
+  }
+  // Nota: goNext/goPrev ya fijan la dirección de la animación
+  // Soporta scroll horizontal del mouse/trackpad para cambiar de foto (desktop y responsive)
+  function handleWheel(e) {
+    if (!hasMany || wheelLocked.current) return;
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(delta) < 30) return;
+    wheelLocked.current = true;
+    if (delta > 0) goNext(); else goPrev();
+    setTimeout(() => { wheelLocked.current = false; }, 350);
+  }
 
   return (
     <div
       className="fixed inset-0 z-[1100] flex items-center justify-center p-4"
       style={{ backgroundColor: rgba(C.bg, 0.92) }}
       onClick={onClose}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onWheel={handleWheel}
       role="dialog"
       aria-modal="true"
     >
       <img
+        key={index}
         src={images[index]}
         alt={alt}
         onClick={(e) => e.stopPropagation()}
-        className="max-w-full max-h-[85vh] object-contain rounded-xl"
+        className={`max-w-full max-h-[85vh] object-contain rounded-xl ${direction === 'right' ? 'gc-slide-right' : 'gc-slide-left'}`}
       />
-      <button onClick={onClose} aria-label="Cerrar" className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.surface, 0.9) }}>
+      <button onClick={onClose} aria-label="Cerrar" className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.surface, 0.45) }}>
         <X size={18} color={C.bright} />
       </button>
       {hasMany && (
         <>
           <button
-            onClick={(e) => { e.stopPropagation(); onIndexChange((index - 1 + images.length) % images.length); }}
+            onClick={(e) => { e.stopPropagation(); goPrev(); }}
             aria-label="Foto anterior"
             className="absolute left-4 w-10 h-10 rounded-full flex items-center justify-center gc-focus"
-            style={{ backgroundColor: rgba(C.surface, 0.9) }}
+            style={{ backgroundColor: rgba(C.surface, 0.45) }}
           >
             <ChevronLeft size={18} color={C.bright} />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onIndexChange((index + 1) % images.length); }}
+            onClick={(e) => { e.stopPropagation(); goNext(); }}
             aria-label="Foto siguiente"
             className="absolute right-4 w-10 h-10 rounded-full flex items-center justify-center gc-focus"
-            style={{ backgroundColor: rgba(C.surface, 0.9) }}
+            style={{ backgroundColor: rgba(C.surface, 0.45) }}
           >
             <ChevronRight size={18} color={C.bright} />
           </button>

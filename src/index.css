@@ -9,10 +9,14 @@
 
 @keyframes gcSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes gcFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gcSlideInRight { from { transform: translateX(60px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes gcSlideInLeft { from { transform: translateX(-60px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 .gc-sheet { animation: gcSlideUp 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
 .gc-overlay { animation: gcFadeIn 0.2s ease-out; }
+.gc-slide-right { animation: gcSlideInRight 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+.gc-slide-left { animation: gcSlideInLeft 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
 @media (prefers-reduced-motion: reduce) {
-  .gc-sheet, .gc-overlay { animation: none; }
+  .gc-sheet, .gc-overlay, .gc-slide-right, .gc-slide-left { animation: none; }
 }
 
 .gc-focus:focus-visible { outline: 2px solid #3FB950; outline-offset: 2px; }

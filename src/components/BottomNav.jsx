@@ -27,7 +27,7 @@ export default function BottomNav({ view, onNavigateMap, onNavigateProfile, onQu
         <NavItem active={view === 'map'} onClick={onNavigateMap} Icon={Home} label="Mapa" />
 
         <button
-          onClick={onQuickAddVisit}
+          onClick={() => { window.dispatchEvent(new Event('gc:close-mobile-menu')); onQuickAddVisit(); }}
           aria-label="Registrar visita"
           className="rounded-full flex items-center justify-center gc-focus gc-tap shrink-0"
           style={{ width: 64, height: 64, marginTop: -40, backgroundColor: C.brand, border: `4px solid ${C.bg}`, boxShadow: `0 8px 22px ${rgba(C.brand, 0.6)}` }}

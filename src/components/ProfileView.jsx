@@ -38,9 +38,9 @@ const OWN_ONLY_TABS = [
 const SPEND_LABELS = { ticket: 'Entradas', food: 'Comida', parking: 'Estacionamiento', transport: 'Transporte' };
 
 // Tarjeta de un número en la vista de estadísticas personales
-function StatTile({ label, value }) {
+function StatTile({ label, value, className = '' }) {
   return (
-    <div className="flex flex-col items-center justify-center text-center px-2 py-4 rounded-2xl min-h-[88px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+    <div className={`flex flex-col items-center justify-center text-center px-2 py-4 rounded-2xl min-h-[88px] ${className}`} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
       <span className="text-2xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{value}</span>
       <span className="text-[10px] uppercase tracking-widest mt-2 leading-tight" style={{ color: C.muted }}>{label}</span>
     </div>
@@ -522,19 +522,19 @@ export default function ProfileView({
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full md:w-auto md:shrink-0">
             {stats.map(({ label, value, Icon, onClick }) => {
               const Tag = onClick ? 'button' : 'div';
               return (
                 <Tag
                   key={label}
                   onClick={onClick}
-                  className={`flex flex-col items-center px-4 py-3 rounded-2xl gc-focus ${onClick ? 'gc-tap' : ''}`}
+                  className={`flex flex-col items-center px-2 sm:px-4 py-2.5 sm:py-3 rounded-2xl gc-focus min-w-0 ${onClick ? 'gc-tap' : ''}`}
                   style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
                 >
-                  <span className="text-2xl" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{value}</span>
-                  <span className="text-[10px] uppercase tracking-widest mt-0.5 flex items-center gap-1" style={{ color: C.muted }}>
-                    <Icon size={10} /> {label}
+                  <span className="text-xl sm:text-2xl" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{value}</span>
+                  <span className="text-[10px] uppercase tracking-widest mt-0.5 flex items-center gap-1 text-center" style={{ color: C.muted }}>
+                    <Icon size={10} className="shrink-0" /> <span className="truncate">{label}</span>
                   </span>
                 </Tag>
               );
@@ -569,7 +569,7 @@ export default function ProfileView({
               <section>
                 <SectionTitle count={displayedVisits.length}>Reseñas</SectionTitle>
                 {displayedVisitsLoading ? (
-                  <div className="grid grid-cols-2 gap-3 animate-pulse">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-pulse">
                     {[0, 1].map((i) => <div key={i} className="h-36 rounded-2xl" style={{ backgroundColor: C.surface }} />)}
                   </div>
                 ) : displayedVisits.length === 0 ? (
@@ -578,7 +578,7 @@ export default function ProfileView({
                   </p>
                 ) : (
                   <>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {paginate(displayedVisits, reviewsPageSafe, REVIEWS_PAGE_SIZE).map((v, i) => {
                         const stadiumId = v.stadium?._id;
                         return (
@@ -680,7 +680,7 @@ export default function ProfileView({
                   </p>
                 ) : (
                   <>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {paginate(visitedStadiumTiles, visitedPageSafe, stadiumPageSize).map((s) => (
                         <StadiumCard
                           key={s.id}
@@ -704,7 +704,7 @@ export default function ProfileView({
                   </p>
                 ) : (
                   <>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {paginate(wishlistStadiums, wishPageSafe, stadiumPageSize).map((s) => (
                         <StadiumCard
                           key={s.id}
@@ -756,22 +756,26 @@ export default function ProfileView({
                       <StatTile label="Estadios distintos" value={myStats.stadiums} />
                       <StatTile label="Puntaje promedio" value={`${myStats.avgRating}/10`} />
                       <StatTile label="Partidos cargados" value={myStats.matches} />
-                      <StatTile label={myStats.clubMatches ? `Partidos de ${myStats.clubMatches.clubName}` : 'Partidos de tu club'} value={myStats.clubMatches?.count ?? '—'} />
+                      <StatTile
+                        className="col-span-2 md:col-span-5"
+                        label={myStats.clubMatches ? `Partidos de ${myStats.clubMatches.clubName}` : 'Partidos de tu club'}
+                        value={myStats.clubMatches?.count ?? '—'}
+                      />
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-3">
-                      <div className="p-5 rounded-2xl text-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                      <div className="p-3 sm:p-5 rounded-2xl text-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
                         <p className="text-[10px] uppercase tracking-widest mb-4" style={{ color: C.muted }}>Estadio favorito</p>
                         {myStats.favoriteStadium ? (
                           <div className="flex flex-col items-center">
                             {myStats.favoriteStadium.clubLogoUrl ? (
-                              <img src={myStats.favoriteStadium.clubLogoUrl} alt={myStats.favoriteStadium.clubName} className="w-24 h-24 object-contain" />
+                              <img src={myStats.favoriteStadium.clubLogoUrl} alt={myStats.favoriteStadium.clubName} className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
                             ) : (
-                              <div className="w-24 h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: C.border, color: C.muted }}>
+                              <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: C.border, color: C.muted }}>
                                 <Landmark size={22} />
                               </div>
                             )}
-                            <p className="text-2xl leading-none mt-3 max-w-full truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{myStats.favoriteStadium.name}</p>
+                            <p className="text-lg sm:text-2xl leading-none mt-3 max-w-full truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{myStats.favoriteStadium.name}</p>
                             {myStats.favoriteStadium.clubName && (
                               <p className="text-xs mt-0.5 truncate max-w-full" style={{ color: C.bright }}>{myStats.favoriteStadium.clubName}</p>
                             )}
@@ -795,9 +799,9 @@ export default function ProfileView({
                         )}
                       </div>
 
-                      <div className="p-5 rounded-2xl text-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                      <div className="p-3 sm:p-5 rounded-2xl text-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
                         <p className="text-[10px] uppercase tracking-widest" style={{ color: C.muted }}>Gasto total</p>
-                        <p className="text-2xl leading-none mt-2 mb-1" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>{formatMoney(myStats.totalSpent)}</p>
+                        <p className="text-lg sm:text-2xl leading-none mt-2 mb-1" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>{formatMoney(myStats.totalSpent)}</p>
                         <p className="text-xs mb-5" style={{ color: C.muted }}>Promedio por visita con gastos: {formatMoney(myStats.avgSpent)}</p>
                         <div className="space-y-3 text-left">
                           {Object.entries(SPEND_LABELS).map(([key, label]) => {
@@ -845,7 +849,7 @@ export default function ProfileView({
                 {followersList.length === 0 ? (
                   <p className="text-sm" style={{ color: C.muted }}>{isOwn ? 'Todavía no tenés seguidores.' : 'Todavía no tiene seguidores.'}</p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {paginate(followersList, followersPageSafe, LIST_PAGE_SIZE).map((f) => (
                       <UserCard key={f._id} user={f} onOpen={() => setViewUserId(f._id)} />
                     ))}
@@ -863,7 +867,7 @@ export default function ProfileView({
                 {followingList.length === 0 ? (
                   <p className="text-sm" style={{ color: C.muted }}>{isOwn ? 'Todavía no seguís a nadie.' : 'Todavía no sigue a nadie.'}</p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {paginate(followingList, followingPageSafe, LIST_PAGE_SIZE).map((f) => (
                       <UserCard key={f._id || f} user={f} onOpen={() => setViewUserId(f._id || f)} />
                     ))}

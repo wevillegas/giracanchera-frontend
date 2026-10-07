@@ -80,7 +80,7 @@ export default function StadiumView({
         ) : (
           <StadiumArt tone={stadium.tone} uid={`page-${stadium.id}`} className="w-full h-full" />
         )}
-        <button onClick={() => onBack(cameFrom)} className="absolute top-32 left-4 w-9 h-9 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.bg, 0.6) }}>
+        <button onClick={() => onBack(cameFrom)} className="absolute top-20 md:top-32 left-4 w-9 h-9 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.bg, 0.6) }}>
           <ChevronLeft size={18} color={C.bright} />
         </button>
         {stadium.status === 'visited' && (
