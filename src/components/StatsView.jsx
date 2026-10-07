@@ -1,4 +1,4 @@
-import logoIcon from '../assets/giracanchera-icono.svg';
+import logoIcon from '../assets/giracanchera-card.svg';
 import { useEffect, useState } from 'react';
 import { ChevronLeft, Activity, MapPin, Star, Users, Flag, Wallet, Shield } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney } from '../theme';
