@@ -164,7 +164,6 @@ export default function StatsView({ onBackToMap, navbarProps }) {
 
         {isAdminRole(user?.rol) && (
           <Section title="Analíticas internas">
-            <p className="text-xs mb-3" style={{ color: C.muted }}>Solo lo ves vos, como admin. Son datos de operación de la plataforma.</p>
             <AdminStatsView />
           </Section>
         )}

@@ -882,7 +882,7 @@ export default function ProfileView({
 
           <aside className="space-y-6 md:sticky md:top-32">
             <section>
-              <h2 className="text-xl font-semibold pb-2 mb-3" style={{ color: C.bright, borderBottom: `1px solid ${C.border}` }}>Bio</h2>
+              <h2 className="text-xl font-semibold pb-2 mb-3" style={{ color: C.bright, borderBottom: `1px solid ${C.border}` }}>Biografía</h2>
               <p className="text-sm leading-relaxed" style={{ color: C.bright }}>{bio}</p>
             </section>
 

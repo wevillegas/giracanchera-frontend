@@ -84,18 +84,32 @@ export default function StadiumView({
           <ChevronLeft size={18} color={C.bright} />
         </button>
         {stadium.status === 'visited' && (
-          <div className="absolute top-32 right-4 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.brandBright }}>
+          <div className="hidden min-[800px]:flex absolute top-32 right-4 px-2.5 py-1 rounded-full text-xs font-semibold items-center gap-1" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.brandBright }}>
             <Check size={12} /> Tenés {myReviews.length} {myReviews.length === 1 ? 'reseña' : 'reseñas'}
           </div>
         )}
         {stadium.status === 'wishlist' && (
-          <div className="absolute top-32 right-4 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.gold }}>
+          <div className="hidden min-[800px]:block absolute top-32 right-4 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.gold }}>
             En tu lista
           </div>
         )}
       </div>
 
-
+      {/* Por debajo de 800px el cartel no entra sobre la foto: se muestra aparte, debajo */}
+      {stadium.status === 'visited' && (
+        <div className="min-[800px]:hidden px-4 pt-3 flex">
+          <div className="px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.brandBright }}>
+            <Check size={12} /> Tenés {myReviews.length} {myReviews.length === 1 ? 'reseña' : 'reseñas'}
+          </div>
+        </div>
+      )}
+      {stadium.status === 'wishlist' && (
+        <div className="min-[800px]:hidden px-4 pt-3 flex">
+          <div className="px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: rgba(C.bg, 0.7), color: C.gold }}>
+            En tu lista
+          </div>
+        </div>
+      )}
 
       <div className="max-w-5xl mx-auto px-4 py-5 grid gap-8 md:grid-cols-[1fr_380px] items-start">
         <div className="min-w-0">
