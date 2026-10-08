@@ -152,7 +152,7 @@ export default function AboutView({ onBackToMap, navbarProps }) {
           <ul className="rounded-2xl p-5 text-sm space-y-2 list-disc pl-9" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.muted }}>
             <li>Recuperación de contraseña por email.</li>
             <li>Opción para elegir la privacidad del perfil y de las listas.</li>
-            <li>Más estadísticas por club y por ciudad.</li>
+            <li>Más estadios de todo el mundo.</li>
           </ul>
         </Section>
 

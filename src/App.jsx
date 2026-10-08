@@ -127,14 +127,14 @@ export default function App() {
   const filteredStadiums = stadiums.filter((s) => {
     const matchesFilter = filter === 'all' ? true : s.status === filter;
     const q = query.toLowerCase();
-    const matchesQuery = s.name.toLowerCase().includes(q) || s.club.toLowerCase().includes(q);
+    const matchesQuery = s.name.toLowerCase().includes(q) || s.club.toLowerCase().includes(q) || s.clubName.toLowerCase().includes(q);
     return matchesFilter && matchesQuery;
   });
 
   const searchResults = query.trim()
     ? stadiums.filter((s) => {
         const q = query.toLowerCase();
-        return s.name.toLowerCase().includes(q) || s.club.toLowerCase().includes(q);
+        return s.name.toLowerCase().includes(q) || s.club.toLowerCase().includes(q) || s.clubName.toLowerCase().includes(q);
       })
     : [];
 
@@ -155,6 +155,9 @@ export default function App() {
   function openStadium(s) {
     setActiveStadium(s);
     setSheet('stadium');
+    if (s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null) {
+      setFlyTarget({ id: s.id, lat: s.location.coordinates.lat, lng: s.location.coordinates.lng });
+    }
   }
 
   // Elegir un resultado solo mueve el mapa al estadio (con zoom). La reseña se abre después, desde el botón +

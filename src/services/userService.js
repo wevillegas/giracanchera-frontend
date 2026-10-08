@@ -41,6 +41,11 @@ async function deleteAccount(password) {
   return data;
 }
 
+async function changePassword(currentPassword, newPassword) {
+  const { data } = await api.put('/users/me/password', { currentPassword, newPassword });
+  return data;
+}
+
 async function toggleFollow(userId) {
   const { data } = await api.post(`/users/follow/${userId}`);
   return data;
@@ -49,8 +54,9 @@ async function toggleFollow(userId) {
 const userService = {
   getMyStats,
   deleteAccount,
+  changePassword,
   getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, toggleFollow,
 };
 
 export default userService;
-export { getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, toggleFollow };
+export { getProfile, updateProfile, toggleWantToVisit, getPublicProfile, searchUsers, toggleFollow, changePassword };

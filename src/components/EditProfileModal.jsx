@@ -1,6 +1,6 @@
 import ConfirmModal from './ConfirmModal';
 import { useEffect, useState } from 'react';
-import { X, Camera, AlertCircle, Trash2 } from 'lucide-react';
+import { X, Camera, AlertCircle, Trash2, Lock } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import userService from '../services/userService';
 import clubService from '../services/clubService';
@@ -16,6 +16,35 @@ export default function EditProfileModal({ profile, onClose, onSaved, onAccountD
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  async function handleChangePassword() {
+    setPasswordError('');
+    setPasswordSuccess('');
+    if (newPassword !== newPasswordConfirm) {
+      setPasswordError('Las contraseñas nuevas no coinciden');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await userService.changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setNewPasswordConfirm('');
+      setPasswordSuccess('Contraseña actualizada.');
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || 'No pudimos cambiar tu contraseña. Probá de nuevo.');
+    } finally {
+      setChangingPassword(false);
+    }
+  }
 
   async function handleDeleteAccount() {
     setDeleting(true);
@@ -159,6 +188,56 @@ export default function EditProfileModal({ profile, onClose, onSaved, onAccountD
             {submitting ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </form>
+
+        <div className="px-5 pb-6 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+          {!passwordOpen ? (
+            <button onClick={() => setPasswordOpen(true)} className="flex items-center gap-1.5 text-xs font-medium gc-focus" style={{ color: C.brandBright }}>
+              <Lock size={13} /> Cambiar contraseña
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs" style={{ color: C.muted }}>
+                Provisorio: hasta que tengamos confirmación por mail, podés cambiar tu contraseña ingresando la actual.
+              </p>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Contraseña actual"
+                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
+              />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Nueva contraseña"
+                minLength={8}
+                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
+              />
+              <input
+                type="password"
+                value={newPasswordConfirm}
+                onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                placeholder="Repetir nueva contraseña"
+                minLength={8}
+                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
+              />
+              {passwordError && <p className="text-xs" style={{ color: '#f85149' }}>{passwordError}</p>}
+              {passwordSuccess && <p className="text-xs" style={{ color: '#3fb950' }}>{passwordSuccess}</p>}
+              <button
+                onClick={handleChangePassword}
+                disabled={!currentPassword || newPassword.length < 8 || !newPasswordConfirm || changingPassword}
+                className="w-full py-2.5 rounded-xl font-semibold text-sm gc-focus disabled:opacity-40"
+                style={{ backgroundColor: C.brand, color: C.bright }}
+              >
+                {changingPassword ? 'Cambiando...' : 'Cambiar contraseña'}
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="px-5 pb-6 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
           {!deleteOpen ? (

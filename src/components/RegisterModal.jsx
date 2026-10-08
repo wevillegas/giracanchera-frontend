@@ -11,6 +11,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [clubId, setClubId] = useState('');
   const [clubs, setClubs] = useState([]);
   const [clubsLoading, setClubsLoading] = useState(true);
@@ -29,6 +30,10 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    if (password !== passwordConfirm) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
     setSubmitting(true);
     try {
       await register({ username, email, password, clubHincha: clubId || undefined });
@@ -108,6 +113,23 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="bg-transparent outline-none text-sm flex-1 min-w-0"
+                style={{ color: C.bright }}
+              />
+            </div>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium" style={{ color: C.muted }}>Repetir contraseña</span>
+            <div className="gc-search-box flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface }}>
+              <Lock size={15} color={C.muted} />
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
                 placeholder="••••••••"
                 className="bg-transparent outline-none text-sm flex-1 min-w-0"
                 style={{ color: C.bright }}
