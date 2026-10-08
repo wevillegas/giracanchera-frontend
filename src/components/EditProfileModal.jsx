@@ -83,6 +83,11 @@ export default function EditProfileModal({ profile, onClose, onSaved, onAccountD
     setPreview(URL.createObjectURL(file));
   }
 
+  // Libera el object URL de la preview anterior al elegir otra foto o cerrar el modal
+  useEffect(() => {
+    return () => { if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview); };
+  }, [preview]);
+
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   function handleSubmit(e) {

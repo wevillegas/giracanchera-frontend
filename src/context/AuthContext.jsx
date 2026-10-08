@@ -10,6 +10,14 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
+  // El interceptor de api.js dispara esto cuando el backend rechaza el token
+  // (expiró, se invalidó con logout en otra pestaña, etc.)
+  useEffect(() => {
+    const onAuthExpired = () => { setToken(null); setUser(null); };
+    window.addEventListener('gc:auth-expired', onAuthExpired);
+    return () => window.removeEventListener('gc:auth-expired', onAuthExpired);
+  }, []);
+
   useEffect(() => {
     if (!token) {
       setUser(null);
