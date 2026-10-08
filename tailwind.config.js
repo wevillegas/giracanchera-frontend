@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       screens: {
-        nav: '1225px',
+        nav: '1267px',
       },
     },
   },

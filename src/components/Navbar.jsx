@@ -101,7 +101,7 @@ export default function Navbar({
           aria-label="Ir al mapa"
         >
           <img src={logoIcon} alt="" className="w-8 h-8 object-contain shrink-0" />
-          <span className="text-xl tracking-wide uppercase shrink-0" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>Gira<span style={{ color: C.brandBright }}>Canchera</span></span>
+          <span className="text-xl tracking-wide uppercase shrink-0 min-[1267px]:max-[1370px]:hidden" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>Gira<span style={{ color: C.brandBright }}>Canchera</span></span>
         </button>
 
         <button

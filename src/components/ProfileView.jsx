@@ -757,7 +757,7 @@ export default function ProfileView({
                       <StatTile label="Puntaje promedio" value={`${myStats.avgRating}/10`} />
                       <StatTile label="Partidos cargados" value={myStats.matches} />
                       <StatTile
-                        className="col-span-2 md:col-span-5"
+                        className="col-span-2 md:col-span-1"
                         label={myStats.clubMatches ? `Partidos de ${myStats.clubMatches.clubName}` : 'Partidos de tu club'}
                         value={myStats.clubMatches?.count ?? '—'}
                       />
