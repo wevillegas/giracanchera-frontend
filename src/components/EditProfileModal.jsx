@@ -28,6 +28,10 @@ export default function EditProfileModal({ profile, onClose, onSaved, onAccountD
   async function handleChangePassword() {
     setPasswordError('');
     setPasswordSuccess('');
+    if (!/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword) || newPassword.length < 8) {
+      setPasswordError('La nueva contraseña debe tener al menos 8 caracteres, con una letra y un número');
+      return;
+    }
     if (newPassword !== newPasswordConfirm) {
       setPasswordError('Las contraseñas nuevas no coinciden');
       return;
@@ -221,6 +225,7 @@ export default function EditProfileModal({ profile, onClose, onSaved, onAccountD
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
                 style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
               />
+              <span className="text-xs" style={{ color: C.muted }}>Mínimo 8 caracteres, con al menos una letra y un número</span>
               <input
                 type="password"
                 value={newPasswordConfirm}

@@ -30,6 +30,10 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    if (!/[a-zA-Z]/.test(password) || !/\d/.test(password) || password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres, con una letra y un número');
+      return;
+    }
     if (password !== passwordConfirm) {
       setError('Las contraseñas no coinciden');
       return;
@@ -118,6 +122,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
                 style={{ color: C.bright }}
               />
             </div>
+            <span className="text-xs" style={{ color: C.muted }}>Mínimo 8 caracteres, con al menos una letra y un número</span>
           </label>
 
           <label className="flex flex-col gap-1.5">
