@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Minus, Plus } from 'lucide-react';
@@ -8,11 +8,17 @@ import { userCountryCode, sameCountry } from '../utils/userCountry';
 // MapLibre usa [lng, lat] y su zoom va uno por debajo del de Leaflet (tiles de 512 px)
 const ARGENTINA_CENTER = [-58.38, -34.6];
 const ARGENTINA_ZOOM = 3.7;
-const FOCUS_ZOOM = 14; // nivel de calle: se ve el estadio, no solo la zona
+const FOCUS_ZOOM = 13; // se ve el estadio y su barrio, sin llegar a pegarse al suelo
+const FOCUS_MS = 2600; // viaje al estadio: lento y suave
+const FOCUS_CURVE = 1.1; // más bajo = menos "salto" de alejar y volver a acercar (por defecto 1.42)
 
 // Zoom mínimo según el tamaño de la pantalla: el planeta llena casi todo el lado menor (las barras
 // lo tapan un poco), así nunca queda como una bolita. Circunferencia en px = 512 * 2^zoom, diámetro = circunferencia / π.
 const GLOBE_FILL = 1.05;
+
+// El espacio (estrellas fugaces y destellos) solo se ve mientras el planeta no llena toda la pantalla:
+// diámetro del globo en px = 512 * 2^zoom / π
+const globeCoversScreen = (zoom, el) => (512 * 2 ** zoom) / Math.PI >= Math.hypot(el.clientWidth, el.clientHeight);
 
 // Con el planeta alejado (zoom por debajo de esto) gira solo, despacio, hasta que el usuario lo toca
 const SPIN_BELOW_ZOOM = 3;
@@ -53,7 +59,8 @@ const MAP_STYLE = {
     },
   },
   layers: [
-    { id: 'fondo', type: 'background', paint: { 'background-color': C.bg } },
+    // Color parecido al del océano ya oscurecido: si un tile tarda en llegar no se ve un hueco negro
+    { id: 'fondo', type: 'background', paint: { 'background-color': '#232F36' } },
     {
       id: 'osm',
       type: 'raster',
@@ -65,6 +72,8 @@ const MAP_STYLE = {
         'raster-hue-rotate': 180,
         'raster-saturation': -0.6,
         'raster-contrast': -0.05,
+        // Sin fundido: con el giro entran tiles nuevos todo el tiempo y con fundido el planeta parpadeaba
+        'raster-fade-duration': 0,
       },
     },
   ],
@@ -151,6 +160,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
   const latest = useRef({ stadiums, onOpenStadium });
   useEffect(() => { latest.current = { stadiums, onOpenStadium }; }, [stadiums, onOpenStadium]);
   const markersRef = useRef(new Map());
+  const spaceRef = useRef(null);
   const interacted = useRef(false);
   const introDone = useRef(false);
 
@@ -176,7 +186,9 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
       pitchWithRotate: false,
     });
     instance.touchZoomRotate.disableRotation();
-    instance.on('resize', () => instance.setMinZoom(minZoomFor(container)));
+    const syncSpace = () => spaceRef.current?.classList.toggle('gc-space-hidden', globeCoversScreen(instance.getZoom(), container));
+    instance.on('resize', () => { instance.setMinZoom(minZoomFor(container)); syncSpace(); });
+    instance.on('zoom', syncSpace);
     // Si el usuario ya movió el mapa, el viaje de bienvenida no le arrebata el control
     ['mousedown', 'touchstart', 'wheel'].forEach((type) => instance.on(type, () => { interacted.current = true; }));
 
@@ -298,13 +310,19 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
 
   useEffect(() => {
     if (!map || !flyTarget) return;
-    map.flyTo({ center: [flyTarget.lng, flyTarget.lat], zoom: Math.max(map.getZoom(), FOCUS_ZOOM), duration: 800 });
+    map.flyTo({
+      center: [flyTarget.lng, flyTarget.lat],
+      zoom: Math.max(map.getZoom(), FOCUS_ZOOM),
+      duration: reducedMotion() ? 0 : FOCUS_MS,
+      curve: FOCUS_CURVE,
+      easing: (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2),
+    });
   }, [map, flyTarget]);
 
   return (
     <>
-      <div className="gc-space" style={{ width: '100vw', height: '100vh' }}>
-        {/* Capas del espacio, todas en CSS: Vía Láctea, dos capas de estrellas, destellos, un planeta lejano y estrellas fugaces */}
+      <div ref={spaceRef} className="gc-space" style={{ width: '100vw', height: '100vh' }}>
+        {/* Capas del espacio, todas en CSS: Vía Láctea, dos capas de estrellas, destellos y estrellas fugaces */}
         <div className="gc-milkyway" aria-hidden="true" />
         <div className="gc-stars gc-stars-a" aria-hidden="true" />
         <div className="gc-stars gc-stars-b" aria-hidden="true" />
@@ -314,7 +332,6 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
           <span className="gc-bright" style={{ top: '72%', left: '6%', animationDelay: '3s' }} />
           <span className="gc-bright" style={{ top: '84%', left: '88%', animationDelay: '2s' }} />
           <span className="gc-bright" style={{ top: '10%', left: '66%', animationDelay: '4s' }} />
-          <span className="gc-planet" />
           <span className="gc-meteor" style={{ top: '8%', left: '12%', animationDelay: '2s', animationDuration: '13s' }} />
           <span className="gc-meteor" style={{ top: '22%', left: '58%', animationDelay: '7s', animationDuration: '17s' }} />
           <span className="gc-meteor" style={{ top: '5%', left: '80%', animationDelay: '11s', animationDuration: '15s' }} />

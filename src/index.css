@@ -51,7 +51,9 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
 }
 
 /* Estrellas fugaces: una línea con cola que cruza en diagonal, visible solo un instante de cada ciclo */
-.gc-sky { position: absolute; inset: 0; pointer-events: none; }
+.gc-sky { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.6s ease; }
+/* Con el planeta llenando la pantalla ya no hay espacio a la vista: las estrellas fugaces y destellos se apagan */
+.gc-space-hidden .gc-sky { opacity: 0; }
 .gc-meteor {
   position: absolute;
   width: 130px;
@@ -235,30 +237,6 @@ input:focus, select:focus, textarea:focus { border-color: #3FB950 !important; }
 }
 .gc-bright::before { width: 22px; height: 1px; }
 .gc-bright::after { width: 1px; height: 22px; background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.7), transparent); }
-
-/* Planeta con anillos, muy lejano y apagado (el planeta Tierra lo tapa si se cruzan) */
-.gc-planet {
-  position: absolute;
-  right: 6%;
-  bottom: 24%;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 30%, #d9b98a, #7a5a3e 62%, #251a12);
-  box-shadow: inset -6px -6px 12px rgba(0, 0, 0, 0.55), 0 0 18px rgba(217, 185, 138, 0.12);
-  opacity: 0.8;
-}
-.gc-planet::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 104px;
-  height: 26px;
-  border-radius: 50%;
-  border: 3px solid rgba(225, 195, 150, 0.45);
-  transform: translate(-50%, -50%) rotate(-20deg);
-}
 
 @media (prefers-reduced-motion: reduce) {
   .gc-stars-a, .gc-stars-b, .gc-bright { animation: none; }
