@@ -9,9 +9,9 @@ import { userCountryCode, sameCountry } from '../utils/userCountry';
 const ARGENTINA_CENTER = [-58.38, -34.6];
 const ARGENTINA_ZOOM = 3.7;
 const FOCUS_ZOOM = 13; // se ve el estadio y su barrio, sin llegar a pegarse al suelo
-const FOCUS_MS = 2600; // viaje al estadio: lento y suave
+const FOCUS_MS = 1500; // viaje al estadio y a un grupo: suave pero ágil
 const FOCUS_CURVE = 1.1; // más bajo = menos "salto" de alejar y volver a acercar (por defecto 1.42)
-const BUTTON_ZOOM_MS = 1000; // botones + y −
+const BUTTON_ZOOM_MS = 600; // botones + y −
 // Arranque y llegada suaves (ease in-out cúbico): el movimiento nunca empieza ni termina de golpe
 const smooth = (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
 
@@ -300,7 +300,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
     introDone.current = true;
     if (interacted.current) return;
 
-    const duration = reducedMotion() ? 0 : 3500;
+    const duration = reducedMotion() ? 0 : 2500;
     const code = userCountryCode();
     const local = stadiums.filter((s) => hasCoordinates(s) && sameCountry(s.location.country, code));
     if (local.length === 0) {
