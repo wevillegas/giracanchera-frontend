@@ -144,7 +144,7 @@ function ZoomControls({ map }) {
   const buttonClass = 'w-9 h-9 rounded-full flex items-center justify-center gc-focus gc-tap';
   return (
     <div
-      className="absolute left-4 z-[400] flex flex-col items-center gap-1 p-1 rounded-full"
+      className="absolute left-4 z-[400] hidden md:flex flex-col items-center gap-1 p-1 rounded-full"
       style={{ bottom: '6.5rem', backgroundColor: rgba(C.surface, 0.92), border: `1px solid ${C.border}`, backdropFilter: 'blur(8px)' }}
     >
       <button onClick={() => map?.zoomIn(buttonZoom())} aria-label="Acercar" className={buttonClass} style={{ color: C.bright }}>
