@@ -153,12 +153,12 @@ function ZoomControls({ map }) {
   );
 }
 
-export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
+export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd }) {
   const containerRef = useRef(null);
   const [map, setMap] = useState(null);
   // Los handlers de los marcadores leen siempre lo último sin recrear el mapa
-  const latest = useRef({ stadiums, onOpenStadium });
-  useEffect(() => { latest.current = { stadiums, onOpenStadium }; }, [stadiums, onOpenStadium]);
+  const latest = useRef({ stadiums, onOpenStadium, onFlyEnd });
+  useEffect(() => { latest.current = { stadiums, onOpenStadium, onFlyEnd }; }, [stadiums, onOpenStadium, onFlyEnd]);
   const markersRef = useRef(new Map());
   const spaceRef = useRef(null);
   const interacted = useRef(false);
@@ -310,6 +310,16 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
 
   useEffect(() => {
     if (!map || !flyTarget) return;
+
+    // Quien pidió el viaje se entera al llegar (por ejemplo, para abrir la ficha del estadio recién ahí)
+    const arrived = () => latest.current.onFlyEnd?.(flyTarget);
+    const { lng, lat } = map.getCenter();
+    const alreadyThere = Math.abs(lng - flyTarget.lng) < 1e-4 && Math.abs(lat - flyTarget.lat) < 1e-4 && map.getZoom() >= FOCUS_ZOOM;
+    if (alreadyThere) {
+      arrived();
+      return;
+    }
+
     map.flyTo({
       center: [flyTarget.lng, flyTarget.lat],
       zoom: Math.max(map.getZoom(), FOCUS_ZOOM),
@@ -317,6 +327,9 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
       curve: FOCUS_CURVE,
       easing: (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2),
     });
+    // flyTo ya frenó cualquier animación anterior: el próximo moveend es el del final de este viaje
+    map.once('moveend', arrived);
+    return () => { map.off('moveend', arrived); };
   }, [map, flyTarget]);
 
   return (

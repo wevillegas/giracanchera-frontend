@@ -3,11 +3,11 @@ import MapScreen from './MapScreen';
 
 export default function MapSection({
   filteredStadiums, query, onQueryChange, filter, onFilterChange, onOpenProfile, onOpenUserProfile, onOpenStats, onOpenStadium,
-  searchResults, onSelectSearchResult, flyTarget, onGoHome, onOpenAdmin, onOpenAbout, onAuthSuccess, authModal, onAuthModalChange,
+  searchResults, onSelectSearchResult, flyTarget, onFlyEnd, onGoHome, onOpenAdmin, onOpenAbout, onAuthSuccess, authModal, onAuthModalChange,
 }) {
   return (
     <div className="relative flex-1 overflow-hidden">
-      <MapScreen stadiums={filteredStadiums} onOpenStadium={onOpenStadium} flyTarget={flyTarget} />
+      <MapScreen stadiums={filteredStadiums} onOpenStadium={onOpenStadium} flyTarget={flyTarget} onFlyEnd={onFlyEnd} />
 
       <Navbar
         query={query}

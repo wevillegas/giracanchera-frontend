@@ -152,12 +152,21 @@ export default function App() {
     goToMap();
   }
 
+  // Elegir un estadio en el mapa: el mapa viaja hasta él y la ficha se abre recién al llegar (flyEnd).
+  // Si el estadio no tiene coordenadas no hay viaje y se abre al instante.
   function openStadium(s) {
-    setActiveStadium(s);
-    setSheet('stadium');
     if (s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null) {
-      setFlyTarget({ id: s.id, lat: s.location.coordinates.lat, lng: s.location.coordinates.lng });
+      setFlyTarget({ id: s.id, lat: s.location.coordinates.lat, lng: s.location.coordinates.lng, stadium: s });
+    } else {
+      setActiveStadium(s);
+      setSheet('stadium');
     }
+  }
+
+  function flyEnd(target) {
+    if (!target.stadium) return;
+    setActiveStadium(target.stadium);
+    setSheet('stadium');
   }
 
   // Elegir un resultado solo mueve el mapa al estadio (con zoom). La reseña se abre después, desde el botón +
@@ -341,6 +350,7 @@ export default function App() {
           searchResults={searchResults}
           onSelectSearchResult={selectSearchResult}
           flyTarget={flyTarget}
+          onFlyEnd={flyEnd}
           onGoHome={goToMap}
           onOpenAdmin={() => setView('admin')}
           onOpenAbout={() => setView('about')}
