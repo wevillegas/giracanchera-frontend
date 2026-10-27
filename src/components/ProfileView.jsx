@@ -198,7 +198,7 @@ export default function ProfileView({
   stadiums, onBackToMap, onOpenStadiumFromId, onEditVisit, onOpenVisit, onToast,
   visitsVersion, onRequireLogin, navbarProps, initialViewUserId,
 }) {
-  const { token, user, updateUser, logout } = useAuth();
+  const { user, loading: authLoading, updateUser, logout } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -224,8 +224,9 @@ export default function ProfileView({
   const [wishPage, setWishPage] = useState(1);
 
   useEffect(() => {
-    if (!token) {
-      onRequireLogin?.();
+    // La sesión es una cookie: sin usuario (y con la sesión ya consultada) se pide iniciar sesión
+    if (!user) {
+      if (!authLoading) onRequireLogin?.();
       return;
     }
 
@@ -239,7 +240,7 @@ export default function ProfileView({
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, visitsVersion]);
+  }, [user?._id, authLoading, visitsVersion]);
 
   useEffect(() => {
     if (!user?._id) return;
@@ -321,7 +322,7 @@ export default function ProfileView({
     return () => { cancelled = true; };
   }, [tab, viewUserId]);
 
-  if (!token) return null;
+  if (!user) return null;
 
   if (loading) {
     return (
