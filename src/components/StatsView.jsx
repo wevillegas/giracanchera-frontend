@@ -7,6 +7,7 @@ import statsService from '../services/statsService';
 import Navbar from './Navbar';
 import { Logo } from './ClubPicker';
 import AdminStatsView from './admin/AdminStatsView';
+import AdminPagination, { paginate, filterFieldStyle } from './admin/AdminPagination';
 import { useAuth } from '../context/AuthContext';
 
 const Section = ({ title, children }) => (
@@ -15,6 +16,9 @@ const Section = ({ title, children }) => (
     {children}
   </section>
 );
+
+const FANS_PAGE_SIZE = 10;
+const NO_COUNTRY = '__none__';
 
 const Empty = () => <p className="text-sm" style={{ color: C.muted }}>Todavía no hay datos suficientes.</p>;
 
@@ -37,6 +41,8 @@ export default function StatsView({ onBackToMap, navbarProps }) {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(false);
+  const [fansPage, setFansPage] = useState(1);
+  const [fansCountry, setFansCountry] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +53,14 @@ export default function StatsView({ onBackToMap, navbarProps }) {
   }, []);
 
   const totals = stats?.totals;
+  // Filtro por país de la lista de hinchas ('' = todos, NO_COUNTRY = clubes sin estadio cargado)
+  const clubFans = stats?.clubFans || [];
+  const fansCountries = [...new Set(clubFans.map((c) => c.country).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  const hasNoCountry = clubFans.some((c) => !c.country);
+  const filteredFans = clubFans.filter((c) => {
+    if (!fansCountry) return true;
+    return fansCountry === NO_COUNTRY ? !c.country : c.country === fansCountry;
+  });
   const maxPlaceReviews = Math.max(1, ...(stats?.byPlace || []).map((p) => p.reviews));
 
   return (
@@ -158,6 +172,35 @@ export default function StatsView({ onBackToMap, navbarProps }) {
                   </div>
                 ))}
               </div>
+            </Section>
+
+            <Section title="Hinchas por club">
+              {(fansCountries.length > 1 || hasNoCountry) && (
+                <select
+                  value={fansCountry}
+                  onChange={(e) => { setFansCountry(e.target.value); setFansPage(1); }}
+                  aria-label="Filtrar por país"
+                  className="mb-3 px-3 py-2 rounded-xl text-sm gc-focus"
+                  style={filterFieldStyle}
+                >
+                  <option value="">Todos los países</option>
+                  {fansCountries.map((country) => <option key={country} value={country}>{country}</option>)}
+                  {hasNoCountry && <option value={NO_COUNTRY}>Sin país</option>}
+                </select>
+              )}
+              <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                {filteredFans.length === 0 ? <div className="p-4"><Empty /></div> : paginate(filteredFans, fansPage, FANS_PAGE_SIZE).map((c, i, rows) => (
+                  <RankRow
+                    key={c.id}
+                    position={(fansPage - 1) * FANS_PAGE_SIZE + i + 1}
+                    title={c.name}
+                    logoUrl={c.logoUrl}
+                    value={`${c.fans} ${c.fans === 1 ? 'hincha' : 'hinchas'}`}
+                    last={i === rows.length - 1}
+                  />
+                ))}
+              </div>
+              <AdminPagination page={fansPage} total={filteredFans.length} pageSize={FANS_PAGE_SIZE} onChange={setFansPage} />
             </Section>
           </>
         )}
