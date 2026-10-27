@@ -10,9 +10,16 @@ const ARGENTINA_CENTER = [-58.38, -34.6];
 const ARGENTINA_ZOOM = 3.7;
 const FOCUS_ZOOM = 14; // nivel de calle: se ve el estadio, no solo la zona
 
-// Zoom mínimo según el tamaño de la pantalla: el planeta ocupa como mucho ~75% del lado menor,
-// así nunca queda como una bolita. Circunferencia en px = 512 * 2^zoom, diámetro = circunferencia / π.
-const GLOBE_FILL = 0.75;
+// Zoom mínimo según el tamaño de la pantalla: el planeta llena casi todo el lado menor (las barras
+// lo tapan un poco), así nunca queda como una bolita. Circunferencia en px = 512 * 2^zoom, diámetro = circunferencia / π.
+const GLOBE_FILL = 1.05;
+
+// Con el planeta alejado (zoom por debajo de esto) gira solo, despacio, hasta que el usuario lo toca
+const SPIN_BELOW_ZOOM = 3;
+const SPIN_DEGREES = 20;
+const SPIN_MS = 8000;
+const SPIN_RESUME_MS = 2500;
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const minZoomFor = (el) => Math.log2((Math.PI * GLOBE_FILL * Math.min(el.clientWidth, el.clientHeight)) / 512);
 
 // Vite no deja a MapLibre ubicar su worker por la URL del módulo (en desarrollo lo transforma y falla).
@@ -151,6 +158,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
   useEffect(() => {
     let instance = null;
     let cancelled = false;
+    let spinTimer = null;
     const markers = markersRef.current;
 
     const start = () => {
@@ -171,6 +179,26 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
     instance.on('resize', () => instance.setMinZoom(minZoomFor(container)));
     // Si el usuario ya movió el mapa, el viaje de bienvenida no le arrebata el control
     ['mousedown', 'touchstart', 'wheel'].forEach((type) => instance.on(type, () => { interacted.current = true; }));
+
+    // Giro lento: cada vuelta de animación encadena la siguiente; tras tocar el mapa espera un momento y retoma
+    let spinning = false;
+    const spin = () => {
+      if (!instance || reducedMotion() || instance.getZoom() > SPIN_BELOW_ZOOM) return;
+      spinning = true;
+      const { lng, lat } = instance.getCenter();
+      instance.easeTo({ center: [lng - SPIN_DEGREES, lat], duration: SPIN_MS, easing: (t) => t });
+    };
+    const stopSpin = () => {
+      clearTimeout(spinTimer);
+      if (!spinning) return; // sin giro en curso no se toca la cámara (el zoom con rueda anima por su cuenta)
+      spinning = false;
+      instance.stop();
+    };
+    ['mousedown', 'touchstart', 'wheel'].forEach((type) => instance.on(type, stopSpin));
+    instance.on('moveend', () => {
+      if (spinning) spin();
+      else { clearTimeout(spinTimer); spinTimer = setTimeout(spin, SPIN_RESUME_MS); }
+    });
 
     // Dibuja como marcadores HTML lo que hay en pantalla (grupos o estadios sueltos) y quita el resto
     const syncMarkers = () => {
@@ -226,6 +254,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
 
     return () => {
       cancelled = true;
+      clearTimeout(spinTimer);
       markers.forEach((marker) => marker.remove());
       markers.clear();
       instance?.remove();
@@ -253,7 +282,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
     introDone.current = true;
     if (interacted.current) return;
 
-    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 3500;
+    const duration = reducedMotion() ? 0 : 3500;
     const code = userCountryCode();
     const local = stadiums.filter((s) => hasCoordinates(s) && sameCountry(s.location.country, code));
     if (local.length === 0) {
@@ -274,7 +303,16 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
 
   return (
     <>
-      <div ref={containerRef} className="gc-space" style={{ width: '100vw', height: '100vh' }} />
+      <div className="gc-space" style={{ width: '100vw', height: '100vh' }}>
+        {/* Estrellas fugaces: puro CSS, cada una con su propia posición y ritmo */}
+        <div className="gc-meteors" aria-hidden="true">
+          <span className="gc-meteor" style={{ top: '8%', left: '12%', animationDelay: '2s', animationDuration: '13s' }} />
+          <span className="gc-meteor" style={{ top: '22%', left: '58%', animationDelay: '7s', animationDuration: '17s' }} />
+          <span className="gc-meteor" style={{ top: '5%', left: '80%', animationDelay: '11s', animationDuration: '15s' }} />
+          <span className="gc-meteor" style={{ top: '40%', left: '6%', animationDelay: '15s', animationDuration: '19s' }} />
+        </div>
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      </div>
       <ZoomControls map={map} />
     </>
   );
