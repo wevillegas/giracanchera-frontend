@@ -11,6 +11,9 @@ const ARGENTINA_ZOOM = 3.7;
 const FOCUS_ZOOM = 13; // se ve el estadio y su barrio, sin llegar a pegarse al suelo
 const FOCUS_MS = 2600; // viaje al estadio: lento y suave
 const FOCUS_CURVE = 1.1; // más bajo = menos "salto" de alejar y volver a acercar (por defecto 1.42)
+const BUTTON_ZOOM_MS = 1000; // botones + y −
+// Arranque y llegada suaves (ease in-out cúbico): el movimiento nunca empieza ni termina de golpe
+const smooth = (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
 
 // Zoom mínimo según el tamaño de la pantalla: el planeta llena casi todo el lado menor (las barras
 // lo tapan un poco), así nunca queda como una bolita. Circunferencia en px = 512 * 2^zoom, diámetro = circunferencia / π.
@@ -135,6 +138,8 @@ function buildClusterElement(count) {
 
 const hasCoordinates = (s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null;
 
+const buttonZoom = () => ({ duration: reducedMotion() ? 0 : BUTTON_ZOOM_MS, easing: smooth });
+
 function ZoomControls({ map }) {
   const buttonClass = 'w-9 h-9 rounded-full flex items-center justify-center gc-focus gc-tap';
   return (
@@ -142,11 +147,11 @@ function ZoomControls({ map }) {
       className="absolute left-4 z-[400] flex flex-col items-center gap-1 p-1 rounded-full"
       style={{ bottom: '6.5rem', backgroundColor: rgba(C.surface, 0.92), border: `1px solid ${C.border}`, backdropFilter: 'blur(8px)' }}
     >
-      <button onClick={() => map?.zoomIn()} aria-label="Acercar" className={buttonClass} style={{ color: C.bright }}>
+      <button onClick={() => map?.zoomIn(buttonZoom())} aria-label="Acercar" className={buttonClass} style={{ color: C.bright }}>
         <Plus size={16} />
       </button>
       <div className="h-px w-5" style={{ backgroundColor: C.border }} />
-      <button onClick={() => map?.zoomOut()} aria-label="Alejar" className={buttonClass} style={{ color: C.bright }}>
+      <button onClick={() => map?.zoomOut(buttonZoom())} aria-label="Alejar" className={buttonClass} style={{ color: C.bright }}>
         <Minus size={16} />
       </button>
     </div>
@@ -234,7 +239,8 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
           el = buildClusterElement(count);
           el.addEventListener('click', async () => {
             const zoom = await instance.getSource('stadiums').getClusterExpansionZoom(f.properties.cluster_id);
-            instance.easeTo({ center: [lng, lat], zoom });
+            // Mismo ritmo que el viaje a un estadio
+            instance.easeTo({ center: [lng, lat], zoom, duration: reducedMotion() ? 0 : FOCUS_MS, easing: smooth });
           });
         } else {
           const stadium = latest.current.stadiums.find((s) => String(s.id) === String(f.properties.id));
@@ -325,7 +331,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
       zoom: Math.max(map.getZoom(), FOCUS_ZOOM),
       duration: reducedMotion() ? 0 : FOCUS_MS,
       curve: FOCUS_CURVE,
-      easing: (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2),
+      easing: smooth,
     });
     // flyTo ya frenó cualquier animación anterior: el próximo moveend es el del final de este viaje
     map.once('moveend', arrived);
