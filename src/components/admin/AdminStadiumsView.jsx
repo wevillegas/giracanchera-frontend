@@ -250,6 +250,7 @@ export default function AdminStadiumsView({ onToast }) {
       {formOpen && (
         <StadiumFormModal
           stadium={formTarget}
+          stadiums={stadiums}
           onClose={() => setFormOpen(false)}
           onSaved={handleSaved}
         />

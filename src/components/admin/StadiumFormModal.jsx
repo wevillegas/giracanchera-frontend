@@ -1,15 +1,17 @@
 import ConfirmModal from '../ConfirmModal';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { X, AlertCircle, Camera } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import clubService from '../../services/clubService';
 import ClubPicker from '../ClubPicker';
+import ComboInput from '../ComboInput';
+import { plain, uniqueSorted, canonical } from '../../utils/text';
 
 const PROVINCE_OWNER = 'province';
 
 const emptyForm = {
-  name: '', capacity: '', city: '', province: '', country: 'Argentina',
+  name: '', capacity: '', city: '', province: '', country: '',
   lat: '', lng: '', mainClub: '', imageUrl: '',
 };
 
@@ -20,7 +22,7 @@ function toFormState(stadium) {
     capacity: stadium.capacity ?? '',
     city: stadium.location?.city || '',
     province: stadium.location?.province || '',
-    country: stadium.location?.country || 'Argentina',
+    country: stadium.location?.country || '',
     lat: stadium.location?.coordinates?.lat ?? '',
     lng: stadium.location?.coordinates?.lng ?? '',
     // Valor del selector de dueño: 'province', id del club, o '' (sin club)
@@ -29,7 +31,7 @@ function toFormState(stadium) {
   };
 }
 
-export default function StadiumFormModal({ stadium, onClose, onSaved }) {
+export default function StadiumFormModal({ stadium, stadiums = [], onClose, onSaved }) {
   const [form, setForm] = useState(() => toFormState(stadium));
   const [clubs, setClubs] = useState([]);
   const [error, setError] = useState('');
@@ -57,6 +59,23 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  // Opciones de los menús de lugar: salen de los estadios ya cargados, así un lugar nuevo queda como opción
+  // apenas se crea el estadio. En cascada: las provincias son las del país elegido y las ciudades, las de esa provincia.
+  const countryOptions = useMemo(() => uniqueSorted(stadiums.map((s) => s.location?.country)), [stadiums]);
+  const inCountry = useMemo(
+    () => stadiums.filter((s) => !form.country.trim() || plain(s.location?.country) === plain(form.country)),
+    [stadiums, form.country],
+  );
+  const provinceOptions = useMemo(() => uniqueSorted(inCountry.map((s) => s.location?.province)), [inCountry]);
+  const cityOptions = useMemo(
+    () => uniqueSorted(
+      inCountry
+        .filter((s) => !form.province.trim() || plain(s.location?.province) === plain(form.province))
+        .map((s) => s.location?.city),
+    ),
+    [inCountry, form.province],
+  );
+
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   function handleSubmit(e) {
@@ -71,9 +90,10 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
       name: form.name.trim(),
       capacity: Number(form.capacity),
       location: {
-        city: form.city.trim(),
-        province: form.province.trim(),
-        country: form.country.trim(),
+        // Si coincide con un lugar existente (sin importar mayúsculas ni acentos) se usa tal como está escrito allí
+        city: canonical(form.city, cityOptions),
+        province: canonical(form.province, provinceOptions),
+        country: canonical(form.country, countryOptions),
         coordinates: { lat: Number(form.lat), lng: Number(form.lng) },
       },
       ownerType: form.mainClub === PROVINCE_OWNER ? 'province' : 'club',
@@ -82,8 +102,8 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
     };
 
     const { lat, lng } = payload.location.coordinates;
-    if (!payload.name || !payload.capacity || !payload.location.city || Number.isNaN(lat) || Number.isNaN(lng)) {
-      setError('Completá nombre, capacidad, ciudad y coordenadas válidas.');
+    if (!payload.name || !payload.capacity || !payload.location.city || !payload.location.country || Number.isNaN(lat) || Number.isNaN(lng)) {
+      setError('Completá nombre, capacidad, ciudad, país y coordenadas válidas.');
       return;
     }
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
@@ -181,39 +201,38 @@ export default function StadiumFormModal({ stadium, onClose, onSaved }) {
             </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: C.muted }}>Ciudad</span>
-              <input
-                value={form.city}
-                onChange={(e) => update('city', e.target.value)}
-                required
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
-                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: C.muted }}>Provincia (opcional)</span>
-              <input
-                value={form.province}
-                onChange={(e) => update('province', e.target.value)}
-                placeholder="Dejar vacío si está en una ciudad, como CABA"
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
-                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
-              />
-            </label>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium" style={{ color: C.muted }}>País</span>
+            <ComboInput
+              value={form.country}
+              onChange={(v) => update('country', v)}
+              options={countryOptions}
+              placeholder="Elegí o escribí un país"
+              required
+            />
           </div>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium" style={{ color: C.muted }}>País</span>
-            <input
-              value={form.country}
-              onChange={(e) => update('country', e.target.value)}
-              required
-              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
-              style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium" style={{ color: C.muted }}>Provincia/estado/región (opcional)</span>
+              <ComboInput
+                value={form.province}
+                onChange={(v) => update('province', v)}
+                options={provinceOptions}
+                placeholder="Vacío si está en una ciudad, como CABA"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium" style={{ color: C.muted }}>Ciudad</span>
+              <ComboInput
+                value={form.city}
+                onChange={(v) => update('city', v)}
+                options={cityOptions}
+                placeholder="Elegí o escribí una ciudad"
+                required
+              />
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
