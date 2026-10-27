@@ -4,7 +4,6 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Minus, Plus } from 'lucide-react';
 import { C, rgba } from '../theme';
 import { userCountryCode, sameCountry } from '../utils/userCountry';
-import Constellations from './Constellations';
 
 // MapLibre usa [lng, lat] y su zoom va uno por debajo del de Leaflet (tiles de 512 px)
 const ARGENTINA_CENTER = [-58.38, -34.6];
@@ -305,14 +304,24 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
   return (
     <>
       <div className="gc-space" style={{ width: '100vw', height: '100vh' }}>
-        {/* Estrellas fugaces: puro CSS, cada una con su propia posición y ritmo */}
-        <div className="gc-meteors" aria-hidden="true">
+        {/* Capas del espacio, todas en CSS: Vía Láctea, dos capas de estrellas, destellos, un planeta lejano y estrellas fugaces */}
+        <div className="gc-milkyway" aria-hidden="true" />
+        <div className="gc-stars gc-stars-a" aria-hidden="true" />
+        <div className="gc-stars gc-stars-b" aria-hidden="true" />
+        <div className="gc-sky" aria-hidden="true">
+          <span className="gc-bright" style={{ top: '14%', left: '9%', animationDelay: '0s' }} />
+          <span className="gc-bright" style={{ top: '30%', left: '91%', animationDelay: '1.5s' }} />
+          <span className="gc-bright" style={{ top: '72%', left: '6%', animationDelay: '3s' }} />
+          <span className="gc-bright" style={{ top: '84%', left: '88%', animationDelay: '2s' }} />
+          <span className="gc-bright" style={{ top: '10%', left: '66%', animationDelay: '4s' }} />
+          <span className="gc-planet" />
           <span className="gc-meteor" style={{ top: '8%', left: '12%', animationDelay: '2s', animationDuration: '13s' }} />
           <span className="gc-meteor" style={{ top: '22%', left: '58%', animationDelay: '7s', animationDuration: '17s' }} />
           <span className="gc-meteor" style={{ top: '5%', left: '80%', animationDelay: '11s', animationDuration: '15s' }} />
           <span className="gc-meteor" style={{ top: '40%', left: '6%', animationDelay: '15s', animationDuration: '19s' }} />
+          <span className="gc-meteor" style={{ top: '62%', left: '70%', animationDelay: '4s', animationDuration: '21s' }} />
+          <span className="gc-meteor" style={{ top: '30%', left: '35%', animationDelay: '18s', animationDuration: '16s' }} />
         </div>
-        <Constellations />
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       </div>
       <ZoomControls map={map} />
