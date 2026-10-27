@@ -1,19 +1,86 @@
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet';
-import MarkerClusterGroup from 'react-leaflet-cluster';
+﻿import { useEffect, useRef, useState } from 'react';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { Minus, Plus } from 'lucide-react';
-import L from 'leaflet';
-import 'leaflet.markercluster/dist/MarkerCluster.css';
 import { C, rgba } from '../theme';
+import { userCountryCode, sameCountry } from '../utils/userCountry';
 
-const ARGENTINA_CENTER = [-34.6, -58.38];
-const ARGENTINA_ZOOM = 5;
-const FOCUS_ZOOM = 15; // nivel de calle: se ve el estadio, no solo la zona
-const MIN_ZOOM = 3;
-const WORLD_BOUNDS = [
-  [-90, -180],
-  [90, 180],
-];
+// MapLibre usa [lng, lat] y su zoom va uno por debajo del de Leaflet (tiles de 512 px)
+const ARGENTINA_CENTER = [-58.38, -34.6];
+const ARGENTINA_ZOOM = 3.7;
+const FOCUS_ZOOM = 13; // se ve el estadio y su barrio, sin llegar a pegarse al suelo
+const FOCUS_MS = 2600; // viaje al estadio: lento y suave
+const FOCUS_CURVE = 1.1; // más bajo = menos "salto" de alejar y volver a acercar (por defecto 1.42)
+const BUTTON_ZOOM_MS = 1000; // botones + y −
+// Arranque y llegada suaves (ease in-out cúbico): el movimiento nunca empieza ni termina de golpe
+const smooth = (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
+
+// Zoom mínimo según el tamaño de la pantalla: el planeta llena casi todo el lado menor (las barras
+// lo tapan un poco), así nunca queda como una bolita. Circunferencia en px = 512 * 2^zoom, diámetro = circunferencia / π.
+const GLOBE_FILL = 1.05;
+
+// El espacio (estrellas fugaces y destellos) solo se ve mientras el planeta no llena toda la pantalla:
+// diámetro del globo en px = 512 * 2^zoom / π
+const globeCoversScreen = (zoom, el) => (512 * 2 ** zoom) / Math.PI >= Math.hypot(el.clientWidth, el.clientHeight);
+
+// Con el planeta alejado (zoom por debajo de esto) gira solo, despacio, hasta que el usuario lo toca
+const SPIN_BELOW_ZOOM = 3;
+const SPIN_DEGREES = 20;
+const SPIN_MS = 8000;
+const SPIN_RESUME_MS = 2500;
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const minZoomFor = (el) => Math.log2((Math.PI * GLOBE_FILL * Math.min(el.clientWidth, el.clientHeight)) / 512);
+
+// Vite no deja a MapLibre ubicar su worker por la URL del módulo (en desarrollo lo transforma y falla).
+// Se carga su código como texto, en un chunk aparte, y se le pasa como Blob. Una sola vez por sesión.
+let workerReady;
+const prepareWorker = () => {
+  workerReady ??= import('maplibre-gl/dist/maplibre-gl-worker.mjs?raw').then(({ default: source }) => {
+    maplibregl.setWorkerUrl(URL.createObjectURL(new Blob([source], { type: 'text/javascript' })));
+  });
+  return workerReady;
+};
+
+const MAP_STYLE = {
+  version: 8,
+  // Globo 3D: al acercarse se aplana solo hasta ser un mapa plano
+  projection: { type: 'globe' },
+  // Halo de atmósfera alrededor del planeta; se apaga al acercarse
+  sky: {
+    'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 5, 1, 7, 0],
+    'sky-color': '#1B4D3E',
+    'horizon-color': '#3FB950',
+    'fog-color': '#0D1117',
+  },
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+  },
+  layers: [
+    // Color parecido al del océano ya oscurecido: si un tile tarda en llegar no se ve un hueco negro
+    { id: 'fondo', type: 'background', paint: { 'background-color': '#232F36' } },
+    {
+      id: 'osm',
+      type: 'raster',
+      source: 'osm',
+      // Oscurece los tiles claros: brightness-min/max invertidos dan el negativo, el tono gira 180° y se apaga el color
+      paint: {
+        'raster-brightness-min': 0.8,
+        'raster-brightness-max': 0,
+        'raster-hue-rotate': 180,
+        'raster-saturation': -0.6,
+        'raster-contrast': -0.05,
+        // Sin fundido: con el giro entran tiles nuevos todo el tiempo y con fundido el planeta parpadeaba
+        'raster-fade-duration': 0,
+      },
+    },
+  ],
+};
 
 // Icono "Goal" de lucide (https://lucide.dev), embebido como path SVG para los pines del mapa.
 const GOAL_ICON_PATHS = [
@@ -46,119 +113,254 @@ function landmarkSvg(color = C.bg) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${LANDMARK_ICON_PATHS.map((d) => `<path d="${d}" />`).join('')}</svg>`;
 }
 
-// Escapa texto antes de meterlo en el HTML del marcador (la URL del escudo viene de la base)
+// Escapa texto antes de meterlo en el HTML del marcador (la URL del escudo y el nombre vienen de la base)
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 }
 
-function buildMarkerIcon(status, logoUrl, hasClub) {
-  const bg = statusColor(status);
-  const inner = logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="" />` : hasClub ? goalSvg() : landmarkSvg();
-  return L.divIcon({
-    className: 'gc-marker',
-    html: `<span class="gc-marker-badge" style="background:${bg}">${inner}</span>`,
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-  });
+// Marcador de un estadio: escudo del club (o un icono genérico) y su nombre arriba
+function buildStadiumElement(stadium) {
+  const bg = statusColor(stadium.status);
+  const inner = stadium.clubLogoUrl ? `<img src="${escapeHtml(stadium.clubLogoUrl)}" alt="" />` : stadium.mainClubId ? goalSvg() : landmarkSvg();
+  const el = document.createElement('div');
+  el.className = 'gc-pin';
+  el.innerHTML = `<span class="gc-marker-label">${escapeHtml(stadium.name)}</span><span class="gc-marker-badge" style="background:${bg}">${inner}</span>`;
+  return el;
 }
 
 // Grupo de estadios superpuestos: símbolo genérico con la cantidad, sin tapar escudos
-function buildClusterIcon(cluster) {
-  return L.divIcon({
-    className: 'gc-marker',
-    html: `<span class="gc-cluster-badge">${goalSvg('#FFFFFF')}<b>${cluster.getChildCount()}</b></span>`,
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-  });
+function buildClusterElement(count) {
+  const el = document.createElement('div');
+  el.className = 'gc-pin';
+  el.innerHTML = `<span class="gc-cluster-badge">${goalSvg('#FFFFFF')}<b>${count}</b></span>`;
+  return el;
 }
 
-function FlyTo({ target }) {
-  const map = useMap();
-  useEffect(() => {
-    if (!target) return;
-    map.flyTo([target.lat, target.lng], Math.max(map.getZoom(), FOCUS_ZOOM), { duration: 0.8 });
-  }, [target, map]);
-  return null;
-}
+const hasCoordinates = (s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null;
 
-function ZoomControls() {
-  const map = useMap();
+const buttonZoom = () => ({ duration: reducedMotion() ? 0 : BUTTON_ZOOM_MS, easing: smooth });
+
+function ZoomControls({ map }) {
+  const buttonClass = 'w-9 h-9 rounded-full flex items-center justify-center gc-focus gc-tap';
   return (
     <div
-      className="absolute left-1/2 -translate-x-1/2 z-[400] flex items-center gap-1 p-1 rounded-full"
+      className="absolute left-4 z-[400] flex flex-col items-center gap-1 p-1 rounded-full"
       style={{ bottom: '6.5rem', backgroundColor: rgba(C.surface, 0.92), border: `1px solid ${C.border}`, backdropFilter: 'blur(8px)' }}
     >
-      <button
-        onClick={() => map.zoomOut()}
-        aria-label="Alejar"
-        className="w-9 h-9 rounded-full flex items-center justify-center gc-focus gc-tap"
-        style={{ color: C.bright }}
-      >
-        <Minus size={16} />
-      </button>
-      <div className="w-px h-5" style={{ backgroundColor: C.border }} />
-      <button
-        onClick={() => map.zoomIn()}
-        aria-label="Acercar"
-        className="w-9 h-9 rounded-full flex items-center justify-center gc-focus gc-tap"
-        style={{ color: C.bright }}
-      >
+      <button onClick={() => map?.zoomIn(buttonZoom())} aria-label="Acercar" className={buttonClass} style={{ color: C.bright }}>
         <Plus size={16} />
+      </button>
+      <div className="h-px w-5" style={{ backgroundColor: C.border }} />
+      <button onClick={() => map?.zoomOut(buttonZoom())} aria-label="Alejar" className={buttonClass} style={{ color: C.bright }}>
+        <Minus size={16} />
       </button>
     </div>
   );
 }
 
-// El nombre es permanente: el cluster solo quita del mapa los marcadores agrupados,
-// así que el texto aparece únicamente cuando el estadio se ve como marcador individual.
-function Markers({ stadiums, onOpenStadium }) {
-  return (
-    <MarkerClusterGroup
-      iconCreateFunction={buildClusterIcon}
-      showCoverageOnHover={false}
-      maxClusterRadius={40}
-    >
-      {stadiums
-        .filter((s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null)
-        .map((s) => (
-          <Marker
-            key={s.id}
-            position={[s.location.coordinates.lat, s.location.coordinates.lng]}
-            icon={buildMarkerIcon(s.status, s.clubLogoUrl, Boolean(s.mainClubId))}
-            eventHandlers={{ click: () => onOpenStadium(s) }}
-          >
-            <Tooltip permanent direction="top" offset={[0, -18]} className="gc-marker-label">
-              {s.name}
-            </Tooltip>
-          </Marker>
-        ))}
-    </MarkerClusterGroup>
-  );
-}
+export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd }) {
+  const containerRef = useRef(null);
+  const [map, setMap] = useState(null);
+  // Los handlers de los marcadores leen siempre lo último sin recrear el mapa
+  const latest = useRef({ stadiums, onOpenStadium, onFlyEnd });
+  useEffect(() => { latest.current = { stadiums, onOpenStadium, onFlyEnd }; }, [stadiums, onOpenStadium, onFlyEnd]);
+  const markersRef = useRef(new Map());
+  const spaceRef = useRef(null);
+  const interacted = useRef(false);
+  const introDone = useRef(false);
 
-export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
+  // Crea el mapa una sola vez
+  useEffect(() => {
+    let instance = null;
+    let cancelled = false;
+    let spinTimer = null;
+    const markers = markersRef.current;
+
+    const start = () => {
+    const container = containerRef.current;
+    const minZoom = minZoomFor(container);
+    instance = new maplibregl.Map({
+      container,
+      style: MAP_STYLE,
+      center: ARGENTINA_CENTER,
+      // Empieza viendo el planeta entero; al cargar los estadios viaja solo al país del visitante
+      zoom: minZoom + 0.2,
+      minZoom,
+      attributionControl: { compact: true },
+      dragRotate: false,
+      pitchWithRotate: false,
+    });
+    instance.touchZoomRotate.disableRotation();
+    const syncSpace = () => spaceRef.current?.classList.toggle('gc-space-hidden', globeCoversScreen(instance.getZoom(), container));
+    instance.on('resize', () => { instance.setMinZoom(minZoomFor(container)); syncSpace(); });
+    instance.on('zoom', syncSpace);
+    // Si el usuario ya movió el mapa, el viaje de bienvenida no le arrebata el control
+    ['mousedown', 'touchstart', 'wheel'].forEach((type) => instance.on(type, () => { interacted.current = true; }));
+
+    // Giro lento: cada vuelta de animación encadena la siguiente; tras tocar el mapa espera un momento y retoma
+    let spinning = false;
+    const spin = () => {
+      if (!instance || reducedMotion() || instance.getZoom() > SPIN_BELOW_ZOOM) return;
+      spinning = true;
+      const { lng, lat } = instance.getCenter();
+      instance.easeTo({ center: [lng - SPIN_DEGREES, lat], duration: SPIN_MS, easing: (t) => t });
+    };
+    const stopSpin = () => {
+      clearTimeout(spinTimer);
+      if (!spinning) return; // sin giro en curso no se toca la cámara (el zoom con rueda anima por su cuenta)
+      spinning = false;
+      instance.stop();
+    };
+    ['mousedown', 'touchstart', 'wheel'].forEach((type) => instance.on(type, stopSpin));
+    instance.on('moveend', () => {
+      if (spinning) spin();
+      else { clearTimeout(spinTimer); spinTimer = setTimeout(spin, SPIN_RESUME_MS); }
+    });
+
+    // Dibuja como marcadores HTML lo que hay en pantalla (grupos o estadios sueltos) y quita el resto
+    const syncMarkers = () => {
+      if (!instance.getSource('stadiums') || !instance.isSourceLoaded('stadiums')) return;
+      const visible = new Map();
+      for (const f of instance.querySourceFeatures('stadiums')) {
+        const { cluster, cluster_id: clusterId, point_count: count, id } = f.properties;
+        const key = cluster ? `c${clusterId}` : `s${id}`;
+        if (visible.has(key)) continue;
+        visible.set(key, { f, cluster, count });
+      }
+
+      for (const [key, marker] of markers) {
+        if (!visible.has(key)) { marker.remove(); markers.delete(key); }
+      }
+      for (const [key, { f, cluster, count }] of visible) {
+        if (markers.has(key)) continue;
+        const [lng, lat] = f.geometry.coordinates;
+        let el;
+        if (cluster) {
+          el = buildClusterElement(count);
+          el.addEventListener('click', async () => {
+            const zoom = await instance.getSource('stadiums').getClusterExpansionZoom(f.properties.cluster_id);
+            // Mismo ritmo que el viaje a un estadio
+            instance.easeTo({ center: [lng, lat], zoom, duration: reducedMotion() ? 0 : FOCUS_MS, easing: smooth });
+          });
+        } else {
+          const stadium = latest.current.stadiums.find((s) => String(s.id) === String(f.properties.id));
+          if (!stadium) continue;
+          el = buildStadiumElement(stadium);
+          el.addEventListener('click', () => latest.current.onOpenStadium(stadium));
+        }
+        markers.set(key, new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lng, lat]).addTo(instance));
+      }
+    };
+
+    instance.on('load', () => {
+      instance.addSource('stadiums', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        cluster: true,
+        clusterRadius: 40,
+        clusterMaxZoom: 14,
+      });
+      // Capa invisible: hace falta para que MapLibre cargue los datos del origen y se puedan consultar
+      instance.addLayer({ id: 'estadios-oculto', type: 'circle', source: 'stadiums', paint: { 'circle-radius': 1, 'circle-opacity': 0 } });
+      instance.on('render', syncMarkers);
+      setMap(instance);
+    });
+
+    };
+
+    prepareWorker().then(() => { if (!cancelled) start(); });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(spinTimer);
+      markers.forEach((marker) => marker.remove());
+      markers.clear();
+      instance?.remove();
+    };
+  }, []);
+
+  // Actualiza los estadios cuando cambian (filtros, estado de visita)
+  useEffect(() => {
+    if (!map) return;
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current.clear();
+    map.getSource('stadiums').setData({
+      type: 'FeatureCollection',
+      features: stadiums.filter(hasCoordinates).map((s) => ({
+        type: 'Feature',
+        properties: { id: String(s.id) },
+        geometry: { type: 'Point', coordinates: [s.location.coordinates.lng, s.location.coordinates.lat] },
+      })),
+    });
+  }, [map, stadiums]);
+
+  // Viaje de bienvenida: una sola vez, cuando el mapa y los estadios están listos
+  useEffect(() => {
+    if (!map || stadiums.length === 0 || introDone.current) return;
+    introDone.current = true;
+    if (interacted.current) return;
+
+    const duration = reducedMotion() ? 0 : 3500;
+    const code = userCountryCode();
+    const local = stadiums.filter((s) => hasCoordinates(s) && sameCountry(s.location.country, code));
+    if (local.length === 0) {
+      map.flyTo({ center: ARGENTINA_CENTER, zoom: ARGENTINA_ZOOM, duration });
+      return;
+    }
+    const bounds = local.reduce(
+      (box, s) => box.extend([s.location.coordinates.lng, s.location.coordinates.lat]),
+      new maplibregl.LngLatBounds(),
+    );
+    map.fitBounds(bounds, { padding: { top: 110, bottom: 150, left: 60, right: 60 }, maxZoom: 6, duration });
+  }, [map, stadiums]);
+
+  useEffect(() => {
+    if (!map || !flyTarget) return;
+
+    // Quien pidió el viaje se entera al llegar (por ejemplo, para abrir la ficha del estadio recién ahí)
+    const arrived = () => latest.current.onFlyEnd?.(flyTarget);
+    const { lng, lat } = map.getCenter();
+    const alreadyThere = Math.abs(lng - flyTarget.lng) < 1e-4 && Math.abs(lat - flyTarget.lat) < 1e-4 && map.getZoom() >= FOCUS_ZOOM;
+    if (alreadyThere) {
+      arrived();
+      return;
+    }
+
+    map.flyTo({
+      center: [flyTarget.lng, flyTarget.lat],
+      zoom: Math.max(map.getZoom(), FOCUS_ZOOM),
+      duration: reducedMotion() ? 0 : FOCUS_MS,
+      curve: FOCUS_CURVE,
+      easing: smooth,
+    });
+    // flyTo ya frenó cualquier animación anterior: el próximo moveend es el del final de este viaje
+    map.once('moveend', arrived);
+    return () => { map.off('moveend', arrived); };
+  }, [map, flyTarget]);
+
   return (
-    <MapContainer
-      center={ARGENTINA_CENTER}
-      zoom={ARGENTINA_ZOOM}
-      minZoom={MIN_ZOOM}
-      maxBounds={WORLD_BOUNDS}
-      maxBoundsViscosity={1.0}
-      worldCopyJump={false}
-      scrollWheelZoom
-      zoomControl={false}
-      style={{ width: '100vw', height: '100vh', backgroundColor: C.bg }}
-    >
-      <TileLayer
-        className="gc-tiles"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        maxZoom={19}
-        noWrap
-      />
-      <Markers stadiums={stadiums} onOpenStadium={onOpenStadium} />
-      <FlyTo target={flyTarget} />
-      <ZoomControls />
-    </MapContainer>
+    <>
+      <div ref={spaceRef} className="gc-space" style={{ width: '100vw', height: '100vh' }}>
+        {/* Capas del espacio, todas en CSS: Vía Láctea, dos capas de estrellas, destellos y estrellas fugaces */}
+        <div className="gc-milkyway" aria-hidden="true" />
+        <div className="gc-stars gc-stars-a" aria-hidden="true" />
+        <div className="gc-stars gc-stars-b" aria-hidden="true" />
+        <div className="gc-sky" aria-hidden="true">
+          <span className="gc-bright" style={{ top: '14%', left: '9%', animationDelay: '0s' }} />
+          <span className="gc-bright" style={{ top: '30%', left: '91%', animationDelay: '1.5s' }} />
+          <span className="gc-bright" style={{ top: '72%', left: '6%', animationDelay: '3s' }} />
+          <span className="gc-bright" style={{ top: '84%', left: '88%', animationDelay: '2s' }} />
+          <span className="gc-bright" style={{ top: '10%', left: '66%', animationDelay: '4s' }} />
+          <span className="gc-meteor" style={{ top: '8%', left: '12%', animationDelay: '2s', animationDuration: '13s' }} />
+          <span className="gc-meteor" style={{ top: '22%', left: '58%', animationDelay: '7s', animationDuration: '17s' }} />
+          <span className="gc-meteor" style={{ top: '5%', left: '80%', animationDelay: '11s', animationDuration: '15s' }} />
+          <span className="gc-meteor" style={{ top: '40%', left: '6%', animationDelay: '15s', animationDuration: '19s' }} />
+          <span className="gc-meteor" style={{ top: '62%', left: '70%', animationDelay: '4s', animationDuration: '21s' }} />
+          <span className="gc-meteor" style={{ top: '30%', left: '35%', animationDelay: '18s', animationDuration: '16s' }} />
+        </div>
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      </div>
+      <ZoomControls map={map} />
+    </>
   );
 }

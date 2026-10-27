@@ -30,32 +30,60 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
 
 ::selection { background: rgba(63, 185, 80, 0.35); color: #F0F6FC; }
 
-/* ---------- Leaflet, con la paleta de GiraCanchera ---------- */
-.leaflet-container { background: #0D1117; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-
-/* Oscurece los tiles claros de OpenStreetMap para que combinen con la paleta oscura de la app.
-   Invertir + girar el tono 180° deja el agua azul oscuro y la tierra gris; saturate lo mantiene sobrio. */
-.gc-tiles {
-  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.95) saturate(0.4);
+/* ---------- Mapa (MapLibre), con la paleta de GiraCanchera ---------- */
+/* Fondo del espacio: degradado oscuro y estrellas (varias capas de puntos con tamaños de baldosa distintos para que no se note el patrón) */
+.gc-space {
+  background-color: #05070C;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, rgba(240, 246, 252, 0.8), transparent),
+    radial-gradient(1px 1px at 90px 120px, rgba(240, 246, 252, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 160px 60px, rgba(240, 246, 252, 0.9), transparent),
+    radial-gradient(1px 1px at 230px 200px, rgba(240, 246, 252, 0.5), transparent),
+    radial-gradient(1px 1px at 300px 90px, rgba(63, 185, 80, 0.5), transparent),
+    radial-gradient(ellipse at 14% 22%, rgba(63, 185, 80, 0.1), transparent 45%),
+    radial-gradient(ellipse at 88% 78%, rgba(56, 139, 253, 0.1), transparent 45%),
+    radial-gradient(ellipse at 78% 12%, rgba(163, 113, 247, 0.08), transparent 40%),
+    radial-gradient(ellipse at 20% 88%, rgba(219, 97, 162, 0.06), transparent 40%),
+    radial-gradient(ellipse at 50% 50%, #0D1117 0%, #05070C 75%);
+  background-size: 260px 240px, 310px 280px, 380px 340px, 440px 390px, 500px 420px, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Viñeta suave en los bordes: da profundidad y hace que los controles flotantes se lean mejor */
-.leaflet-container::after {
-  content: '';
+/* Estrellas fugaces: una línea con cola que cruza en diagonal, visible solo un instante de cada ciclo */
+.gc-sky { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.6s ease; }
+/* Con el planeta llenando la pantalla ya no hay espacio a la vista: las estrellas fugaces y destellos se apagan */
+.gc-space-hidden .gc-sky { opacity: 0; }
+.gc-meteor {
   position: absolute;
-  inset: 0;
-  z-index: 450;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(13, 17, 23, 0.55) 100%);
+  width: 130px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(240, 246, 252, 0), rgba(240, 246, 252, 0.95));
+  transform: rotate(35deg);
+  opacity: 0;
+  animation: gc-meteor 15s linear infinite;
+}
+@keyframes gc-meteor {
+  0% { opacity: 0; translate: 0 0; }
+  1.5% { opacity: 1; }
+  6% { opacity: 0; translate: 300px 210px; }
+  100% { opacity: 0; translate: 300px 210px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gc-meteor { display: none; }
 }
 
-.leaflet-control-attribution {
+.maplibregl-map { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+.maplibregl-ctrl-attribution {
   background: rgba(13, 17, 23, 0.75) !important;
   color: #8B949E !important;
 }
-.leaflet-control-attribution a { color: #8B949E !important; }
+.maplibregl-ctrl-attribution a { color: #8B949E !important; }
 
-.gc-marker { background: transparent !important; border: none !important; }
+/* Marcador: el escudo queda centrado sobre el punto y el nombre flota arriba */
+.gc-pin { position: relative; width: 42px; height: 42px; }
 .gc-marker-badge {
   width: 42px;
   height: 42px;
@@ -110,6 +138,12 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
 }
 
 .gc-marker-label {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
   background: rgba(13, 17, 23, 0.75) !important;
   border: none !important;
   color: #F0F6FC !important;
@@ -119,7 +153,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
   border-radius: 6px;
   box-shadow: none !important;
 }
-.gc-marker-label::before { display: none; }
 
 .gc-search-box { border: 1px solid #30363D; transition: border-color 0.15s ease; }
 .gc-search-box:focus-within { border-color: #3FB950; }
@@ -137,3 +170,74 @@ input.gc-focus:focus-visible, select.gc-focus:focus-visible, textarea.gc-focus:f
 /* Borde verde al enfocar cualquier campo; dentro de un contenedor con borde (gc-search-box) lo da el contenedor */
 input:focus, select:focus, textarea:focus { border-color: #3FB950 !important; }
 .gc-search-box input:focus { border-color: transparent !important; }
+
+/* ---------- Capas del espacio ---------- */
+
+/* Vía Láctea: una banda diagonal difusa con estrellitas muy finas concentradas en ella */
+.gc-milkyway {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background:
+    radial-gradient(1px 1px at 12px 18px, rgba(220, 230, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 47px 61px, rgba(255, 240, 220, 0.45), transparent),
+    radial-gradient(1px 1px at 83px 29px, rgba(220, 230, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 31px 92px, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 96px 74px, rgba(220, 230, 255, 0.45), transparent),
+    linear-gradient(115deg, transparent 32%, rgba(150, 170, 255, 0.05) 42%, rgba(255, 230, 210, 0.09) 50%, rgba(150, 170, 255, 0.05) 58%, transparent 68%);
+  background-size: 110px 110px, 110px 110px, 110px 110px, 110px 110px, 110px 110px, 100% 100%;
+  -webkit-mask-image: linear-gradient(115deg, transparent 30%, #000 50%, transparent 70%);
+  mask-image: linear-gradient(115deg, transparent 30%, #000 50%, transparent 70%);
+}
+
+/* Dos capas de estrellas: una se desliza muy despacio (como si el cielo girara) y la otra parpadea */
+.gc-stars { position: absolute; inset: 0; pointer-events: none; }
+.gc-stars-a {
+  background-image:
+    radial-gradient(1px 1px at 14px 23px, rgba(240, 246, 252, 0.7), transparent),
+    radial-gradient(1px 1px at 73px 141px, rgba(240, 246, 252, 0.5), transparent),
+    radial-gradient(1px 1px at 121px 58px, rgba(240, 246, 252, 0.6), transparent),
+    radial-gradient(1px 1px at 165px 176px, rgba(255, 240, 220, 0.6), transparent),
+    radial-gradient(1px 1px at 38px 109px, rgba(240, 246, 252, 0.4), transparent),
+    radial-gradient(1px 1px at 188px 92px, rgba(190, 210, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 99px 12px, rgba(240, 246, 252, 0.5), transparent);
+  background-size: 200px 200px;
+  animation: gc-drift 300s linear infinite;
+}
+.gc-stars-b {
+  background-image:
+    radial-gradient(1.5px 1.5px at 52px 77px, rgba(255, 255, 255, 0.95), transparent),
+    radial-gradient(1.5px 1.5px at 197px 31px, rgba(255, 245, 225, 0.9), transparent),
+    radial-gradient(1.5px 1.5px at 131px 184px, rgba(200, 220, 255, 0.9), transparent),
+    radial-gradient(1.5px 1.5px at 244px 128px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1.5px 1.5px at 18px 226px, rgba(255, 245, 225, 0.85), transparent);
+  background-size: 280px 260px;
+  animation: gc-twinkle 6s ease-in-out infinite;
+}
+@keyframes gc-drift { to { background-position: 200px 200px; } }
+@keyframes gc-twinkle { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+/* Estrellas brillantes con destello en cruz */
+.gc-bright {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px 2px rgba(220, 230, 255, 0.55);
+  animation: gc-twinkle 5s ease-in-out infinite;
+}
+.gc-bright::before, .gc-bright::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  transform: translate(-50%, -50%);
+}
+.gc-bright::before { width: 22px; height: 1px; }
+.gc-bright::after { width: 1px; height: 22px; background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.7), transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gc-stars-a, .gc-stars-b, .gc-bright { animation: none; }
+}

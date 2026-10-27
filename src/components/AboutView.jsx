@@ -23,7 +23,7 @@ const FEATURES = [
 ];
 
 const STACK = [
-  { group: 'Frontend', Icon: Code2, items: ['React 19', 'Vite 8', 'Tailwind CSS 3', 'Leaflet', 'Lucide'] },
+  { group: 'Frontend', Icon: Code2, items: ['React 19', 'Vite 8', 'Tailwind CSS 3', 'MapLibre', 'Lucide'] },
   { group: 'Backend', Icon: Server, items: ['Node.js', 'Express 5', 'JWT y bcrypt', 'Helmet', 'Cloudinary'] },
   { group: 'Datos', Icon: Database, items: ['MongoDB Atlas', 'Mongoose 9'] },
 ];
