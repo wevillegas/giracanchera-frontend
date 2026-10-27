@@ -27,7 +27,7 @@ const expenseFields = [
 ];
 
 export default function App() {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const [view, setView] = useState('map'); // 'map' | 'profile' | 'stadium' | 'visit'
   const [cameFrom, setCameFrom] = useState('map');
   const [activeVisit, setActiveVisit] = useState(null);
@@ -82,7 +82,7 @@ export default function App() {
   // Sincroniza el status local ('visited'/'wishlist') con los datos reales
   // del backend (visitas y wantToVisit del usuario), una vez que estadios y sesión están listos.
   useEffect(() => {
-    if (!token || !user?._id || stadiums.length === 0) return;
+    if (!user?._id || stadiums.length === 0) return;
     let cancelled = false;
 
     Promise.all([userService.getProfile(), visitService.getUserVisits(user._id)])
@@ -99,12 +99,12 @@ export default function App() {
       .catch(() => {});
 
     return () => { cancelled = true; };
-  }, [token, user?._id, stadiumsVersion]);
+  }, [user?._id, stadiumsVersion]);
 
   // Trae las reseñas reales del usuario (para el bloque "Vos" en StadiumView);
   // se re-corre cada vez que se crea/edita una visita (visitsVersion).
   useEffect(() => {
-    if (!token || !user?._id) {
+    if (!user?._id) {
       setReviews([]);
       return;
     }
@@ -122,7 +122,7 @@ export default function App() {
       })
       .catch(() => { if (!cancelled) setReviews([]); });
     return () => { cancelled = true; };
-  }, [token, user?._id, visitsVersion]);
+  }, [user?._id, visitsVersion]);
 
   const filteredStadiums = stadiums.filter((s) => {
     const matchesFilter = filter === 'all' ? true : s.status === filter;
@@ -140,7 +140,7 @@ export default function App() {
 
   // Filtros que muestran datos propios: sin sesión abren el login en vez de mostrar una lista vacía
   function applyFilter(f) {
-    if ((f === 'visited' || f === 'wishlist') && !token) {
+    if ((f === 'visited' || f === 'wishlist') && !user) {
       setAuthModal('login');
       return;
     }
@@ -201,7 +201,7 @@ export default function App() {
 
   // Cargar una reseña requiere sesión: sin usuario abre el login y no el formulario
   function startVisit(s) {
-    if (!token) {
+    if (!user) {
       setAuthModal('login');
       return;
     }
@@ -211,7 +211,7 @@ export default function App() {
   }
 
   function startEditVisit(visit) {
-    if (!token) {
+    if (!user) {
       setAuthModal('login');
       return;
     }
@@ -259,7 +259,7 @@ export default function App() {
   }
 
   async function toggleWishlist(id) {
-    if (!token) {
+    if (!user) {
       setAuthModal('login');
       return;
     }
@@ -558,7 +558,7 @@ export default function App() {
         view={view}
         onNavigateMap={goToMap}
         onNavigateProfile={() => setView('profile')}
-        onQuickAddVisit={() => (token ? setPickerOpen(true) : setAuthModal('login'))}
+        onQuickAddVisit={() => (user ? setPickerOpen(true) : setAuthModal('login'))}
       />
     </div>
   );

@@ -1,67 +1,47 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import authService from '../services/authService';
 
-const TOKEN_KEY = 'token';
-
 const AuthContext = createContext(null);
 
+// La sesión vive en una cookie httpOnly que el navegador envía solo: el JS nunca ve el token.
+// Para saber si hay sesión se le pregunta al servidor quién es (/auth/me).
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
-  // El interceptor de api.js dispara esto cuando el backend rechaza el token
+  // El interceptor de api.js dispara esto cuando el backend rechaza la sesión
   // (expiró, se invalidó con logout en otra pestaña, etc.)
   useEffect(() => {
-    const onAuthExpired = () => { setToken(null); setUser(null); };
+    const onAuthExpired = () => setUser(null);
     window.addEventListener('gc:auth-expired', onAuthExpired);
     return () => window.removeEventListener('gc:auth-expired', onAuthExpired);
   }, []);
 
-  useEffect(() => {
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
+  const loadProfile = useCallback(() => authService.getProfile().then(setUser), []);
 
+  useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     authService.getProfile()
       .then((profile) => { if (!cancelled) setUser(profile); })
-      .catch(() => {
-        if (!cancelled) {
-          localStorage.removeItem(TOKEN_KEY);
-          setToken(null);
-          setUser(null);
-        }
-      })
+      .catch(() => { if (!cancelled) setUser(null); })
       .finally(() => { if (!cancelled) setLoading(false); });
-
     return () => { cancelled = true; };
-  }, [token]);
-
-  const login = useCallback(async (email, password) => {
-    const data = await authService.login(email, password);
-    localStorage.setItem(TOKEN_KEY, data.token);
-    setUser(data.user ?? null);
-    setToken(data.token);
-    return data;
   }, []);
 
-  const register = useCallback(async (userData) => {
-    const data = await authService.register(userData);
-    localStorage.setItem(TOKEN_KEY, data.token);
+  // Tras entrar, se pide el perfil completo (el login devuelve uno reducido)
+  const startSession = useCallback(async (data) => {
     setUser(data.user ?? null);
-    setToken(data.token);
+    await loadProfile().catch(() => {});
     return data;
-  }, []);
+  }, [loadProfile]);
+
+  const login = useCallback(async (email, password) => startSession(await authService.login(email, password)), [startSession]);
+
+  const register = useCallback(async (userData) => startSession(await authService.register(userData)), [startSession]);
 
   const logout = useCallback(() => {
-    // Invalida el token en el servidor; si falla (sin red), igual cerramos la sesión local
+    // Invalida la sesión en el servidor y borra la cookie; si falla (sin red), igual cerramos la sesión local
     authService.logout().catch(() => {});
-    localStorage.removeItem(TOKEN_KEY);
-    setToken(null);
     setUser(null);
   }, []);
 
@@ -70,7 +50,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
