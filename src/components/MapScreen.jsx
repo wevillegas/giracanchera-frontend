@@ -1,19 +1,55 @@
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet';
-import MarkerClusterGroup from 'react-leaflet-cluster';
+import { useEffect, useRef, useState } from 'react';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { Minus, Plus } from 'lucide-react';
-import L from 'leaflet';
-import 'leaflet.markercluster/dist/MarkerCluster.css';
 import { C, rgba } from '../theme';
 
-const ARGENTINA_CENTER = [-34.6, -58.38];
-const ARGENTINA_ZOOM = 5;
-const FOCUS_ZOOM = 15; // nivel de calle: se ve el estadio, no solo la zona
-const MIN_ZOOM = 3;
-const WORLD_BOUNDS = [
-  [-90, -180],
-  [90, 180],
-];
+// MapLibre usa [lng, lat] y su zoom va uno por debajo del de Leaflet (tiles de 512 px)
+const ARGENTINA_CENTER = [-58.38, -34.6];
+const ARGENTINA_ZOOM = 3.7;
+const FOCUS_ZOOM = 14; // nivel de calle: se ve el estadio, no solo la zona
+const MIN_ZOOM = 0.8;
+
+// Vite no deja a MapLibre ubicar su worker por la URL del módulo (en desarrollo lo transforma y falla).
+// Se carga su código como texto, en un chunk aparte, y se le pasa como Blob. Una sola vez por sesión.
+let workerReady;
+const prepareWorker = () => {
+  workerReady ??= import('maplibre-gl/dist/maplibre-gl-worker.mjs?raw').then(({ default: source }) => {
+    maplibregl.setWorkerUrl(URL.createObjectURL(new Blob([source], { type: 'text/javascript' })));
+  });
+  return workerReady;
+};
+
+const MAP_STYLE = {
+  version: 8,
+  // Globo 3D: al acercarse se aplana solo hasta ser un mapa plano
+  projection: { type: 'globe' },
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+  },
+  layers: [
+    { id: 'fondo', type: 'background', paint: { 'background-color': C.bg } },
+    {
+      id: 'osm',
+      type: 'raster',
+      source: 'osm',
+      // Oscurece los tiles claros: brightness-min/max invertidos dan el negativo, el tono gira 180° y se apaga el color
+      paint: {
+        'raster-brightness-min': 0.8,
+        'raster-brightness-max': 0,
+        'raster-hue-rotate': 180,
+        'raster-saturation': -0.6,
+        'raster-contrast': -0.05,
+      },
+    },
+  ],
+};
 
 // Icono "Goal" de lucide (https://lucide.dev), embebido como path SVG para los pines del mapa.
 const GOAL_ICON_PATHS = [
@@ -46,119 +82,160 @@ function landmarkSvg(color = C.bg) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${LANDMARK_ICON_PATHS.map((d) => `<path d="${d}" />`).join('')}</svg>`;
 }
 
-// Escapa texto antes de meterlo en el HTML del marcador (la URL del escudo viene de la base)
+// Escapa texto antes de meterlo en el HTML del marcador (la URL del escudo y el nombre vienen de la base)
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 }
 
-function buildMarkerIcon(status, logoUrl, hasClub) {
-  const bg = statusColor(status);
-  const inner = logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="" />` : hasClub ? goalSvg() : landmarkSvg();
-  return L.divIcon({
-    className: 'gc-marker',
-    html: `<span class="gc-marker-badge" style="background:${bg}">${inner}</span>`,
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-  });
+// Marcador de un estadio: escudo del club (o un icono genérico) y su nombre arriba
+function buildStadiumElement(stadium) {
+  const bg = statusColor(stadium.status);
+  const inner = stadium.clubLogoUrl ? `<img src="${escapeHtml(stadium.clubLogoUrl)}" alt="" />` : stadium.mainClubId ? goalSvg() : landmarkSvg();
+  const el = document.createElement('div');
+  el.className = 'gc-pin';
+  el.innerHTML = `<span class="gc-marker-label">${escapeHtml(stadium.name)}</span><span class="gc-marker-badge" style="background:${bg}">${inner}</span>`;
+  return el;
 }
 
 // Grupo de estadios superpuestos: símbolo genérico con la cantidad, sin tapar escudos
-function buildClusterIcon(cluster) {
-  return L.divIcon({
-    className: 'gc-marker',
-    html: `<span class="gc-cluster-badge">${goalSvg('#FFFFFF')}<b>${cluster.getChildCount()}</b></span>`,
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-  });
+function buildClusterElement(count) {
+  const el = document.createElement('div');
+  el.className = 'gc-pin';
+  el.innerHTML = `<span class="gc-cluster-badge">${goalSvg('#FFFFFF')}<b>${count}</b></span>`;
+  return el;
 }
 
-function FlyTo({ target }) {
-  const map = useMap();
-  useEffect(() => {
-    if (!target) return;
-    map.flyTo([target.lat, target.lng], Math.max(map.getZoom(), FOCUS_ZOOM), { duration: 0.8 });
-  }, [target, map]);
-  return null;
-}
+const hasCoordinates = (s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null;
 
-function ZoomControls() {
-  const map = useMap();
+function ZoomControls({ map }) {
+  const buttonClass = 'w-9 h-9 rounded-full flex items-center justify-center gc-focus gc-tap';
   return (
     <div
       className="absolute left-1/2 -translate-x-1/2 z-[400] flex items-center gap-1 p-1 rounded-full"
       style={{ bottom: '6.5rem', backgroundColor: rgba(C.surface, 0.92), border: `1px solid ${C.border}`, backdropFilter: 'blur(8px)' }}
     >
-      <button
-        onClick={() => map.zoomOut()}
-        aria-label="Alejar"
-        className="w-9 h-9 rounded-full flex items-center justify-center gc-focus gc-tap"
-        style={{ color: C.bright }}
-      >
+      <button onClick={() => map?.zoomOut()} aria-label="Alejar" className={buttonClass} style={{ color: C.bright }}>
         <Minus size={16} />
       </button>
       <div className="w-px h-5" style={{ backgroundColor: C.border }} />
-      <button
-        onClick={() => map.zoomIn()}
-        aria-label="Acercar"
-        className="w-9 h-9 rounded-full flex items-center justify-center gc-focus gc-tap"
-        style={{ color: C.bright }}
-      >
+      <button onClick={() => map?.zoomIn()} aria-label="Acercar" className={buttonClass} style={{ color: C.bright }}>
         <Plus size={16} />
       </button>
     </div>
   );
 }
 
-// El nombre es permanente: el cluster solo quita del mapa los marcadores agrupados,
-// así que el texto aparece únicamente cuando el estadio se ve como marcador individual.
-function Markers({ stadiums, onOpenStadium }) {
-  return (
-    <MarkerClusterGroup
-      iconCreateFunction={buildClusterIcon}
-      showCoverageOnHover={false}
-      maxClusterRadius={40}
-    >
-      {stadiums
-        .filter((s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null)
-        .map((s) => (
-          <Marker
-            key={s.id}
-            position={[s.location.coordinates.lat, s.location.coordinates.lng]}
-            icon={buildMarkerIcon(s.status, s.clubLogoUrl, Boolean(s.mainClubId))}
-            eventHandlers={{ click: () => onOpenStadium(s) }}
-          >
-            <Tooltip permanent direction="top" offset={[0, -18]} className="gc-marker-label">
-              {s.name}
-            </Tooltip>
-          </Marker>
-        ))}
-    </MarkerClusterGroup>
-  );
-}
-
 export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
+  const containerRef = useRef(null);
+  const [map, setMap] = useState(null);
+  // Los handlers de los marcadores leen siempre lo último sin recrear el mapa
+  const latest = useRef({ stadiums, onOpenStadium });
+  useEffect(() => { latest.current = { stadiums, onOpenStadium }; }, [stadiums, onOpenStadium]);
+  const markersRef = useRef(new Map());
+
+  // Crea el mapa una sola vez
+  useEffect(() => {
+    let instance = null;
+    let cancelled = false;
+    const markers = markersRef.current;
+
+    const start = () => {
+    instance = new maplibregl.Map({
+      container: containerRef.current,
+      style: MAP_STYLE,
+      center: ARGENTINA_CENTER,
+      zoom: ARGENTINA_ZOOM,
+      minZoom: MIN_ZOOM,
+      attributionControl: { compact: true },
+      dragRotate: false,
+      pitchWithRotate: false,
+    });
+    instance.touchZoomRotate.disableRotation();
+
+    // Dibuja como marcadores HTML lo que hay en pantalla (grupos o estadios sueltos) y quita el resto
+    const syncMarkers = () => {
+      if (!instance.getSource('stadiums') || !instance.isSourceLoaded('stadiums')) return;
+      const visible = new Map();
+      for (const f of instance.querySourceFeatures('stadiums')) {
+        const { cluster, cluster_id: clusterId, point_count: count, id } = f.properties;
+        const key = cluster ? `c${clusterId}` : `s${id}`;
+        if (visible.has(key)) continue;
+        visible.set(key, { f, cluster, count });
+      }
+
+      for (const [key, marker] of markers) {
+        if (!visible.has(key)) { marker.remove(); markers.delete(key); }
+      }
+      for (const [key, { f, cluster, count }] of visible) {
+        if (markers.has(key)) continue;
+        const [lng, lat] = f.geometry.coordinates;
+        let el;
+        if (cluster) {
+          el = buildClusterElement(count);
+          el.addEventListener('click', async () => {
+            const zoom = await instance.getSource('stadiums').getClusterExpansionZoom(f.properties.cluster_id);
+            instance.easeTo({ center: [lng, lat], zoom });
+          });
+        } else {
+          const stadium = latest.current.stadiums.find((s) => String(s.id) === String(f.properties.id));
+          if (!stadium) continue;
+          el = buildStadiumElement(stadium);
+          el.addEventListener('click', () => latest.current.onOpenStadium(stadium));
+        }
+        markers.set(key, new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lng, lat]).addTo(instance));
+      }
+    };
+
+    instance.on('load', () => {
+      instance.addSource('stadiums', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        cluster: true,
+        clusterRadius: 40,
+        clusterMaxZoom: 14,
+      });
+      // Capa invisible: hace falta para que MapLibre cargue los datos del origen y se puedan consultar
+      instance.addLayer({ id: 'estadios-oculto', type: 'circle', source: 'stadiums', paint: { 'circle-radius': 1, 'circle-opacity': 0 } });
+      instance.on('render', syncMarkers);
+      setMap(instance);
+    });
+
+    };
+
+    prepareWorker().then(() => { if (!cancelled) start(); });
+
+    return () => {
+      cancelled = true;
+      markers.forEach((marker) => marker.remove());
+      markers.clear();
+      instance?.remove();
+    };
+  }, []);
+
+  // Actualiza los estadios cuando cambian (filtros, estado de visita)
+  useEffect(() => {
+    if (!map) return;
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current.clear();
+    map.getSource('stadiums').setData({
+      type: 'FeatureCollection',
+      features: stadiums.filter(hasCoordinates).map((s) => ({
+        type: 'Feature',
+        properties: { id: String(s.id) },
+        geometry: { type: 'Point', coordinates: [s.location.coordinates.lng, s.location.coordinates.lat] },
+      })),
+    });
+  }, [map, stadiums]);
+
+  useEffect(() => {
+    if (!map || !flyTarget) return;
+    map.flyTo({ center: [flyTarget.lng, flyTarget.lat], zoom: Math.max(map.getZoom(), FOCUS_ZOOM), duration: 800 });
+  }, [map, flyTarget]);
+
   return (
-    <MapContainer
-      center={ARGENTINA_CENTER}
-      zoom={ARGENTINA_ZOOM}
-      minZoom={MIN_ZOOM}
-      maxBounds={WORLD_BOUNDS}
-      maxBoundsViscosity={1.0}
-      worldCopyJump={false}
-      scrollWheelZoom
-      zoomControl={false}
-      style={{ width: '100vw', height: '100vh', backgroundColor: C.bg }}
-    >
-      <TileLayer
-        className="gc-tiles"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        maxZoom={19}
-        noWrap
-      />
-      <Markers stadiums={stadiums} onOpenStadium={onOpenStadium} />
-      <FlyTo target={flyTarget} />
-      <ZoomControls />
-    </MapContainer>
+    <>
+      <div ref={containerRef} style={{ width: '100vw', height: '100vh', backgroundColor: C.bg }} />
+      <ZoomControls map={map} />
+    </>
   );
 }

@@ -30,32 +30,17 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
 
 ::selection { background: rgba(63, 185, 80, 0.35); color: #F0F6FC; }
 
-/* ---------- Leaflet, con la paleta de GiraCanchera ---------- */
-.leaflet-container { background: #0D1117; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+/* ---------- Mapa (MapLibre), con la paleta de GiraCanchera ---------- */
+.maplibregl-map { background: #0D1117; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
 
-/* Oscurece los tiles claros de OpenStreetMap para que combinen con la paleta oscura de la app.
-   Invertir + girar el tono 180° deja el agua azul oscuro y la tierra gris; saturate lo mantiene sobrio. */
-.gc-tiles {
-  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.95) saturate(0.4);
-}
-
-/* Viñeta suave en los bordes: da profundidad y hace que los controles flotantes se lean mejor */
-.leaflet-container::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 450;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(13, 17, 23, 0.55) 100%);
-}
-
-.leaflet-control-attribution {
+.maplibregl-ctrl-attribution {
   background: rgba(13, 17, 23, 0.75) !important;
   color: #8B949E !important;
 }
-.leaflet-control-attribution a { color: #8B949E !important; }
+.maplibregl-ctrl-attribution a { color: #8B949E !important; }
 
-.gc-marker { background: transparent !important; border: none !important; }
+/* Marcador: el escudo queda centrado sobre el punto y el nombre flota arriba */
+.gc-pin { position: relative; width: 42px; height: 42px; }
 .gc-marker-badge {
   width: 42px;
   height: 42px;
@@ -110,6 +95,12 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
 }
 
 .gc-marker-label {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
   background: rgba(13, 17, 23, 0.75) !important;
   border: none !important;
   color: #F0F6FC !important;
@@ -119,7 +110,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
   border-radius: 6px;
   box-shadow: none !important;
 }
-.gc-marker-label::before { display: none; }
 
 .gc-search-box { border: 1px solid #30363D; transition: border-color 0.15s ease; }
 .gc-search-box:focus-within { border-color: #3FB950; }
