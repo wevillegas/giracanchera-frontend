@@ -196,7 +196,7 @@ function StadiumCard({ stadium, onClick }) {
 
 export default function ProfileView({
   stadiums, onBackToMap, onOpenStadiumFromId, onEditVisit, onOpenVisit, onToast,
-  visitsVersion, onRequireLogin, navbarProps, initialViewUserId,
+  visitsVersion, onRequireLogin, navbarProps, initialViewUserId, openCount,
 }) {
   const { user, loading: authLoading, updateUser, logout } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -207,6 +207,13 @@ export default function ProfileView({
   const [visitsLoading, setVisitsLoading] = useState(true);
 
   const [viewUserId, setViewUserId] = useState(initialViewUserId ?? null);
+
+  // Elegir otro usuario en el buscador estando ya en un perfil: el estado inicial no se vuelve a leer,
+  // así que se sincroniza acá (sin recrear la vista, para que el buscador conserve su modo)
+  useEffect(() => {
+    setViewUserId(initialViewUserId ?? null);
+    setTab('perfil');
+  }, [initialViewUserId, openCount]);
   const [viewedProfile, setViewedProfile] = useState(null);
   const [viewedVisits, setViewedVisits] = useState([]);
   const [viewedLoading, setViewedLoading] = useState(false);

@@ -31,6 +31,7 @@ export default function App() {
   const [view, setView] = useState('map'); // 'map' | 'profile' | 'stadium' | 'visit'
   const [cameFrom, setCameFrom] = useState('map');
   const [activeVisit, setActiveVisit] = useState(null);
+  const [profileOpenCount, setProfileOpenCount] = useState(0); // cambia cada vez que se elige un usuario en el buscador, aunque sea el mismo
   const [profileTarget, setProfileTarget] = useState(null); // id de otro usuario a mostrar en el perfil; null = el propio // { visit, stadium, from: 'profile' | 'stadium' }
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
@@ -183,6 +184,7 @@ export default function App() {
 
   function openUserProfile(userId) {
     setProfileTarget(userId === user?._id ? null : userId);
+    setProfileOpenCount((n) => n + 1);
     setView('profile');
   }
 
@@ -415,6 +417,7 @@ export default function App() {
           onEditVisit={startEditVisit}
           onOpenVisit={(visit) => openVisit(visit, 'profile')}
           initialViewUserId={profileTarget}
+          openCount={profileOpenCount}
           onToast={setToast}
           onOpenAbout={() => setView('about')}
           onOpenStats={() => setView('stats')}
