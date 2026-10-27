@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Minus, Plus } from 'lucide-react';
 import { C, rgba } from '../theme';
 import { userCountryCode, sameCountry } from '../utils/userCountry';
+import Constellations from './Constellations';
 
 // MapLibre usa [lng, lat] y su zoom va uno por debajo del de Leaflet (tiles de 512 px)
 const ARGENTINA_CENTER = [-58.38, -34.6];
@@ -130,15 +131,15 @@ function ZoomControls({ map }) {
   const buttonClass = 'w-9 h-9 rounded-full flex items-center justify-center gc-focus gc-tap';
   return (
     <div
-      className="absolute left-1/2 -translate-x-1/2 z-[400] flex items-center gap-1 p-1 rounded-full"
+      className="absolute left-4 z-[400] flex flex-col items-center gap-1 p-1 rounded-full"
       style={{ bottom: '6.5rem', backgroundColor: rgba(C.surface, 0.92), border: `1px solid ${C.border}`, backdropFilter: 'blur(8px)' }}
     >
-      <button onClick={() => map?.zoomOut()} aria-label="Alejar" className={buttonClass} style={{ color: C.bright }}>
-        <Minus size={16} />
-      </button>
-      <div className="w-px h-5" style={{ backgroundColor: C.border }} />
       <button onClick={() => map?.zoomIn()} aria-label="Acercar" className={buttonClass} style={{ color: C.bright }}>
         <Plus size={16} />
+      </button>
+      <div className="h-px w-5" style={{ backgroundColor: C.border }} />
+      <button onClick={() => map?.zoomOut()} aria-label="Alejar" className={buttonClass} style={{ color: C.bright }}>
+        <Minus size={16} />
       </button>
     </div>
   );
@@ -311,6 +312,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
           <span className="gc-meteor" style={{ top: '5%', left: '80%', animationDelay: '11s', animationDuration: '15s' }} />
           <span className="gc-meteor" style={{ top: '40%', left: '6%', animationDelay: '15s', animationDuration: '19s' }} />
         </div>
+        <Constellations />
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       </div>
       <ZoomControls map={map} />

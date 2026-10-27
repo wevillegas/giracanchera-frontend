@@ -48,6 +48,26 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
   overflow: hidden;
 }
 
+/* Constelaciones: un SVG por orientación, en las zonas que no tapa el planeta */
+.gc-const { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.gc-const-portrait { display: none; }
+@media (orientation: portrait) {
+  .gc-const-landscape { display: none; }
+  .gc-const-portrait { display: block; }
+}
+.gc-star { fill: #F0F6FC; animation: gc-twinkle 5s ease-in-out infinite; }
+@keyframes gc-twinkle { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+.gc-const-name {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 3.6px; /* unidades del grupo escalado: ~9px en pantalla */
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  fill: rgba(139, 148, 158, 0.55);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gc-star { animation: none; opacity: 0.8; }
+}
+
 /* Estrellas fugaces: una línea con cola que cruza en diagonal, visible solo un instante de cada ciclo */
 .gc-meteors { position: absolute; inset: 0; pointer-events: none; }
 .gc-meteor {
