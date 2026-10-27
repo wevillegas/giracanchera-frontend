@@ -31,7 +31,20 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
 ::selection { background: rgba(63, 185, 80, 0.35); color: #F0F6FC; }
 
 /* ---------- Mapa (MapLibre), con la paleta de GiraCanchera ---------- */
-.maplibregl-map { background: #0D1117; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+/* Fondo del espacio: degradado oscuro y estrellas (varias capas de puntos con tamaños de baldosa distintos para que no se note el patrón) */
+.gc-space {
+  background-color: #05070C;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, rgba(240, 246, 252, 0.8), transparent),
+    radial-gradient(1px 1px at 90px 120px, rgba(240, 246, 252, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 160px 60px, rgba(240, 246, 252, 0.9), transparent),
+    radial-gradient(1px 1px at 230px 200px, rgba(240, 246, 252, 0.5), transparent),
+    radial-gradient(1px 1px at 300px 90px, rgba(63, 185, 80, 0.5), transparent),
+    radial-gradient(ellipse at 50% 50%, #0D1117 0%, #05070C 75%);
+  background-size: 260px 240px, 310px 280px, 380px 340px, 440px 390px, 500px 420px, 100% 100%;
+}
+
+.maplibregl-map { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
 
 .maplibregl-ctrl-attribution {
   background: rgba(13, 17, 23, 0.75) !important;

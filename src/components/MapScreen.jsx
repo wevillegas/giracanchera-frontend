@@ -3,12 +3,17 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Minus, Plus } from 'lucide-react';
 import { C, rgba } from '../theme';
+import { userCountryCode, sameCountry } from '../utils/userCountry';
 
 // MapLibre usa [lng, lat] y su zoom va uno por debajo del de Leaflet (tiles de 512 px)
 const ARGENTINA_CENTER = [-58.38, -34.6];
 const ARGENTINA_ZOOM = 3.7;
 const FOCUS_ZOOM = 14; // nivel de calle: se ve el estadio, no solo la zona
-const MIN_ZOOM = 0.8;
+
+// Zoom mínimo según el tamaño de la pantalla: el planeta ocupa como mucho ~75% del lado menor,
+// así nunca queda como una bolita. Circunferencia en px = 512 * 2^zoom, diámetro = circunferencia / π.
+const GLOBE_FILL = 0.75;
+const minZoomFor = (el) => Math.log2((Math.PI * GLOBE_FILL * Math.min(el.clientWidth, el.clientHeight)) / 512);
 
 // Vite no deja a MapLibre ubicar su worker por la URL del módulo (en desarrollo lo transforma y falla).
 // Se carga su código como texto, en un chunk aparte, y se le pasa como Blob. Una sola vez por sesión.
@@ -24,6 +29,13 @@ const MAP_STYLE = {
   version: 8,
   // Globo 3D: al acercarse se aplana solo hasta ser un mapa plano
   projection: { type: 'globe' },
+  // Halo de atmósfera alrededor del planeta; se apaga al acercarse
+  sky: {
+    'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 5, 1, 7, 0],
+    'sky-color': '#1B4D3E',
+    'horizon-color': '#3FB950',
+    'fog-color': '#0D1117',
+  },
   sources: {
     osm: {
       type: 'raster',
@@ -132,6 +144,8 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
   const latest = useRef({ stadiums, onOpenStadium });
   useEffect(() => { latest.current = { stadiums, onOpenStadium }; }, [stadiums, onOpenStadium]);
   const markersRef = useRef(new Map());
+  const interacted = useRef(false);
+  const introDone = useRef(false);
 
   // Crea el mapa una sola vez
   useEffect(() => {
@@ -140,17 +154,23 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
     const markers = markersRef.current;
 
     const start = () => {
+    const container = containerRef.current;
+    const minZoom = minZoomFor(container);
     instance = new maplibregl.Map({
-      container: containerRef.current,
+      container,
       style: MAP_STYLE,
       center: ARGENTINA_CENTER,
-      zoom: ARGENTINA_ZOOM,
-      minZoom: MIN_ZOOM,
+      // Empieza viendo el planeta entero; al cargar los estadios viaja solo al país del visitante
+      zoom: minZoom + 0.2,
+      minZoom,
       attributionControl: { compact: true },
       dragRotate: false,
       pitchWithRotate: false,
     });
     instance.touchZoomRotate.disableRotation();
+    instance.on('resize', () => instance.setMinZoom(minZoomFor(container)));
+    // Si el usuario ya movió el mapa, el viaje de bienvenida no le arrebata el control
+    ['mousedown', 'touchstart', 'wheel'].forEach((type) => instance.on(type, () => { interacted.current = true; }));
 
     // Dibuja como marcadores HTML lo que hay en pantalla (grupos o estadios sueltos) y quita el resto
     const syncMarkers = () => {
@@ -227,6 +247,26 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
     });
   }, [map, stadiums]);
 
+  // Viaje de bienvenida: una sola vez, cuando el mapa y los estadios están listos
+  useEffect(() => {
+    if (!map || stadiums.length === 0 || introDone.current) return;
+    introDone.current = true;
+    if (interacted.current) return;
+
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 3500;
+    const code = userCountryCode();
+    const local = stadiums.filter((s) => hasCoordinates(s) && sameCountry(s.location.country, code));
+    if (local.length === 0) {
+      map.flyTo({ center: ARGENTINA_CENTER, zoom: ARGENTINA_ZOOM, duration });
+      return;
+    }
+    const bounds = local.reduce(
+      (box, s) => box.extend([s.location.coordinates.lng, s.location.coordinates.lat]),
+      new maplibregl.LngLatBounds(),
+    );
+    map.fitBounds(bounds, { padding: { top: 110, bottom: 150, left: 60, right: 60 }, maxZoom: 6, duration });
+  }, [map, stadiums]);
+
   useEffect(() => {
     if (!map || !flyTarget) return;
     map.flyTo({ center: [flyTarget.lng, flyTarget.lat], zoom: Math.max(map.getZoom(), FOCUS_ZOOM), duration: 800 });
@@ -234,7 +274,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget }) {
 
   return (
     <>
-      <div ref={containerRef} style={{ width: '100vw', height: '100vh', backgroundColor: C.bg }} />
+      <div ref={containerRef} className="gc-space" style={{ width: '100vw', height: '100vh' }} />
       <ZoomControls map={map} />
     </>
   );
