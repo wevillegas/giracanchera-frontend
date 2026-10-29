@@ -49,6 +49,17 @@ async function reportVisit(visitId, reason) {
   return data;
 }
 
+// Admin: todas las reseñas con búsqueda y filtros, ocultar/mostrar
+async function adminListVisits(params) {
+  const { data } = await api.get('/visits/admin/all', { params });
+  return data;
+}
+
+async function setVisitHidden(visitId, hidden, reason) {
+  const { data } = await api.patch(`/visits/admin/${visitId}/hidden`, { hidden, reason });
+  return data;
+}
+
 async function getReports() {
   const { data } = await api.get('/visits/reports');
   return data;
@@ -70,7 +81,7 @@ async function getLikedVisits() {
 }
 
 const visitService = {
-  reportVisit, getReports, resolveReport,
+  reportVisit, getReports, resolveReport, adminListVisits, setVisitHidden,
   createVisit, updateVisit, deleteVisit, adminDeleteVisit, getUserVisits, getStadiumVisits, toggleLike, toggleSave, getSavedVisits, getLikedVisits,
 };
 

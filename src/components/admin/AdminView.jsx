@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ChevronLeft, Users, LandPlot, Shield, Flag, Activity, ScrollText, PenLine, LayoutDashboard } from 'lucide-react';
+import { ChevronLeft, Users, LandPlot, Shield, Flag, Activity, ScrollText, PenLine, LayoutDashboard, MessageSquareText } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import Navbar from '../Navbar';
 import AdminOverviewView from './AdminOverviewView';
+import AdminVisitsView from './AdminVisitsView';
 import AdminUsersView from './AdminUsersView';
 import AdminStadiumsView from './AdminStadiumsView';
 import AdminClubsView from './AdminClubsView';
@@ -16,6 +17,7 @@ const TABS = [
   { key: 'users', label: 'Usuarios', Icon: Users },
   { key: 'stadiums', label: 'Estadios', Icon: LandPlot },
   { key: 'clubs', label: 'Clubes', Icon: Shield },
+  { key: 'visits', label: 'Reseñas', Icon: MessageSquareText },
   { key: 'reports', label: 'Reportes', Icon: Flag },
   { key: 'suggestions', label: 'Correcciones', Icon: PenLine },
   { key: 'analytics', label: 'Analíticas', Icon: Activity },
@@ -30,7 +32,7 @@ export default function AdminView({ onBackToMap, onToast, navbarProps }) {
   return (
     <div className="relative flex-1 overflow-y-auto gc-hide-scrollbar">
       <Navbar {...navbarProps} />
-      <div className="max-w-3xl mx-auto px-4 pt-32 pb-10">
+      <div className="max-w-5xl mx-auto px-4 pt-32 pb-10">
         <button onClick={onBackToMap} className="flex items-center gap-1.5 text-sm gc-focus gc-tap" style={{ color: C.muted }}>
           <ChevronLeft size={16} /> Mapa
         </button>
@@ -60,6 +62,7 @@ export default function AdminView({ onBackToMap, onToast, navbarProps }) {
         {tab === 'users' && <AdminUsersView onToast={onToast} />}
         {tab === 'stadiums' && <AdminStadiumsView onToast={onToast} openId={openStadiumId} onOpenHandled={() => setOpenStadiumId(null)} />}
         {tab === 'clubs' && <AdminClubsView onToast={onToast} />}
+        {tab === 'visits' && <AdminVisitsView onToast={onToast} />}
         {tab === 'reports' && <AdminReportsView onToast={onToast} />}
         {tab === 'suggestions' && <AdminSuggestionsView onToast={onToast} />}
         {tab === 'analytics' && <AdminStatsView />}

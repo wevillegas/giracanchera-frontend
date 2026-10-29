@@ -15,6 +15,8 @@ export default function AdminUserEditModal({ user, onClose, onSaved }) {
   const [rol, setRol] = useState(user.rol || 'user');
   const [clubId, setClubId] = useState(user.clubHincha?.id ?? user.clubHincha?._id ?? '');
   const [clubs, setClubs] = useState([]);
+  const [muteDays, setMuteDays] = useState(''); // '' no cambia la sanción; '0' la levanta
+  const mutedNow = user.mutedUntil && new Date(user.mutedUntil) > new Date();
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,6 +41,7 @@ export default function AdminUserEditModal({ user, onClose, onSaved }) {
     try {
       const updated = await adminService.updateUser(user._id, {
         nombre, username, email, rol, clubHincha: clubId,
+        ...(muteDays !== '' && { mutedDays: Number(muteDays) }),
       });
       onSaved(updated);
       onClose();
@@ -148,6 +151,27 @@ export default function AdminUserEditModal({ user, onClose, onSaved }) {
               </select>
             </div>
           </label>
+
+          {user._id !== me?._id && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium" style={{ color: C.muted }}>Silenciar (no puede publicar ni editar reseñas)</span>
+              {mutedNow && (
+                <span className="text-xs" style={{ color: '#f85149' }}>Silenciado hasta el {new Date(user.mutedUntil).toLocaleDateString('es-AR')}</span>
+              )}
+              <select
+                value={muteDays}
+                onChange={(e) => setMuteDays(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright, colorScheme: 'dark' }}
+              >
+                <option value="" style={{ backgroundColor: C.surface }}>{mutedNow ? 'Mantener la sanción actual' : 'Sin sanción'}</option>
+                {mutedNow && <option value="0" style={{ backgroundColor: C.surface }}>Levantar el silencio</option>}
+                {[1, 7, 30, 90].map((d) => (
+                  <option key={d} value={d} style={{ backgroundColor: C.surface }}>Silenciar {d} {d === 1 ? 'día' : 'días'}</option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <button
             type="submit"

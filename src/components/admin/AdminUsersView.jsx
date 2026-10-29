@@ -142,6 +142,9 @@ export default function AdminUsersView({ onToast }) {
                 {user._id === me?._id && (
                   <span className="text-[10px]" style={{ color: C.muted }}>(vos)</span>
                 )}
+                {user.mutedUntil && new Date(user.mutedUntil) > new Date() && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ border: '1px solid #f85149', color: '#f85149' }}>Silenciado</span>
+                )}
               </div>
               <span className="block text-xs truncate" style={{ color: C.muted }}>{user.email}</span>
             </div>

@@ -67,10 +67,20 @@ export default function AdminReportsView({ onToast }) {
       ) : reports.map((r) => (
         <div key={r._id} className="p-4 rounded-2xl space-y-2" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-base truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{r.visit?.stadium?.name || 'Estadio'}</span>
+            <span className="flex items-center gap-2 min-w-0">
+              {r.visit?.stadium?.mainClub?.logoUrl && <img src={r.visit.stadium.mainClub.logoUrl} alt={r.visit.stadium.mainClub.name || ''} title={r.visit.stadium.mainClub.name} className="w-8 h-8 object-contain shrink-0" />}
+              <span className="text-base truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{r.visit?.stadium?.name || 'Estadio'}</span>
+            </span>
             <span className="text-xs shrink-0" style={{ color: C.muted }}>{formatDate(r.createdAt)}</span>
           </div>
-          <p className="text-xs" style={{ color: C.muted }}>Reseña de @{r.visit?.user?.username || '...'} · {r.visit?.rating}/10</p>
+          <p className="text-xs" style={{ color: C.muted }}>
+            Reseña de @{r.visit?.user?.username || '...'} · {r.visit?.rating}/10
+            {r.authorReportCount > 1 && (
+              <span className="ml-2 px-2 py-0.5 rounded-full font-medium" style={{ border: '1px solid #f85149', color: '#f85149' }}>
+                Reincidente: {r.authorReportCount} denuncias en sus reseñas
+              </span>
+            )}
+          </p>
           <p className="text-sm leading-snug" style={{ color: C.bright }}>{r.visit?.reviewText?.trim() || 'Sin texto'}</p>
           <div className="p-3 rounded-xl" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}>
             <p className="text-xs" style={{ color: C.muted }}>Denunciada por @{r.reporter?.username || '...'}</p>
