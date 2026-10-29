@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Ticket, UtensilsCrossed, Car, Bus } from 'lucide-react';
 import { C, BODY_FONT } from './theme';
 import { isAdminRole } from './utils/roles';
+import { stadiumPath, stadiumIdFromPath } from './utils/stadiumUrl';
 import { useAuth } from './context/AuthContext';
 import stadiumService from './services/stadiumService';
 import visitService from './services/visitService';
@@ -79,6 +80,35 @@ export default function App() {
   useEffect(() => {
     loadStadiums();
   }, []);
+
+  // Link directo /estadio/<id>: se abre al terminar de cargar la lista. Mientras tanto la URL no se toca.
+  const deepLinkId = useRef(stadiumIdFromPath(window.location.pathname));
+  useEffect(() => {
+    if (!deepLinkId.current || stadiumsLoading) return;
+    const match = stadiums.find((s) => s.id === deepLinkId.current);
+    deepLinkId.current = null;
+    if (match) openStadiumPage(match, 'map');
+    else window.history.replaceState(null, '', '/'); // el estadio no existe o no se pudo cargar
+  }, [stadiums, stadiumsLoading]);
+
+  // La URL sigue a la página del estadio: al abrirla pasa a /estadio/<id> y al salir vuelve a /
+  useEffect(() => {
+    if (deepLinkId.current) return;
+    const path = view === 'stadium' && activeStadium ? stadiumPath(activeStadium.id) : '/';
+    if (path !== window.location.pathname) window.history.pushState(null, '', path);
+  }, [view, activeStadium]);
+
+  // Botones atrás/adelante del navegador
+  useEffect(() => {
+    function onPopState() {
+      const id = stadiumIdFromPath(window.location.pathname);
+      const match = id && stadiums.find((s) => s.id === id);
+      if (match) openStadiumPage(match, 'map');
+      else if (view === 'stadium') goToMap();
+    }
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  });
 
   // Sincroniza el status local ('visited'/'wishlist') con los datos reales
   // del backend (visitas y wantToVisit del usuario), una vez que estadios y sesión están listos.
@@ -502,7 +532,10 @@ export default function App() {
 
       {view === 'stadium' && activeStadium && (
         <StadiumView
+          key={activeStadium.id}
           stadium={activeStadium}
+          stadiums={stadiums}
+          onOpenStadium={(s) => openStadiumPage(s, cameFrom)}
           reviews={reviews}
           expenseFields={expenseFields}
           cameFrom={cameFrom}
@@ -510,6 +543,7 @@ export default function App() {
           onStartVisit={startVisit}
           onToggleWishlist={toggleWishlist}
           onOpenVisit={(visit, s) => openVisit(visit, 'stadium', s)}
+          onToast={setToast}
           navbarProps={{
             query,
             onQueryChange: setQuery,

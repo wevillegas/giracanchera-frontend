@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, Check, Users, Star, MapPin, Images } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Users, Star, MapPin, Images, Calendar, Ruler, Sprout, Activity, Share2, PenLine } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import visitService from '../services/visitService';
-import { computeVisitStats } from '../utils/visitStats';
+import { computeVisitStats, FEW_REVIEWS } from '../utils/visitStats';
+import { nearbyStadiums } from '../utils/distance';
+import { stadiumPath } from '../utils/stadiumUrl';
 import StadiumArt from './StadiumArt';
 import StarRow from './StarRow';
 import ScoreDistribution from './ScoreDistribution';
 import Navbar from './Navbar';
+import SuggestionModal from './SuggestionModal';
 import AdminPagination, { paginate, clampPage } from './admin/AdminPagination';
 
 // Cantidad elegida para que la columna de reseñas llegue a la altura de la columna izquierda
 const REVIEWS_PAGE_SIZE = 7;
+const FAN_PHOTOS_SHOWN = 8;
 
 // Corta la reseña en 3 líneas y pone "..." al final, como en las cards del perfil
 const REVIEW_CLAMP = { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
@@ -19,6 +23,20 @@ const REVIEW_CLAMP = { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrie
 function formatVisitDate(value) {
   if (!value) return '';
   return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
+}
+
+const SURFACE_LABEL = { natural: 'Césped natural', sintetico: 'Césped sintético', hibrido: 'Césped híbrido' };
+const CONDITION_LABEL = { activo: 'Activo', en_obra: 'En obra', demolido: 'Demolido' };
+
+// Datos de la ficha técnica; los que no tienen valor no se muestran
+function techFacts(stadium) {
+  const { length, width } = stadium.pitch || {};
+  return [
+    { Icon: Calendar, label: 'Inauguración', value: stadium.openedYear },
+    { Icon: Ruler, label: 'Cancha', value: length && width ? `${length} × ${width} m` : null },
+    { Icon: Sprout, label: 'Superficie', value: SURFACE_LABEL[stadium.surface] },
+    { Icon: Activity, label: 'Estado', value: CONDITION_LABEL[stadium.condition] },
+  ].filter((fact) => fact.value);
 }
 
 function initialsOf(name = '') {
@@ -37,12 +55,17 @@ function Avatar({ url, name, className }) {
 }
 
 export default function StadiumView({
-  stadium, expenseFields, cameFrom, onBack, onStartVisit, onToggleWishlist, onOpenVisit, navbarProps,
+  stadium, stadiums = [], onOpenStadium, expenseFields, cameFrom, onBack, onStartVisit, onToggleWishlist, onOpenVisit, onToast, navbarProps,
 }) {
   const { user: me } = useAuth();
   const [stadiumReviews, setStadiumReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [reviewsPage, setReviewsPage] = useState(1);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  // La foto elegida se guarda con el id del estadio: al cambiar de estadio vuelve sola a la portada
+  const [photoPick, setPhotoPick] = useState({ id: stadium.id, index: 0 });
+  const photoIndex = photoPick.id === stadium.id ? photoPick.index : 0;
+  const setPhotoIndex = (index) => setPhotoPick({ id: stadium.id, index });
 
   useEffect(() => {
     let cancelled = false;
@@ -63,18 +86,65 @@ export default function StadiumView({
   const pageReviews = paginate(orderedReviews, reviewsPageSafe, REVIEWS_PAGE_SIZE);
 
   const stats = computeVisitStats(stadiumReviews);
+  const photos = stadium.photos || [];
+  const photo = photos[Math.min(photoIndex, photos.length - 1)];
+  const goPhoto = (step) => setPhotoIndex((photoIndex + step + photos.length) % photos.length);
+  const facts = techFacts(stadium);
+
+  // Sugerir una corrección pide sesión, igual que registrar una visita
+  function openSuggestion() {
+    if (!me) {
+      onToast?.('Iniciá sesión para sugerir una corrección');
+      return;
+    }
+    setSuggestOpen(true);
+  }
+
+  // En el celular abre el menú de compartir del sistema; en la compu copia el link
+  async function share() {
+    const url = `${window.location.origin}${stadiumPath(stadium.id)}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: stadium.name, text: `Mirá ${stadium.name} en GiraCanchera`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        onToast?.('Link copiado');
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') onToast?.('No pudimos compartir el link'); // AbortError: el usuario cerró el menú
+    }
+  }
+  const nearby = nearbyStadiums(stadium, stadiums);
+  const fewReviews = stats.count > 0 && stats.count < FEW_REVIEWS;
   return (
     <div className="flex-1 overflow-y-auto gc-hide-scrollbar">
       <Navbar {...navbarProps} />
       <div className="relative h-[calc(7rem+300px)] md:h-[calc(7rem+320px)] overflow-hidden" style={{ backgroundColor: C.surface }}>
-        {stadium.imageUrl ? (
+        {photo ? (
           <>
             {/* Fondo: la misma foto desenfocada que llena el espacio sin verse estirada */}
-            <img src={stadium.imageUrl} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-60" />
+            <img src={photo.url} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-60" />
             {/* Foto completa, sin recortar ni estirar */}
             <div className="absolute top-28 inset-x-0 bottom-0 flex items-center justify-center p-4 pb-8">
-              <img src={stadium.imageUrl} alt={stadium.name} className="max-w-full max-h-full object-contain rounded-xl" />
+              <img src={photo.url} alt={stadium.name} className="max-w-full max-h-full object-contain rounded-xl" />
             </div>
+            {photos.length > 1 && (
+              <>
+                {[[-1, 'left-3', ChevronLeft, 'Foto anterior'], [1, 'right-3', ChevronRight, 'Foto siguiente']].map(([step, side, Icon, label]) => (
+                  <button key={step} onClick={() => goPhoto(step)} aria-label={label} className={`absolute ${side} top-[calc(50%+3.5rem)] -translate-y-1/2 z-10 w-9 h-9 rounded-full flex items-center justify-center gc-focus`} style={{ backgroundColor: rgba(C.bg, 0.6) }}>
+                    <Icon size={18} color={C.bright} />
+                  </button>
+                ))}
+                <div className="absolute bottom-3 inset-x-0 z-10 flex justify-center gap-1.5">
+                  {photos.map((p, i) => (
+                    <button key={p.url} onClick={() => setPhotoIndex(i)} aria-label={`Ver foto ${i + 1}`} className="w-2 h-2 rounded-full gc-focus" style={{ backgroundColor: i === photoIndex ? C.bright : rgba(C.bright, 0.35) }} />
+                  ))}
+                </div>
+              </>
+            )}
+            {photo.credit && (
+              <p className="absolute bottom-3 left-4 z-10 text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: rgba(C.bg, 0.6), color: C.muted }}>{photo.credit}</p>
+            )}
             <div className="absolute inset-x-0 bottom-0 h-24" style={{ background: `linear-gradient(to top, ${C.bg}, transparent)` }} />
           </>
         ) : (
@@ -114,6 +184,9 @@ export default function StadiumView({
       <div className="max-w-5xl mx-auto px-4 py-5 grid gap-8 md:grid-cols-[1fr_380px] items-start">
         <div className="min-w-0">
           <h1 className="text-4xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{stadium.name}</h1>
+          {stadium.nickname && (
+            <p className="text-lg italic mt-1" style={{ color: C.brandBright }}>“{stadium.nickname}”</p>
+          )}
           <div className="flex items-center gap-3 mt-2">
             {stadium.clubLogoUrl && (
               <img src={stadium.clubLogoUrl} alt={stadium.clubName} className="w-12 h-12 rounded-full object-cover shrink-0" style={{ backgroundColor: C.surface, border: `2px solid ${C.border}` }} />
@@ -149,7 +222,55 @@ export default function StadiumView({
             >
               {stadium.status === 'wishlist' ? 'Quitar de la lista' : 'Visitaré próximamente'}
             </button>
+            <button onClick={share} aria-label="Compartir estadio" title="Compartir" className="w-12 h-12 shrink-0 rounded-xl flex items-center justify-center gc-focus gc-tap" style={{ border: `1px solid ${C.border}`, color: C.bright }}>
+              <Share2 size={18} />
+            </button>
           </div>
+
+          {/* Ficha técnica */}
+          {facts.length > 0 && (
+            <div className="mt-7 grid grid-cols-2 gap-3">
+              {facts.map(({ Icon, label, value }) => (
+                <div key={label} className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                  <Icon size={16} color={C.muted} />
+                  <div>
+                    <p className="text-xs" style={{ color: C.muted }}>{label}</p>
+                    <p className="text-sm font-medium" style={{ color: C.bright }}>{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Historia, datos curiosos y otros usos */}
+          {(stadium.history || stadium.funFacts.length > 0 || stadium.otherUses.length > 0) && (
+            <div className="mt-4 p-4 rounded-2xl space-y-4" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              {stadium.history && (
+                <div>
+                  <h2 className="text-sm font-semibold mb-1.5" style={{ color: C.bright }}>Historia</h2>
+                  <p className="text-sm leading-relaxed whitespace-pre-line break-words" style={{ color: C.muted }}>{stadium.history}</p>
+                </div>
+              )}
+              {stadium.funFacts.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-semibold mb-1.5" style={{ color: C.bright }}>Datos curiosos</h2>
+                  <ul className="list-disc pl-5 space-y-1 text-sm break-words" style={{ color: C.muted }}>
+                    {stadium.funFacts.map((fact) => <li key={fact}>{fact}</li>)}
+                  </ul>
+                </div>
+              )}
+              {stadium.otherUses.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-semibold mb-1.5" style={{ color: C.bright }}>Otros usos</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {stadium.otherUses.map((use) => (
+                      <span key={use} className="px-2.5 py-1 rounded-full text-xs" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, color: C.bright }}>{use}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Puntuación de la comunidad */}
           <div className="mt-7 p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
@@ -161,6 +282,9 @@ export default function StadiumView({
               <div className="flex-1">
                 <StarRow rating={stats.starRating} size={14} />
                 <p className="text-xs mt-1" style={{ color: C.muted }}>{stats.count.toLocaleString('es-AR')} reseñas de la comunidad</p>
+                {fewReviews && (
+                  <p className="text-xs mt-0.5" style={{ color: C.gold }}>Basado en solo {stats.count} {stats.count === 1 ? 'reseña' : 'reseñas'}</p>
+                )}
               </div>
             </div>
             <div className="mt-4">
@@ -171,9 +295,9 @@ export default function StadiumView({
           {/* Gasto promedio */}
           <div className="mt-4 p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold" style={{ color: C.bright }}>Gasto promedio por visita</span>
+              <span className="text-sm font-semibold" style={{ color: C.bright }}>Gasto típico por visita</span>
               <span className="text-sm font-semibold" style={{ color: C.brandBright }}>
-                {formatMoney(sumExpenses(stats.avgExpenses), stats.currency)}
+                {formatMoney(sumExpenses(stats.medianExpenses), stats.currency)}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -182,12 +306,32 @@ export default function StadiumView({
                   <Icon size={14} color={C.muted} />
                   <div className="flex-1">
                     <p className="text-xs" style={{ color: C.muted }}>{label}</p>
-                    <p className="text-sm font-medium" style={{ color: C.bright }}>{formatMoney(stats.avgExpenses[key], stats.currency)}</p>
+                    <p className="text-sm font-medium" style={{ color: C.bright }}>{formatMoney(stats.medianExpenses[key], stats.currency)}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Fotos que subieron los hinchas en sus reseñas */}
+          {stats.fanPhotos.length > 0 && (
+            <div className="mt-4 p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Images size={14} color={C.muted} />
+                <span className="text-sm font-semibold" style={{ color: C.bright }}>Fotos de hinchas</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {stats.fanPhotos.slice(0, FAN_PHOTOS_SHOWN).map(({ url, visit }) => (
+                  <button key={url} onClick={() => onOpenVisit(visit, stadium)} aria-label="Ver la reseña de esta foto" className="aspect-square rounded-lg overflow-hidden gc-focus gc-tap">
+                    <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+              {stats.fanPhotos.length > FAN_PHOTOS_SHOWN && (
+                <p className="text-xs mt-2" style={{ color: C.muted }}>y {stats.fanPhotos.length - FAN_PHOTOS_SHOWN} más en las reseñas</p>
+              )}
+            </div>
+          )}
 
           {/* Mapa con la ubicación del estadio */}
           {stadium.location?.coordinates?.lat && (
@@ -209,6 +353,33 @@ export default function StadiumView({
                   referrerPolicy="no-referrer-when-downgrade"
                   allowFullScreen
                 />
+              </div>
+            </div>
+          )}
+
+          <button onClick={openSuggestion} className="mt-4 flex items-center gap-1.5 text-sm gc-focus gc-tap rounded-lg" style={{ color: C.muted }}>
+            <PenLine size={14} /> ¿Algo está mal? Sugerir una corrección
+          </button>
+
+          {/* Otros estadios a menos de 100 km */}
+          {nearby.length > 0 && (
+            <div className="mt-4 p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              <h2 className="text-sm font-semibold mb-3" style={{ color: C.bright }}>Estadios cercanos</h2>
+              <div className="space-y-2">
+                {nearby.map(({ stadium: near, km }) => (
+                  <button key={near.id} onClick={() => onOpenStadium(near)} className="w-full flex items-center gap-3 p-2 rounded-xl text-left gc-focus gc-tap" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}>
+                    {near.clubLogoUrl ? (
+                      <img src={near.clubLogoUrl} alt={near.clubName} loading="lazy" className="w-12 h-12 rounded-full object-cover shrink-0" style={{ backgroundColor: C.surface, border: `2px solid ${C.border}` }} />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full shrink-0" style={{ backgroundColor: C.border }} />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate" style={{ color: C.bright }}>{near.name}</p>
+                      <p className="text-xs truncate" style={{ color: C.muted }}>{near.clubName || near.locationLabel}</p>
+                    </div>
+                    <span className="text-xs shrink-0" style={{ color: C.brandBright }}>{km < 1 ? '< 1 km' : `${Math.round(km)} km`}</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -282,6 +453,7 @@ export default function StadiumView({
           )}
         </aside>
       </div>
+      {suggestOpen && <SuggestionModal stadium={stadium} onClose={() => setSuggestOpen(false)} onToast={onToast} />}
     </div>
   );
 }

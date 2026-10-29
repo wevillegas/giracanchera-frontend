@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ChevronLeft, Users, LandPlot, Shield, Flag, Activity, ScrollText } from 'lucide-react';
+import { ChevronLeft, Users, LandPlot, Shield, Flag, Activity, ScrollText, PenLine } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import Navbar from '../Navbar';
 import AdminUsersView from './AdminUsersView';
 import AdminStadiumsView from './AdminStadiumsView';
 import AdminClubsView from './AdminClubsView';
 import AdminReportsView from './AdminReportsView';
+import AdminSuggestionsView from './AdminSuggestionsView';
 import AdminStatsView from './AdminStatsView';
 import AdminAuditView from './AdminAuditView';
 
@@ -14,6 +15,7 @@ const TABS = [
   { key: 'stadiums', label: 'Estadios', Icon: LandPlot },
   { key: 'clubs', label: 'Clubes', Icon: Shield },
   { key: 'reports', label: 'Reportes', Icon: Flag },
+  { key: 'suggestions', label: 'Correcciones', Icon: PenLine },
   { key: 'analytics', label: 'Analíticas', Icon: Activity },
   { key: 'audit', label: 'Auditoría', Icon: ScrollText },
 ];
@@ -54,6 +56,7 @@ export default function AdminView({ onBackToMap, onToast, navbarProps }) {
         {tab === 'stadiums' && <AdminStadiumsView onToast={onToast} />}
         {tab === 'clubs' && <AdminClubsView onToast={onToast} />}
         {tab === 'reports' && <AdminReportsView onToast={onToast} />}
+        {tab === 'suggestions' && <AdminSuggestionsView onToast={onToast} />}
         {tab === 'analytics' && <AdminStatsView />}
         {tab === 'audit' && <AdminAuditView />}
       </div>

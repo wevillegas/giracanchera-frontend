@@ -1,6 +1,6 @@
 import ConfirmModal from '../ConfirmModal';
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Trash2, Plus, AlertCircle, Users } from 'lucide-react';
+import { Pencil, Trash2, Plus, AlertCircle, Users, CheckCircle2, Sparkles } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import StadiumFormModal from './StadiumFormModal';
@@ -10,10 +10,42 @@ function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
 }
 
+// Qué le falta a la ficha del estadio (otros usos es opcional y no cuenta)
+function fichaChecks(s) {
+  return [
+    ['Apodo', Boolean(s.nickname)],
+    ['Año de inauguración', Boolean(s.openedYear)],
+    ['Estado', Boolean(s.status)],
+    ['Superficie', Boolean(s.surface)],
+    ['Medidas de la cancha', Boolean(s.pitch?.length && s.pitch?.width)],
+    ['Historia', Boolean(s.history)],
+    ['Datos curiosos', s.funFacts?.length > 0],
+    ['Fotos', s.photos?.length > 0 || Boolean(s.imageUrl)],
+  ];
+}
+
+function FichaBadge({ stadium }) {
+  const checks = fichaChecks(stadium);
+  const done = checks.filter(([, ok]) => ok).length;
+  const missing = checks.filter(([, ok]) => !ok).map(([label]) => label);
+  const complete = missing.length === 0;
+  return (
+    <span
+      title={complete ? 'Ficha completa' : `Falta: ${missing.join(', ')}`}
+      className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium shrink-0"
+      style={{ backgroundColor: 'transparent', border: `1px solid ${complete ? C.brandBright : C.border}`, color: complete ? C.brandBright : C.muted }}
+    >
+      {complete ? <CheckCircle2 size={12} /> : null}
+      Ficha {done}/{checks.length}
+    </span>
+  );
+}
+
 export default function AdminStadiumsView({ onToast }) {
   const [stadiums, setStadiums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [drafts, setDrafts] = useState({}); // id del estadio → sugerencia de Wikidata
   const [formTarget, setFormTarget] = useState(null); // null closed | {} new | stadium editing
   const [formOpen, setFormOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -33,6 +65,10 @@ export default function AdminStadiumsView({ onToast }) {
       .then((data) => setStadiums(Array.isArray(data) ? data : data.stadiums ?? []))
       .catch((err) => setError(err))
       .finally(() => setLoading(false));
+    // Si falla, simplemente no hay sugerencias a la vista
+    adminService.getStadiumDrafts()
+      .then((list) => setDrafts(Object.fromEntries(list.map(({ _id, draft }) => [_id, draft]))))
+      .catch(() => setDrafts({}));
   }
 
   // Filtros en cascada: país → provincia → ciudad. Cada nivel muestra solo lo que existe dentro del nivel anterior.
@@ -107,6 +143,7 @@ export default function AdminStadiumsView({ onToast }) {
   }
 
   function handleSaved(saved) {
+    setDrafts(({ [saved._id]: _reviewed, ...rest }) => rest); // al guardar, la sugerencia queda revisada
     setStadiums((prev) => {
       const exists = prev.some((s) => s._id === saved._id);
       return exists ? prev.map((s) => (s._id === saved._id ? saved : s)) : [saved, ...prev];
@@ -208,6 +245,13 @@ export default function AdminStadiumsView({ onToast }) {
                 </span>
               </div>
 
+              {drafts[s._id] && (
+                <span title="Hay datos sugeridos por Wikidata para revisar" className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium shrink-0" style={{ border: `1px solid ${C.gold}`, color: C.gold }}>
+                  <Sparkles size={12} /> Sugerencia
+                </span>
+              )}
+              <FichaBadge stadium={s} />
+
               <span className="hidden sm:flex items-center gap-1 text-xs shrink-0" style={{ color: C.muted, fontFamily: DISPLAY_FONT }}>
                 <Users size={12} /> {s.capacity?.toLocaleString('es-AR')}
               </span>
@@ -250,6 +294,7 @@ export default function AdminStadiumsView({ onToast }) {
       {formOpen && (
         <StadiumFormModal
           stadium={formTarget}
+          draft={formTarget ? drafts[formTarget._id] : null}
           stadiums={stadiums}
           onClose={() => setFormOpen(false)}
           onSaved={handleSaved}

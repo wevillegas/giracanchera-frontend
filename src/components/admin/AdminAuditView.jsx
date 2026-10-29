@@ -10,6 +10,7 @@ const ENTITY_LABELS = {
   user: 'Usuario',
   visit: 'Reseña',
   report: 'Denuncia',
+  suggestion: 'Corrección',
 };
 
 const ACTION_LABELS = { create: 'Alta', update: 'Edición', delete: 'Baja', resolve: 'Moderación' };

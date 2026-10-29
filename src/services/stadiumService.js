@@ -29,7 +29,18 @@ function normalizeStadium(raw) {
     locationLabel: [raw.location?.city, raw.location?.province, raw.location?.country].filter(Boolean).join(', '),
     capacity: raw.capacity ?? 0,
     location: { coordinates: { lat: coords.lat, lng: coords.lng } },
-    status: raw.status ?? 'none',
+    // 'status' es la relación del usuario con el estadio (visited/wishlist); el estado físico va aparte en 'condition'
+    status: ['visited', 'wishlist'].includes(raw.status) ? raw.status : 'none',
+    condition: raw.status ?? '',
+    nickname: raw.nickname ?? '',
+    openedYear: raw.openedYear ?? null,
+    surface: raw.surface ?? '',
+    pitch: { length: raw.pitch?.length ?? null, width: raw.pitch?.width ?? null },
+    history: raw.history ?? '',
+    funFacts: raw.funFacts ?? [],
+    otherUses: raw.otherUses ?? [],
+    // Un estadio viejo con solo imageUrl se ve como una galería de una foto
+    photos: raw.photos?.length ? raw.photos : (raw.imageUrl ? [{ url: raw.imageUrl, credit: '' }] : []),
     visits: raw.visits ?? 0,
     tone: raw.tone ?? 'brand',
     rating: raw.rating ?? 0,
@@ -52,7 +63,13 @@ async function getById(id) {
   return normalizeStadium(data.stadium ?? data);
 }
 
-const stadiumService = { getAll, getById };
+// Un usuario propone corregir un dato; queda pendiente hasta que un admin lo revise
+async function suggest(id, { field, value, note }) {
+  const { data } = await api.post(`/stadiums/${id}/suggestions`, { field, value, note });
+  return data;
+}
+
+const stadiumService = { getAll, getById, suggest };
 
 export default stadiumService;
 export { getAll, getById };

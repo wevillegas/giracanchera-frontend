@@ -95,7 +95,7 @@ export default function Navbar({
     >
       <div className="max-w-[1400px] mx-auto flex items-center gap-3 flex-wrap">
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => window.location.assign('/')}
           className="flex items-center gap-1.5 shrink-0 gc-focus gc-tap rounded-lg"
           style={{ opacity: 1 }}
           aria-label="Ir al mapa"

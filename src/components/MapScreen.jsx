@@ -48,37 +48,28 @@ const MAP_STYLE = {
   // Halo de atmósfera alrededor del planeta; se apaga al acercarse
   sky: {
     'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 5, 1, 7, 0],
-    'sky-color': '#1B4D3E',
-    'horizon-color': '#3FB950',
+    'sky-color': '#4F9BE8',
+    'horizon-color': '#BFE0FF',
     'fog-color': '#0D1117',
   },
   sources: {
-    osm: {
+    // Imágenes satelitales (océanos, relieve, selvas, desiertos) con calles y nombres encima
+    sat: {
       type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256,
-      maxzoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxzoom: 18,
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics',
     },
+    calles: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 18 },
+    lugares: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 18 },
   },
   layers: [
-    // Color parecido al del océano ya oscurecido: si un tile tarda en llegar no se ve un hueco negro
-    { id: 'fondo', type: 'background', paint: { 'background-color': '#232F36' } },
-    {
-      id: 'osm',
-      type: 'raster',
-      source: 'osm',
-      // Oscurece los tiles claros: brightness-min/max invertidos dan el negativo, el tono gira 180° y se apaga el color
-      paint: {
-        'raster-brightness-min': 0.8,
-        'raster-brightness-max': 0,
-        'raster-hue-rotate': 180,
-        'raster-saturation': -0.6,
-        'raster-contrast': -0.05,
-        // Sin fundido: con el giro entran tiles nuevos todo el tiempo y con fundido el planeta parpadeaba
-        'raster-fade-duration': 0,
-      },
-    },
+    { id: 'fondo', type: 'background', paint: { 'background-color': '#0B3D6B' } },
+    // Sin fundido: con el giro entran tiles nuevos todo el tiempo y con fundido el planeta parpadeaba
+    { id: 'sat', type: 'raster', source: 'sat', paint: { 'raster-fade-duration': 0 } },
+    { id: 'calles', type: 'raster', source: 'calles', minzoom: 9, paint: { 'raster-fade-duration': 0 } },
+    { id: 'lugares', type: 'raster', source: 'lugares', minzoom: 3, paint: { 'raster-fade-duration': 0 } },
   ],
 };
 

@@ -84,7 +84,7 @@ export default function StadiumModal({
             <div className="flex items-center gap-1.5 mt-2">
               <Wallet size={15} color={C.muted} />
               <span className="text-sm" style={{ color: C.muted }}>
-                Gasto promedio: <span style={{ color: C.brandBright, fontWeight: 600 }}>{formatMoney(sumExpenses(stats.avgExpenses), stats.currency)}</span>
+                Gasto típico: <span style={{ color: C.brandBright, fontWeight: 600 }}>{formatMoney(sumExpenses(stats.medianExpenses), stats.currency)}</span>
               </span>
             </div>
           )}

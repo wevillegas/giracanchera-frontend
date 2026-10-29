@@ -20,6 +20,22 @@ async function getStadiums() {
   return data;
 }
 
+// Sugerencias de Wikidata pendientes: { _id, draft }
+async function getStadiumDrafts() {
+  const { data } = await api.get('/stadiums/drafts');
+  return data;
+}
+
+async function getSuggestions() {
+  const { data } = await api.get('/stadiums/suggestions');
+  return data;
+}
+
+async function resolveSuggestion(id, action) {
+  const { data } = await api.patch(`/stadiums/suggestions/${id}`, { action });
+  return data;
+}
+
 async function uploadStadiumImage(file) {
   const formData = new FormData();
   formData.append('image', file);
@@ -69,7 +85,8 @@ async function getAuditLogs({ page = 1, entity = '' } = {}) {
 
 const adminService = {
   getUsers, updateUser, deleteUser,
-  getStadiums, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
+  getSuggestions, resolveSuggestion,
+  getStadiums, getStadiumDrafts, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
   getAuditLogs,
 };
@@ -77,7 +94,8 @@ const adminService = {
 export default adminService;
 export {
   getUsers, updateUser, deleteUser,
-  getStadiums, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
+  getSuggestions, resolveSuggestion,
+  getStadiums, getStadiumDrafts, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
   getAuditLogs,
 };
