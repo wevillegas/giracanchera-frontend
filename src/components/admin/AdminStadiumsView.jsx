@@ -1,6 +1,6 @@
 import ConfirmModal from '../ConfirmModal';
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Trash2, Plus, AlertCircle, Users, CheckCircle2, Sparkles } from 'lucide-react';
+import { Pencil, Trash2, Plus, AlertCircle, Users, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import StadiumFormModal from './StadiumFormModal';
@@ -9,6 +9,83 @@ import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminP
 
 function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+const NO_LOCATION = 'Ubicación en el mapa';
+
+// Lo que le falta a la ficha, más las coordenadas (que no cuentan en la insignia pero el mapa las necesita)
+function missingOf(stadium) {
+  const missing = fichaChecks(stadium).filter(([, ok]) => !ok).map(([label]) => label);
+  if (!stadium.location?.coordinates?.lat) missing.push(NO_LOCATION);
+  return missing;
+}
+
+const MISSING_FILTERS = [...new Set([...fichaChecks({}).map(([label]) => label), NO_LOCATION])];
+
+// Busca en Wikidata para todos los estadios sin sugerencia y guarda borradores para revisar; muestra el avance
+function WikidataImport({ onDone, onToast }) {
+  const [job, setJob] = useState({ status: 'idle' });
+  const running = job.status === 'running';
+
+  useEffect(() => {
+    adminService.getWikidataImport().then(setJob).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const timer = setInterval(() => {
+      adminService.getWikidataImport().then((next) => {
+        setJob(next);
+        if (next.status === 'done') {
+          onToast?.(`Búsqueda terminada: ${next.saved} sugerencias nuevas`);
+          onDone();
+        } else if (next.status === 'error') {
+          onToast?.('La búsqueda en Wikidata falló');
+        }
+      }).catch(() => {});
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [running, onDone, onToast]);
+
+  async function start() {
+    try {
+      setJob(await adminService.startWikidataImport());
+    } catch (err) {
+      if (err.response?.status === 409) setJob(err.response.data.job);
+      else onToast?.(err.response?.data?.message || 'No pudimos iniciar la búsqueda.');
+    }
+  }
+
+  const percent = job.total ? Math.round((job.done / job.total) * 100) : 0;
+  return (
+    <div className="flex flex-wrap items-center gap-3 p-3 mb-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold" style={{ color: C.bright }}>Datos de Wikidata</p>
+        {running ? (
+          <>
+            <p className="text-xs mt-0.5" style={{ color: C.muted }}>Buscando… {job.done}/{job.total} estadios · {job.saved} sugerencias nuevas</p>
+            <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{ backgroundColor: C.bg }}>
+              <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: C.brandBright }} />
+            </div>
+          </>
+        ) : (
+          <p className="text-xs mt-0.5" style={{ color: job.status === 'error' ? '#f85149' : C.muted }}>
+            {job.status === 'done' ? `Última búsqueda: ${job.saved} sugerencias nuevas${job.failed ? `, ${job.failed} con error` : ''}.`
+              : job.status === 'error' ? 'La última búsqueda falló.'
+              : 'Trae apodo, año de inauguración e historia de los estadios que aún no tienen sugerencia, para que los revises.'}
+          </p>
+        )}
+      </div>
+      <button
+        onClick={start}
+        disabled={running}
+        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold shrink-0 gc-focus gc-tap disabled:opacity-50"
+        style={{ border: `1px solid ${C.brandBright}`, color: C.brandBright }}
+      >
+        {running ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {running ? 'Buscando...' : 'Buscar en Wikidata'}
+      </button>
+    </div>
+  );
 }
 
 function FichaBadge({ stadium }) {
@@ -41,6 +118,7 @@ export default function AdminStadiumsView({ onToast, openId, onOpenHandled }) {
   const [provinceFilter, setProvinceFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [missingFilter, setMissingFilter] = useState(''); // '' todos | '*' cualquier faltante | etiqueta de lo que falta
 
   useEffect(() => {
     load();
@@ -97,9 +175,11 @@ export default function AdminStadiumsView({ onToast, openId, onOpenHandled }) {
       const matchesCountry = !countryFilter || s.location?.country === countryFilter;
       const matchesProvince = !provinceFilter || s.location?.province === provinceFilter;
       const matchesCity = !cityFilter || s.location?.city === cityFilter;
-      return matchesText && matchesCountry && matchesProvince && matchesCity;
+      const missing = missingFilter ? missingOf(s) : [];
+      const matchesMissing = !missingFilter || (missingFilter === '*' ? missing.length > 0 : missing.includes(missingFilter));
+      return matchesText && matchesCountry && matchesProvince && matchesCity && matchesMissing;
     });
-  }, [stadiums, query, countryFilter, provinceFilter, cityFilter]);
+  }, [stadiums, query, countryFilter, provinceFilter, cityFilter, missingFilter]);
 
   const currentPage = clampPage(page, filtered.length);
   const visible = paginate(filtered, currentPage);
@@ -174,6 +254,8 @@ export default function AdminStadiumsView({ onToast, openId, onOpenHandled }) {
         </button>
       </div>
 
+      <WikidataImport onDone={load} onToast={onToast} />
+
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           type="search"
@@ -211,6 +293,17 @@ export default function AdminStadiumsView({ onToast, openId, onOpenHandled }) {
         >
           <option value="">{provinceFilter ? 'Todas las ciudades' : 'Elegí una provincia primero'}</option>
           {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select
+          value={missingFilter}
+          onChange={(e) => { setMissingFilter(e.target.value); setPage(1); }}
+          aria-label="Filtrar por datos que faltan"
+          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
+          style={filterFieldStyle}
+        >
+          <option value="">Toda la ficha</option>
+          <option value="*">Con datos faltantes</option>
+          {MISSING_FILTERS.map((label) => <option key={label} value={label}>Sin {label.toLowerCase()}</option>)}
         </select>
       </div>
 

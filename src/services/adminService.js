@@ -26,6 +26,17 @@ async function getStadiumDrafts() {
   return data;
 }
 
+// Búsqueda de datos en Wikidata para todos los estadios: arranca en el servidor y se consulta el avance
+async function startWikidataImport() {
+  const { data } = await api.post('/stadiums/import-wikidata');
+  return data;
+}
+
+async function getWikidataImport() {
+  const { data } = await api.get('/stadiums/import-wikidata');
+  return data;
+}
+
 async function getSuggestions() {
   const { data } = await api.get('/stadiums/suggestions');
   return data;
@@ -85,7 +96,7 @@ async function getAuditLogs({ page = 1, entity = '' } = {}) {
 
 const adminService = {
   getUsers, updateUser, deleteUser,
-  getSuggestions, resolveSuggestion,
+  getSuggestions, resolveSuggestion, startWikidataImport, getWikidataImport,
   getStadiums, getStadiumDrafts, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
   getAuditLogs,
