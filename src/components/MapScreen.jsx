@@ -185,7 +185,9 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
       // Empieza viendo el planeta entero; al cargar los estadios viaja solo al país del visitante
       zoom: minZoom + 0.2,
       minZoom,
-      attributionControl: { compact: true },
+      attributionControl: false,
+      // Centra el planeta en el espacio bajo la navbar (80px); no cambia el zoom mínimo
+      padding: { top: 80, bottom: 0, left: 0, right: 0 },
       dragRotate: false,
       pitchWithRotate: false,
     });
@@ -363,6 +365,10 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       </div>
       <ZoomControls map={map} />
+      {/* Atribución de Esri: abajo al centro, libre de los botones laterales */}
+      <p className="fixed bottom-1 inset-x-0 text-center pointer-events-none z-[900]" style={{ fontSize: 10, color: C.muted, opacity: 0.7 }}>
+        Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics
+      </p>
     </>
   );
 }
