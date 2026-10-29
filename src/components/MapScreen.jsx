@@ -8,7 +8,7 @@ import { userCountryCode, sameCountry } from '../utils/userCountry';
 // MapLibre usa [lng, lat] y su zoom va uno por debajo del de Leaflet (tiles de 512 px)
 const ARGENTINA_CENTER = [-58.38, -34.6];
 const ARGENTINA_ZOOM = 3.7;
-const FOCUS_ZOOM = 13; // se ve el estadio y su barrio, sin llegar a pegarse al suelo
+const FOCUS_ZOOM = 16; // se ve el estadio y sus alrededores inmediatos, para ubicarlo en el barrio
 const FOCUS_MS = 1500; // viaje al estadio y a un grupo: suave pero ágil
 const FOCUS_CURVE = 1.1; // más bajo = menos "salto" de alejar y volver a acercar (por defecto 1.42)
 const BUTTON_ZOOM_MS = 600; // botones + y −
@@ -57,7 +57,8 @@ const MAP_STYLE = {
     sat: {
       type: 'raster',
       tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256,
+      // Con 256 el viaje a un estadio pedía unos 450 mosaicos en 1,5 s; con 384 se piden bastantes menos y la foto sigue nítida
+      tileSize: 384,
       maxzoom: 18,
       attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics',
     },
@@ -129,6 +130,13 @@ function buildClusterElement(count) {
 
 const hasCoordinates = (s) => s.location?.coordinates?.lat != null && s.location?.coordinates?.lng != null;
 
+// Calles y nombres se ocultan durante el viaje a un estadio: son cientos de pedidos de imágenes que nadie llega a leer
+// mientras la cámara se mueve, y le sacan ancho de banda a la foto satelital. Aparecen al llegar.
+const OVERLAY_LAYERS = ['calles', 'lugares'];
+const showOverlays = (map, visible) => OVERLAY_LAYERS.forEach((id) => {
+  if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
+});
+
 const buttonZoom = () => ({ duration: reducedMotion() ? 0 : BUTTON_ZOOM_MS, easing: smooth });
 
 function ZoomControls({ map }) {
@@ -136,7 +144,7 @@ function ZoomControls({ map }) {
   return (
     <div
       className="absolute left-4 z-[400] hidden md:flex flex-col items-center gap-1 p-1 rounded-full"
-      style={{ bottom: '6.5rem', backgroundColor: rgba(C.surface, 0.92), border: `1px solid ${C.border}`, backdropFilter: 'blur(8px)' }}
+      style={{ bottom: '1.5rem', backgroundColor: rgba(C.surface, 0.92), border: `1px solid ${C.border}`, backdropFilter: 'blur(8px)' }}
     >
       <button onClick={() => map?.zoomIn(buttonZoom())} aria-label="Acercar" className={buttonClass} style={{ color: C.bright }}>
         <Plus size={16} />
@@ -317,6 +325,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
       return;
     }
 
+    showOverlays(map, false);
     map.flyTo({
       center: [flyTarget.lng, flyTarget.lat],
       zoom: Math.max(map.getZoom(), FOCUS_ZOOM),
@@ -325,8 +334,10 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
       easing: smooth,
     });
     // flyTo ya frenó cualquier animación anterior: el próximo moveend es el del final de este viaje
+    const restore = () => showOverlays(map, true);
+    map.once('moveend', restore);
     map.once('moveend', arrived);
-    return () => { map.off('moveend', arrived); };
+    return () => { map.off('moveend', arrived); map.off('moveend', restore); restore(); };
   }, [map, flyTarget]);
 
   return (

@@ -17,7 +17,7 @@ import StadiumModal from './components/StadiumModal';
 import VisitFormModal from './components/VisitFormModal';
 import StadiumPickerModal from './components/StadiumPickerModal';
 import Toast from './components/Toast';
-import BottomNav from './components/BottomNav';
+import AddVisitButton from './components/AddVisitButton';
 import AdminView from './components/admin/AdminView';
 
 const expenseFields = [
@@ -601,12 +601,9 @@ export default function App() {
 
       <Toast message={toast} />
 
-      <BottomNav
-        view={view}
-        onNavigateMap={goToMap}
-        onNavigateProfile={() => setView('profile')}
-        onQuickAddVisit={() => (user ? setPickerOpen(true) : setAuthModal('login'))}
-      />
+      {view !== 'admin' && (
+        <AddVisitButton onClick={() => (user ? setPickerOpen(true) : setAuthModal('login'))} />
+      )}
     </div>
   );
 }
