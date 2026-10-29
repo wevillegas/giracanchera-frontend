@@ -75,8 +75,8 @@ export default function ClubFormModal({ club, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4 gc-overlay" style={{ backgroundColor: rgba('#000000', 0.6) }} onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-3xl overflow-y-auto gc-hide-scrollbar"
-        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, maxHeight: '90vh' }}
+        className="w-full max-w-2xl rounded-3xl overflow-y-auto gc-hide-scrollbar"
+        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, maxHeight: '94vh' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-5">

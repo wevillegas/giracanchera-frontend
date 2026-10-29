@@ -73,7 +73,7 @@ export default function SuggestionModal({ stadium, onClose, onToast }) {
                 {config.options.map(([optionValue, text]) => <option key={optionValue} value={optionValue}>{text}</option>)}
               </select>
             ) : config.type === 'textarea' ? (
-              <textarea rows={4} value={value} onChange={(e) => setValue(e.target.value)} required maxLength={field === 'other' ? 500 : 5000} className={`${fieldClass} resize-y`} style={fieldStyle} />
+              <textarea rows={4} value={value} onChange={(e) => setValue(e.target.value)} required maxLength={field === 'other' ? 500 : 3000} className={`${fieldClass} resize-y`} style={fieldStyle} />
             ) : (
               <input type={config.type} step={config.type === 'number' ? 'any' : undefined} value={value} onChange={(e) => setValue(e.target.value)} required className={fieldClass} style={fieldStyle} />
             )}

@@ -206,8 +206,8 @@ export default function StadiumFormModal({ stadium, draft, stadiums = [], onClos
   return (
     <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4 gc-overlay" style={{ backgroundColor: rgba('#000000', 0.6) }} onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-3xl overflow-y-auto gc-hide-scrollbar"
-        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, maxHeight: '90vh' }}
+        className="w-full max-w-3xl rounded-3xl overflow-y-auto gc-hide-scrollbar"
+        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, maxHeight: '94vh' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-5">
@@ -388,19 +388,19 @@ export default function StadiumFormModal({ stadium, draft, stadiums = [], onClos
           <Section title="Historia" open={openSections.includes('history')} onToggle={() => toggleSection('history')}>
             <label className="flex flex-col gap-1.5">
               <span className="flex justify-between text-xs font-medium" style={{ color: C.muted }}>
-                <span>Historia</span><span>{form.history.length}/1000</span>
+                <span>Historia</span><span>{form.history.length}/3000</span>
               </span>
-              <textarea rows={5} maxLength={1000} value={form.history} onChange={(e) => update('history', e.target.value)} placeholder="Contá cómo nació y qué marcó al estadio" className={`${fieldClass} resize-y`} style={fieldStyle} />
+              <textarea rows={9} maxLength={3000} value={form.history} onChange={(e) => update('history', e.target.value)} placeholder="Contá cómo nació y qué marcó al estadio" className={`${fieldClass} resize-y`} style={fieldStyle} />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: C.muted }}>Datos curiosos (uno por línea, hasta 5 de 150 caracteres)</span>
-              <textarea rows={4} value={form.funFacts} onChange={(e) => update('funFacts', e.target.value)} placeholder="" className={`${fieldClass} resize-y`} style={fieldStyle} />
+              <span className="text-xs font-medium" style={{ color: C.muted }}>Datos curiosos (uno por línea, hasta 8 de 300 caracteres)</span>
+              <textarea rows={7} value={form.funFacts} onChange={(e) => update('funFacts', e.target.value)} placeholder="" className={`${fieldClass} resize-y`} style={fieldStyle} />
             </label>
           </Section>
 
           <Section title={`Fotos (${photos.length}/${MAX_PHOTOS})`} open={openSections.includes('photos')} onToggle={() => toggleSection('photos')}>
             <p className="text-xs" style={{ color: C.muted }}>La primera foto es la portada: es la que se ve en el mapa y en las listas.</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {photos.map((photo, index) => (
                 <div key={photo.preview} className="flex flex-col gap-1.5">
                   <label className="relative cursor-pointer gc-focus rounded-xl overflow-hidden aspect-video" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>

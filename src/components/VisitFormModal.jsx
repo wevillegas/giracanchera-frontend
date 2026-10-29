@@ -6,7 +6,7 @@ import visitService from '../services/visitService';
 import clubService from '../services/clubService';
 import ClubPicker from './ClubPicker';
 
-const REVIEW_MAX = 300;
+const REVIEW_MAX = 1000;
 // Tope por rubro de gasto (en pesos)
 const EXPENSE_MAX = 2000000;
 
