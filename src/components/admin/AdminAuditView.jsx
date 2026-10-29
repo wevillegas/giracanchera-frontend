@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Download, ArrowRight } from 'lucide-react';
 import { C } from '../../theme';
 import adminService from '../../services/adminService';
 import AdminPagination, { filterFieldStyle } from './AdminPagination';
@@ -14,20 +14,27 @@ const ENTITY_LABELS = {
 };
 
 const ACTION_LABELS = { create: 'Alta', update: 'Edición', delete: 'Baja', resolve: 'Moderación' };
+const NO_FILTERS = { entity: '', action: '', actor: '', from: '', to: '' };
 
 export default function AdminAuditView() {
   const [logs, setLogs] = useState([]);
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
-  const [entity, setEntity] = useState('');
+  const [filters, setFilters] = useState(NO_FILTERS);
+  const [actors, setActors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    adminService.getAuditActors().then(setActors).catch(() => setActors([]));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    adminService.getAuditLogs({ page, entity })
+    adminService.getAuditLogs({ page, ...filters })
       .then((data) => {
         if (cancelled) return;
         setLogs(data.logs);
@@ -38,28 +45,75 @@ export default function AdminAuditView() {
       .catch((err) => { if (!cancelled) setError(err); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [page, entity]);
+  }, [page, filters]);
 
+  const setFilter = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
+  };
+  const hasFilters = Object.values(filters).some(Boolean);
+
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const blob = await adminService.exportAuditLogs(filters);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'auditoria.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError(new Error('export'));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  const selectClass = 'px-3 py-2 rounded-xl text-sm outline-none gc-focus';
   return (
     <div>
       <div className="flex items-center justify-between mb-4 gap-2">
         <h2 className="text-lg font-semibold" style={{ color: C.bright }}>Auditoría ({total})</h2>
-        <select
-          value={entity}
-          onChange={(e) => { setEntity(e.target.value); setPage(1); }}
-          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
-          style={filterFieldStyle}
+        <button
+          onClick={exportCsv}
+          disabled={exporting || total === 0}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold gc-focus gc-tap disabled:opacity-40"
+          style={{ border: `1px solid ${C.brandBright}`, color: C.brandBright }}
         >
-          <option value="">Todo</option>
-          {Object.entries(ENTITY_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
+          <Download size={14} /> {exporting ? 'Exportando...' : 'Exportar CSV'}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        <select value={filters.entity} onChange={(e) => setFilter('entity', e.target.value)} aria-label="Filtrar por sección" className={selectClass} style={filterFieldStyle}>
+          <option value="">Toda sección</option>
+          {Object.entries(ENTITY_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
+        <select value={filters.action} onChange={(e) => setFilter('action', e.target.value)} aria-label="Filtrar por acción" className={selectClass} style={filterFieldStyle}>
+          <option value="">Toda acción</option>
+          {Object.entries(ACTION_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+        </select>
+        <select value={filters.actor} onChange={(e) => setFilter('actor', e.target.value)} aria-label="Filtrar por administrador" className={selectClass} style={filterFieldStyle}>
+          <option value="">Todo administrador</option>
+          {actors.map((name) => <option key={name} value={name}>@{name}</option>)}
+        </select>
+        <label className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+          Desde
+          <input type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => setFilter('from', e.target.value)} className={selectClass} style={{ ...filterFieldStyle, colorScheme: 'dark' }} />
+        </label>
+        <label className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+          Hasta
+          <input type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilter('to', e.target.value)} className={selectClass} style={{ ...filterFieldStyle, colorScheme: 'dark' }} />
+        </label>
+        {hasFilters && (
+          <button onClick={() => { setFilters(NO_FILTERS); setPage(1); }} className="text-xs underline gc-focus rounded" style={{ color: C.muted }}>Limpiar filtros</button>
+        )}
       </div>
 
       {error ? (
         <div className="flex items-center gap-2 text-sm" style={{ color: C.muted }}>
-          <AlertCircle size={15} /> No pudimos cargar la auditoría.
+          <AlertCircle size={15} /> No pudimos completar la operación con la auditoría.
         </div>
       ) : loading ? (
         <p className="text-sm" style={{ color: C.muted }}>Cargando auditoría...</p>
@@ -67,7 +121,7 @@ export default function AdminAuditView() {
         <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
           {logs.length === 0 ? (
             <p className="text-sm text-center py-8" style={{ backgroundColor: C.surface, color: C.muted }}>
-              Todavía no hay cambios registrados.
+              {hasFilters ? 'Ningún cambio coincide con los filtros.' : 'Todavía no hay cambios registrados.'}
             </p>
           ) : logs.map((log, i) => (
             <div
@@ -82,7 +136,18 @@ export default function AdminAuditView() {
                 <span className="text-[10px]" style={{ color: C.muted }}>{ACTION_LABELS[log.action] ?? log.action}</span>
               </div>
               <p className="text-sm mt-1" style={{ color: C.bright }}>{log.summary}</p>
-              {log.fields?.length > 0 && (
+              {log.changes?.length > 0 ? (
+                <div className="mt-1.5 space-y-1">
+                  {log.changes.map((change) => (
+                    <p key={change.field} className="flex flex-wrap items-center gap-x-1.5 text-xs" style={{ color: C.muted }}>
+                      <span style={{ color: C.bright }}>{change.field}:</span>
+                      <span className="line-through break-all" style={{ color: '#f85149' }}>{change.before || '(vacío)'}</span>
+                      <ArrowRight size={11} />
+                      <span className="break-all" style={{ color: C.brandBright }}>{change.after || '(vacío)'}</span>
+                    </p>
+                  ))}
+                </div>
+              ) : log.fields?.length > 0 && (
                 <p className="text-xs mt-0.5" style={{ color: C.muted }}>Campos: {log.fields.join(', ')}</p>
               )}
               <p className="text-xs mt-0.5" style={{ color: C.muted }}>

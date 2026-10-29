@@ -1,10 +1,11 @@
 import ConfirmModal from '../ConfirmModal';
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Trash2, Star, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, Star, AlertCircle, Activity } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import adminService from '../../services/adminService';
 import AdminUserEditModal from './AdminUserEditModal';
+import UserActivityModal from './UserActivityModal';
 import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminPagination';
 import { isAdminRole } from '../../utils/roles';
 
@@ -22,6 +23,10 @@ export default function AdminUsersView({ onToast }) {
   const [rolFilter, setRolFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [activityUser, setActivityUser] = useState(null);
+  const [selected, setSelected] = useState(() => new Set()); // acciones masivas
+  const [bulkDays, setBulkDays] = useState('7');
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,7 +40,8 @@ export default function AdminUsersView({ onToast }) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return users.filter((u) => {
-      const matchesRol = rolFilter === 'all' || (rolFilter === 'admin') === isAdminRole(u.rol);
+      const muted = Boolean(u.mutedUntil) && new Date(u.mutedUntil) > new Date();
+      const matchesRol = rolFilter === 'all' || (rolFilter === 'muted' ? muted : (rolFilter === 'admin') === isAdminRole(u.rol));
       const matchesText = !q || u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
       return matchesRol && matchesText;
     });
@@ -57,6 +63,25 @@ export default function AdminUsersView({ onToast }) {
     } catch (err) {
       onToast?.(err.response?.data?.message || 'No pudimos eliminar el usuario.');
     }
+  }
+
+  const toggleSelected = (id) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  // Silencia (o levanta el silencio de) todos los seleccionados; cada uno se guarda por separado
+  async function bulkMute(days) {
+    setBulkBusy(true);
+    const ids = [...selected];
+    const results = await Promise.allSettled(ids.map((id) => adminService.updateUser(id, { mutedDays: days })));
+    const updated = results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+    setUsers((prev) => prev.map((u) => updated.find((x) => x._id === u._id) ?? u));
+    const failed = ids.length - updated.length;
+    onToast?.(`${updated.length} ${updated.length === 1 ? 'usuario' : 'usuarios'} ${days === 0 ? 'con el silencio levantado' : 'silenciado(s)'}${failed ? `, ${failed} con error` : ''}`);
+    setSelected(new Set());
+    setBulkBusy(false);
   }
 
   // Un admin no puede tocar a otro admin (el back lo valida igual)
@@ -103,8 +128,21 @@ export default function AdminUsersView({ onToast }) {
           <option value="all">Todos</option>
           <option value="user">Usuarios</option>
           <option value="admin">Admins</option>
+          <option value="muted">Silenciados</option>
         </select>
       </div>
+
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 p-3 mb-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.brandBright}` }}>
+          <span className="text-sm font-semibold" style={{ color: C.bright }}>{selected.size} {selected.size === 1 ? 'seleccionado' : 'seleccionados'}</span>
+          <select value={bulkDays} onChange={(e) => setBulkDays(e.target.value)} aria-label="Días de silencio" className="px-2.5 py-1.5 rounded-lg text-xs outline-none gc-focus" style={filterFieldStyle}>
+            {[1, 7, 30, 90].map((d) => <option key={d} value={d}>{d} {d === 1 ? 'día' : 'días'}</option>)}
+          </select>
+          <button onClick={() => bulkMute(Number(bulkDays))} disabled={bulkBusy} className="px-3 py-1.5 rounded-lg text-xs font-semibold gc-focus disabled:opacity-40" style={{ backgroundColor: '#f85149', color: C.bright }}>Silenciar</button>
+          <button onClick={() => bulkMute(0)} disabled={bulkBusy} className="px-3 py-1.5 rounded-lg text-xs font-semibold gc-focus disabled:opacity-40" style={{ border: `1px solid ${C.border}`, color: C.bright }}>Levantar silencio</button>
+          <button onClick={() => setSelected(new Set())} className="text-xs ml-auto gc-focus rounded" style={{ color: C.muted }}>Cancelar</button>
+        </div>
+      )}
 
       <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
         {visible.length === 0 ? (
@@ -117,6 +155,14 @@ export default function AdminUsersView({ onToast }) {
             className="flex items-center gap-3 px-4 py-3"
             style={{ backgroundColor: C.surface, borderTop: i === 0 ? 'none' : `1px solid ${C.border}` }}
           >
+            <input
+              type="checkbox"
+              checked={selected.has(user._id)}
+              onChange={() => toggleSelected(user._id)}
+              disabled={user._id === me?._id || isLockedBy(user)}
+              aria-label={`Seleccionar a @${user.username}`}
+              className="w-4 h-4 shrink-0 accent-green-500 disabled:opacity-30"
+            />
             {user.avatarUrl ? (
               <img src={user.avatarUrl} alt={user.username} className="w-9 h-9 rounded-full object-cover shrink-0" />
             ) : (
@@ -161,6 +207,15 @@ export default function AdminUsersView({ onToast }) {
 
             <div className="flex items-center gap-1 shrink-0">
               <button
+                onClick={() => setActivityUser(user)}
+                aria-label="Ver actividad"
+                title="Ver actividad"
+                className="w-8 h-8 rounded-full flex items-center justify-center gc-focus gc-tap"
+                style={{ color: C.muted }}
+              >
+                <Activity size={14} />
+              </button>
+              <button
                 onClick={() => setEditingUser(user)}
                 disabled={isLockedBy(user)}
                 aria-label="Editar usuario"
@@ -197,6 +252,7 @@ export default function AdminUsersView({ onToast }) {
           onCancel={() => setPendingDelete(null)}
         />
       )}
+      {activityUser && <UserActivityModal user={activityUser} onClose={() => setActivityUser(null)} />}
       {editingUser && (
         <AdminUserEditModal
           user={editingUser}

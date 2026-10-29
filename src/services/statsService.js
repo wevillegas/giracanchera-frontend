@@ -7,8 +7,8 @@ async function getPublicStats() {
 }
 
 // Analíticas internas (solo admin, con sesión)
-async function getAdminStats() {
-  const { data } = await api.get('/stats/admin');
+async function getAdminStats(days = 30) {
+  const { data } = await api.get('/stats/admin', { params: { days } });
   return data;
 }
 

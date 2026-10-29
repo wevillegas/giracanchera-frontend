@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, Users, Flag, MapPin, Star } from 'lucide-react';
+import { AlertCircle, Users, Flag, MapPin, Star, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import statsService from '../../services/statsService';
 
@@ -54,6 +54,18 @@ const Card = ({ title, children }) => (
   </div>
 );
 
+// Variación contra el período anterior: verde si sube, rojo si baja
+function Delta({ now, prev }) {
+  if (prev === 0 && now === 0) return <span className="text-[11px]" style={{ color: C.muted }}>sin cambios</span>;
+  if (prev === 0) return <span className="flex items-center gap-1 text-[11px]" style={{ color: C.brandBright }}><TrendingUp size={11} /> nuevo</span>;
+  const percent = Math.round(((now - prev) / prev) * 100);
+  const Icon = percent > 0 ? TrendingUp : percent < 0 ? TrendingDown : Minus;
+  const color = percent > 0 ? C.brandBright : percent < 0 ? '#f85149' : C.muted;
+  return <span className="flex items-center gap-1 text-[11px]" style={{ color }}><Icon size={11} /> {percent > 0 ? '+' : ''}{percent}% vs. anterior ({prev})</span>;
+}
+
+const PERIODS = [7, 30, 90];
+
 const Stat = ({ label, value, Icon }) => (
   <div className="flex flex-col items-center py-3 rounded-2xl" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}>
     <span className="text-xl" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>{value ?? '—'}</span>
@@ -66,14 +78,15 @@ const Stat = ({ label, value, Icon }) => (
 export default function AdminStatsView() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(false);
+  const [days, setDays] = useState(30);
 
   useEffect(() => {
     let cancelled = false;
-    statsService.getAdminStats()
-      .then((data) => { if (!cancelled) setStats(data); })
+    statsService.getAdminStats(days)
+      .then((data) => { if (!cancelled) { setStats(data); setError(false); } })
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
-  }, []);
+  }, [days]);
 
   if (error) {
     return (
@@ -84,8 +97,30 @@ export default function AdminStatsView() {
   }
   if (!stats) return <p className="text-sm" style={{ color: C.muted }}>Cargando analíticas...</p>;
 
+  const { period } = stats;
+  const maxTop = Math.max(1, ...stats.topStadiums.map((s) => s.reviews));
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex gap-2" role="group" aria-label="Período">
+          {PERIODS.map((d) => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              aria-pressed={days === d}
+              className="px-3.5 py-1.5 rounded-full text-sm font-medium gc-focus gc-tap"
+              style={{ backgroundColor: days === d ? C.brandBright : C.surface, color: days === d ? C.bg : C.muted, border: `1px solid ${days === d ? C.brandBright : C.border}` }}
+            >
+              {d} días
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
+          <p className="text-sm" style={{ color: C.bright }}>Reseñas: <strong>{period.visits}</strong> <Delta now={period.visits} prev={period.visitsPrev} /></p>
+          <p className="text-sm" style={{ color: C.bright }}>Usuarios nuevos: <strong>{period.newUsers}</strong> <Delta now={period.newUsers} prev={period.newUsersPrev} /></p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Usuarios" value={stats.users.total} Icon={Users} />
         <Stat label="Nuevos (7 días)" value={stats.users.new7} Icon={Users} />
@@ -94,8 +129,8 @@ export default function AdminStatsView() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        <Card title="Reseñas por día (últimos 30 días)">
-          <Bars data={stats.visitsByDay} labelFor={formatShortDate} />
+        <Card title={`Reseñas por día (últimos ${period.days} días)`}>
+          <Bars data={period.byDay} labelFor={formatShortDate} />
         </Card>
         <Card title="Usuarios nuevos por semana (últimas 8)">
           <Bars data={stats.usersByWeek} labelFor={formatShortDate} />
@@ -123,6 +158,45 @@ export default function AdminStatsView() {
                 </div>
               ))}
             </div>
+          )}
+        </Card>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card title={`Estadios con más reseñas (${period.days} días)`}>
+          {stats.topStadiums.length === 0 ? (
+            <p className="text-sm" style={{ color: C.muted }}>Sin reseñas en este período.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {stats.topStadiums.map((s) => (
+                <div key={s.name}>
+                  <div className="flex items-center justify-between gap-2 text-sm" style={{ color: C.bright }}>
+                    <span className="flex items-center gap-2 min-w-0">
+                      {s.logoUrl && <img src={s.logoUrl} alt="" className="w-5 h-5 object-contain shrink-0" />}
+                      <span className="truncate">{s.name}</span>
+                    </span>
+                    <span className="shrink-0" style={{ color: C.muted }}>{s.reviews} · {s.avg}/10</span>
+                  </div>
+                  <div className="h-1.5 rounded-full mt-1" style={{ backgroundColor: C.bg }}>
+                    <div className="h-full rounded-full" style={{ width: `${(s.reviews / maxTop) * 100}%`, backgroundColor: C.brandBright }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+        <Card title={`Estadios sin ninguna reseña (${stats.unreviewed.total})`}>
+          {stats.unreviewed.total === 0 ? (
+            <p className="text-sm" style={{ color: C.muted }}>Todos los estadios tienen al menos una reseña.</p>
+          ) : (
+            <>
+              <ul className="space-y-1 text-sm" style={{ color: C.bright }}>
+                {stats.unreviewed.sample.map((name) => <li key={name} className="truncate">{name}</li>)}
+              </ul>
+              {stats.unreviewed.total > stats.unreviewed.sample.length && (
+                <p className="text-xs mt-2" style={{ color: C.muted }}>y {stats.unreviewed.total - stats.unreviewed.sample.length} más</p>
+              )}
+            </>
           )}
         </Card>
       </div>

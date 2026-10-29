@@ -89,8 +89,28 @@ async function deleteClub(id) {
   return data;
 }
 
-async function getAuditLogs({ page = 1, entity = '' } = {}) {
-  const { data } = await api.get('/audit', { params: { page, entity: entity || undefined } });
+// Los filtros vacíos no se mandan
+const withValues = (filters) => Object.fromEntries(Object.entries(filters).filter(([, value]) => value));
+
+async function getAuditLogs({ page = 1, ...filters } = {}) {
+  const { data } = await api.get('/audit', { params: { page, ...withValues(filters) } });
+  return data;
+}
+
+async function getAuditActors() {
+  const { data } = await api.get('/audit/actors');
+  return data;
+}
+
+// CSV con los mismos filtros que la lista
+async function exportAuditLogs(filters = {}) {
+  const { data } = await api.get('/audit/export', { params: withValues(filters), responseType: 'blob' });
+  return data;
+}
+
+// Resumen de actividad de un usuario: reseñas, denuncias hechas y recibidas, últimas reseñas
+async function getUserActivity(id) {
+  const { data } = await api.get(`/users/admin/${id}/activity`);
   return data;
 }
 
@@ -99,7 +119,7 @@ const adminService = {
   getSuggestions, resolveSuggestion, startWikidataImport, getWikidataImport,
   getStadiums, getStadiumDrafts, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
-  getAuditLogs,
+  getAuditLogs, getAuditActors, exportAuditLogs, getUserActivity,
 };
 
 export default adminService;
@@ -108,5 +128,5 @@ export {
   getSuggestions, resolveSuggestion,
   getStadiums, getStadiumDrafts, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
-  getAuditLogs,
+  getAuditLogs, getAuditActors, exportAuditLogs, getUserActivity,
 };
