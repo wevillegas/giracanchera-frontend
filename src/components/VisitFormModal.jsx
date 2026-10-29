@@ -30,6 +30,8 @@ function todayDateInputValue() {
 export default function VisitFormModal({ stadium, editingVisit, expenseFields, onClose, onSaved }) {
   const isEditing = Boolean(editingVisit);
   const stadiumName = isEditing ? editingVisit.stadium?.name : stadium?.name;
+  // Al editar, la reseña trae el estadio con su club; al crear, el estadio ya trae el escudo
+  const clubLogoUrl = (isEditing && (editingVisit.stadium?.mainClub?.logoUrl || editingVisit.stadium?.clubLogoUrl)) || stadium?.clubLogoUrl;
 
   const [date, setDate] = useState(() => (isEditing ? toDateInputValue(editingVisit.visitDate) : ''));
   const [score, setScore] = useState(() => editingVisit?.rating ?? 8);
@@ -179,15 +181,16 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
           onCancel={() => setConfirmOpen(false)}
         />
       )}
-      <div className="w-full max-w-md rounded-3xl overflow-y-auto gc-hide-scrollbar flex flex-col" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, maxHeight: '90vh' }}>
+      <div className="w-full max-w-2xl rounded-3xl overflow-y-auto gc-hide-scrollbar flex flex-col" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, maxHeight: '94vh' }}>
         <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-4" style={{ backgroundColor: rgba(C.bg, 0.9), backdropFilter: 'blur(10px)', borderBottom: `1px solid ${C.border}` }}>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: C.surface }}>
             <ChevronLeft size={18} color={C.bright} />
           </button>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-xs" style={{ color: C.muted }}>{isEditing ? 'Editar entrada de tu bitácora' : 'Nueva entrada en tu bitácora'}</p>
-            <p className="text-base font-semibold" style={{ color: C.bright }}>{stadiumName}</p>
+            <p className="text-base font-semibold break-words" style={{ color: C.bright }}>{stadiumName}</p>
           </div>
+          {clubLogoUrl && <img src={clubLogoUrl} alt="" className="w-11 h-11 object-contain shrink-0" />}
         </div>
 
         {saved ? (
@@ -295,7 +298,7 @@ export default function VisitFormModal({ stadium, editingVisit, expenseFields, o
                   onChange={(e) => setReview(e.target.value.slice(0, REVIEW_MAX))}
                   maxLength={REVIEW_MAX}
                   placeholder="Contá cómo fue el ambiente, la hinchada, cómo se vio el partido..."
-                  rows={5}
+                  rows={8}
                   className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none gc-focus"
                   style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
                 />
