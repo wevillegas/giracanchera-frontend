@@ -7,6 +7,7 @@ import clubService from '../../services/clubService';
 import ClubPicker from '../ClubPicker';
 import ComboInput from '../ComboInput';
 import { plain, uniqueSorted, canonical } from '../../utils/text';
+import { SHARP_WIDTH } from '../../utils/photoQuality';
 
 const PROVINCE_OWNER = 'province';
 
@@ -77,6 +78,7 @@ export default function StadiumFormModal({ stadium, draft, stadiums = [], onClos
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState(() => toPhotoState(stadium));
+  const [photoWidths, setPhotoWidths] = useState({}); // ancho real de cada foto, para avisar si es chica
   const [openSections, setOpenSections] = useState(['basic']);
   const isEditing = Boolean(stadium);
 
@@ -385,11 +387,13 @@ export default function StadiumFormModal({ stadium, draft, stadiums = [], onClos
 
           <Section title="Historia" open={openSections.includes('history')} onToggle={() => toggleSection('history')}>
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: C.muted }}>Historia</span>
-              <textarea rows={5} value={form.history} onChange={(e) => update('history', e.target.value)} placeholder="Contá cómo nació y qué marcó al estadio" className={`${fieldClass} resize-y`} style={fieldStyle} />
+              <span className="flex justify-between text-xs font-medium" style={{ color: C.muted }}>
+                <span>Historia</span><span>{form.history.length}/1000</span>
+              </span>
+              <textarea rows={5} maxLength={1000} value={form.history} onChange={(e) => update('history', e.target.value)} placeholder="Contá cómo nació y qué marcó al estadio" className={`${fieldClass} resize-y`} style={fieldStyle} />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: C.muted }}>Datos curiosos (uno por línea)</span>
+              <span className="text-xs font-medium" style={{ color: C.muted }}>Datos curiosos (uno por línea, hasta 5 de 150 caracteres)</span>
               <textarea rows={4} value={form.funFacts} onChange={(e) => update('funFacts', e.target.value)} placeholder="" className={`${fieldClass} resize-y`} style={fieldStyle} />
             </label>
           </Section>
@@ -400,7 +404,12 @@ export default function StadiumFormModal({ stadium, draft, stadiums = [], onClos
               {photos.map((photo, index) => (
                 <div key={photo.preview} className="flex flex-col gap-1.5">
                   <label className="relative cursor-pointer gc-focus rounded-xl overflow-hidden aspect-video" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-                    <img src={photo.preview} alt={`Foto ${index + 1} del estadio`} className="w-full h-full object-cover" />
+                    <img
+                      src={photo.preview}
+                      alt={`Foto ${index + 1} del estadio`}
+                      onLoad={(e) => setPhotoWidths((prev) => ({ ...prev, [photo.preview]: e.currentTarget.naturalWidth }))}
+                      className="w-full h-full object-cover"
+                    />
                     {index === 0 && (
                       <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ backgroundColor: C.brand, color: C.bright }}>Portada</span>
                     )}
@@ -417,6 +426,11 @@ export default function StadiumFormModal({ stadium, draft, stadiums = [], onClos
                     className={fieldClass}
                     style={fieldStyle}
                   />
+                  {photoWidths[photo.preview] < SHARP_WIDTH && (
+                    <p className="text-xs" style={{ color: C.gold }}>
+                      Foto chica ({photoWidths[photo.preview]} px): en la portada se amplía y puede verse pixelada. Ideal: {SHARP_WIDTH} px o más de ancho.
+                    </p>
+                  )}
                   <div className="flex items-center justify-between text-xs">
                     {index > 0 ? (
                       <button type="button" onClick={() => makeCover(index)} className="gc-focus rounded" style={{ color: C.brandBright }}>Hacer portada</button>
