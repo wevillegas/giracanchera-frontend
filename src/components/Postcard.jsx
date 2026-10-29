@@ -13,13 +13,13 @@ const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)'
 function Frame({ a, b, className = '', children }) {
   return (
     <div
-      className={`p-[7px] rounded-md ${className}`}
+      className={`p-[5px] sm:p-[7px] rounded-md ${className}`}
       style={{
         background: `repeating-linear-gradient(135deg, ${a} 0 14px, ${PAPER} 14px 28px, ${b} 28px 42px, ${PAPER} 42px 56px)`,
         boxShadow: '0 20px 45px rgba(0,0,0,0.5)',
       }}
     >
-      <div className="h-full flex flex-col p-3 pb-4 rounded-[3px]" style={{ backgroundColor: PAPER }}>{children}</div>
+      <div className="h-full flex flex-col p-2 sm:p-3 pb-3 sm:pb-4 rounded-[3px]" style={{ backgroundColor: PAPER }}>{children}</div>
     </div>
   );
 }
@@ -45,11 +45,11 @@ export function PostcardFront({ stadium, photo, a, b, className = '', photoOverl
           <StadiumArt tone={stadium.tone} uid={`postal-${stadium.id}`} className="absolute inset-0 w-full h-full" />
         )}
         {photoOverlay}
-        {stadium.clubLogoUrl && <Stamp logoUrl={stadium.clubLogoUrl} a={a} className="absolute top-2 right-2 w-14" />}
+        {stadium.clubLogoUrl && <Stamp logoUrl={stadium.clubLogoUrl} a={a} className="absolute top-2 right-2 w-11 sm:w-14" />}
       </div>
-      <div className="flex items-center justify-between gap-3 mt-3 px-1">
+      <div className="flex items-center justify-between gap-3 mt-2 sm:mt-3 px-1">
         <div className="min-w-0">
-          <p className="text-xl leading-none truncate" style={{ fontFamily: DISPLAY_FONT, color: INK }}>Saludos desde {stadium.city || stadium.name}</p>
+          <p className="text-base sm:text-xl leading-none truncate" style={{ fontFamily: DISPLAY_FONT, color: INK }}>Saludos desde {stadium.city || stadium.name}</p>
           {photo?.credit && <p className="text-[11px] mt-1 truncate" style={{ color: INK_SOFT }}>{photo.credit}</p>}
         </div>
         {captionRight}
@@ -139,7 +139,7 @@ export default function PostcardViewer({ stadium, photo, a, b, onClose }) {
         <X size={20} color={C.bright} />
       </button>
 
-      <div className="w-full max-w-3xl gc-modal" style={{ perspective: '1400px' }} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full gc-modal" style={{ perspective: '1400px', maxWidth: 'min(48rem, calc((100dvh - 8rem) * 1.3))' }} onClick={(e) => e.stopPropagation()}>
         <div
           ref={tiltRef}
           className="group relative w-full aspect-[4/3] sm:aspect-[3/2] cursor-pointer"

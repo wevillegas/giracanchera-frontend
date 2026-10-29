@@ -175,12 +175,12 @@ export default function StadiumView({
         {photo && <img src={photo.url} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-50" />}
         <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, ${rgba(C.bg, 0.6)}, ${rgba(C.bg, 0.25)} 45%, ${C.bg})` }} />
         <div aria-hidden="true" className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 25% 40%, ${rgba(postalA, 0.22)}, transparent 60%)` }} />
-        <div className="relative max-w-5xl mx-auto px-4 pt-28 pb-10">
+        <div className="relative max-w-5xl mx-auto px-4 pt-24 sm:pt-28 pb-8 sm:pb-10">
           <button onClick={() => onBack(cameFrom)} aria-label="Volver" className="w-9 h-9 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.bg, 0.6) }}>
             <ChevronLeft size={18} color={C.bright} />
           </button>
 
-          <div className="mt-5 grid gap-10 md:grid-cols-[1.1fr_1fr] items-center">
+          <div className="mt-4 sm:mt-5 grid gap-8 sm:gap-10 md:grid-cols-[1.1fr_1fr] items-center">
             {/* Postal: al tocarla se abre grande, con inclinación y dorso */}
             <div className="relative w-full max-w-xl mx-auto md:-rotate-1">
               <span aria-hidden="true" className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 rotate-2 z-10" style={{ backgroundColor: rgba(postalA, 0.55) }} />
@@ -226,19 +226,19 @@ export default function StadiumView({
                   En tu lista
                 </div>
               )}
-              <h1 className="text-5xl md:text-6xl leading-none break-words" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{stadium.name}</h1>
-              {stadium.nickname && <p className="text-xl italic mt-3" style={{ color: C.brandBright }}>“{stadium.nickname}”</p>}
-              <div className="mt-6 space-y-4">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl leading-none break-words" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{stadium.name}</h1>
+              {stadium.nickname && <p className="text-base sm:text-xl italic mt-2 sm:mt-3" style={{ color: C.brandBright }}>“{stadium.nickname}”</p>}
+              <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
                 {stadium.clubName && (
                   <div className="flex items-center gap-3.5 min-w-0">
-                    {stadium.clubLogoUrl && <img src={stadium.clubLogoUrl} alt="" className="w-14 h-14 object-contain shrink-0" />}
-                    <p className="text-2xl font-semibold leading-tight break-words" style={{ color: C.bright }}>{stadium.clubName}</p>
+                    {stadium.clubLogoUrl && <img src={stadium.clubLogoUrl} alt="" className="w-10 h-10 sm:w-14 sm:h-14 object-contain shrink-0" />}
+                    <p className="text-lg sm:text-2xl font-semibold leading-tight break-words" style={{ color: C.bright }}>{stadium.clubName}</p>
                   </div>
                 )}
-                <div className="flex items-start gap-3 text-lg leading-snug" style={{ color: C.muted }}>
+                <div className="flex items-start gap-3 text-sm sm:text-lg leading-snug" style={{ color: C.muted }}>
                   <MapPin size={20} className="shrink-0 mt-0.5" /> <span className="break-words">{stadium.locationLabel}</span>
                 </div>
-                <div className="flex items-start gap-3 text-lg leading-snug" style={{ color: C.muted }}>
+                <div className="flex items-start gap-3 text-sm sm:text-lg leading-snug" style={{ color: C.muted }}>
                   <Users size={20} className="shrink-0 mt-0.5" /> <span>{stadium.capacity.toLocaleString('es-AR')} espectadores</span>
                 </div>
               </div>
@@ -250,13 +250,13 @@ export default function StadiumView({
       {/* Acciones y datos clave */}
       <div className="max-w-5xl mx-auto px-4 pt-5">
         <div className="flex items-center gap-3">
-          <button onClick={() => onStartVisit(stadium)} className="flex-1 py-3 rounded-xl font-semibold text-sm gc-focus" style={{ backgroundColor: C.brand, color: C.bright }}>
+          <button onClick={() => onStartVisit(stadium)} className="gc-action flex-1 sm:flex-none sm:w-60 gc-focus" style={{ backgroundColor: C.brand, color: C.bright }}>
             Registrar visita
           </button>
           <button
             onClick={() => onToggleWishlist(stadium.id)}
             disabled={stadium.status === 'visited'}
-            className="flex-1 py-3 rounded-xl font-semibold text-sm gc-focus"
+            className="gc-action flex-1 sm:flex-none sm:w-60 gc-focus"
             style={{
               backgroundColor: 'transparent',
               border: `1px solid ${stadium.status === 'visited' ? C.border : C.gold}`,
@@ -274,7 +274,7 @@ export default function StadiumView({
           {keyStats.map(({ Icon, label, value, extra }) => (
             <div key={label} className="flex-1 min-w-[calc(50%-0.5rem)] md:min-w-0 rounded-2xl p-3 md:p-4" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
               <div className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}><Icon size={13} /> {label}</div>
-              <div className="text-2xl md:text-3xl font-semibold leading-none mt-2" style={{ color: label === 'Gasto típico' ? C.brandBright : C.bright }}>{value}</div>
+              <div className="text-xl md:text-3xl font-semibold leading-none mt-2" style={{ color: label === 'Gasto típico' ? C.brandBright : C.bright }}>{value}</div>
               {extra && <div className="mt-2">{extra}</div>}
             </div>
           ))}
@@ -287,7 +287,7 @@ export default function StadiumView({
               role="tab"
               aria-selected={tab === id}
               onClick={() => setTabPick({ id: stadium.id, tab: id })}
-              className="px-4 py-2.5 text-sm font-semibold whitespace-nowrap gc-focus -mb-px"
+              className="px-3 sm:px-4 py-2.5 text-sm font-semibold whitespace-nowrap gc-focus -mb-px"
               style={{ color: tab === id ? C.bright : C.muted, borderBottom: `2px solid ${tab === id ? C.brandBright : 'transparent'}` }}
             >
               {label}{count > 0 && <span className="ml-1.5 text-xs font-normal" style={{ color: C.muted }}>{count.toLocaleString('es-AR')}</span>}
@@ -315,9 +315,9 @@ export default function StadiumView({
                 </div>
               )}
               {stadium.history && (
-                <div className="p-5 rounded-2xl" style={card}>
+                <div className="p-4 sm:p-5 rounded-2xl" style={card}>
                   <h2 className="text-base font-semibold mb-2" style={{ color: C.bright }}>Historia</h2>
-                  <p className="leading-relaxed whitespace-pre-line break-words" style={{ color: C.muted }}>{stadium.history}</p>
+                  <p className="text-sm sm:text-base leading-relaxed whitespace-pre-line break-words" style={{ color: C.muted }}>{stadium.history}</p>
                 </div>
               )}
               {stadium.otherUses.length > 0 && (
@@ -482,7 +482,7 @@ export default function StadiumView({
                     )}
                   </div>
                 </button>
-                <button onClick={() => onStartVisit(stadium)} className="py-2.5 rounded-xl font-semibold text-sm gc-focus" style={{ backgroundColor: C.brand, color: C.bright }}>
+                <button onClick={() => onStartVisit(stadium)} className="gc-action w-60 max-w-full self-center gc-focus" style={{ backgroundColor: C.brand, color: C.bright }}>
                   Registrar otra visita
                 </button>
               </div>
@@ -491,7 +491,7 @@ export default function StadiumView({
                 <PenLine size={22} color={C.brandBright} />
                 <p className="text-base font-semibold" style={{ color: C.bright }}>¿Estuviste en {stadium.name}?</p>
                 <p className="text-sm" style={{ color: C.muted }}>Sumá tu reseña y ayudá a otros hinchas a planear su visita.</p>
-                <button onClick={() => onStartVisit(stadium)} className="mt-2 px-5 py-2.5 rounded-xl font-semibold text-sm gc-focus" style={{ backgroundColor: C.brand, color: C.bright }}>
+                <button onClick={() => onStartVisit(stadium)} className="gc-action w-60 max-w-full mt-2 gc-focus" style={{ backgroundColor: C.brand, color: C.bright }}>
                   Registrar visita
                 </button>
               </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Check, Users, Wallet, Plus } from 'lucide-react';
+import { X, Check, Users, Wallet } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import visitService from '../services/visitService';
 import { computeVisitStats } from '../utils/visitStats';
@@ -130,31 +130,30 @@ export default function StadiumModal({
             ))}
           </div>
 
-          <button
-            onClick={() => onStartVisit(stadium)}
-            className="w-full mt-4 sm:mt-5 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 gc-focus"
-            style={{ backgroundColor: C.brand, color: C.bright }}
-          >
-            <Plus size={18} /> Registrar visita
-          </button>
-
-          <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-2 gap-3 mt-4 sm:mt-5">
+            <button
+              onClick={() => onStartVisit(stadium)}
+              className="gc-action w-full gc-focus"
+              style={{ backgroundColor: C.brand, color: C.bright }}
+            >
+              Registrar visita
+            </button>
             <button
               onClick={() => onToggleWishlist(stadium.id)}
               disabled={visited}
-              className="py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 gc-focus"
+              className="gc-action w-full gc-focus"
               style={{ border: `1px solid ${visited ? C.border : C.gold}`, color: visited ? C.border : C.gold }}
             >
               {wishlisted ? 'Quitar de la lista' : 'Visitaré próximamente'}
             </button>
-            <button
-              onClick={() => onOpenStadiumPage(stadium, 'map')}
-              className="py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 gc-focus"
-              style={{ color: C.muted, border: `1px solid ${C.border}` }}
-            >
-              Ver ficha completa
-            </button>
           </div>
+          <button
+            onClick={() => onOpenStadiumPage(stadium, 'map')}
+            className="gc-action w-full mt-3 gc-focus"
+            style={{ color: C.muted, border: `1px solid ${C.border}` }}
+          >
+            Ver ficha completa
+          </button>
         </div>
       </div>
     </div>

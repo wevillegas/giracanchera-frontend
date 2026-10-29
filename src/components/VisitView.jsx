@@ -232,12 +232,12 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
         {stadiumPhoto && <img src={stadiumPhoto.url} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-50" />}
         <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, ${rgba(C.bg, 0.6)}, ${rgba(C.bg, 0.25)} 45%, ${C.bg})` }} />
         <div aria-hidden="true" className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 25% 40%, ${rgba(postalA, 0.22)}, transparent 60%)` }} />
-        <div className="relative max-w-5xl mx-auto px-4 pt-28 pb-10">
+        <div className="relative max-w-5xl mx-auto px-4 pt-24 sm:pt-28 pb-8 sm:pb-10">
           <button onClick={onBack} aria-label="Volver" className="w-9 h-9 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.bg, 0.6) }}>
             <ChevronLeft size={18} color={C.bright} />
           </button>
 
-          <div className="mt-5 grid gap-10 md:grid-cols-2 items-center">
+          <div className="mt-4 sm:mt-5 grid gap-8 sm:gap-10 md:grid-cols-2 items-center">
             {/* Postal del estadio: la misma de su ficha; las fotos de la reseña van más abajo, en su sección */}
             <div className="relative w-full max-w-xl mx-auto md:-rotate-1">
               <span aria-hidden="true" className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 rotate-2 z-10" style={{ backgroundColor: rgba(postalA, 0.55) }} />
@@ -283,49 +283,49 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
                   className="flex items-center gap-4 rounded-xl text-left gc-focus gc-tap disabled:cursor-default"
                 >
                   {author.avatarUrl ? (
-                    <img src={author.avatarUrl} alt={author.username} className="w-16 h-16 rounded-full object-cover shrink-0" style={{ border: `3px solid ${C.surface}` }} />
+                    <img src={author.avatarUrl} alt={author.username} className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover shrink-0" style={{ border: `3px solid ${C.surface}` }} />
                   ) : (
-                    <div className="w-16 h-16 rounded-full shrink-0 flex items-center justify-center text-2xl font-semibold" style={{ backgroundColor: C.border, color: C.bright }}>
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full shrink-0 flex items-center justify-center text-xl sm:text-2xl font-semibold" style={{ backgroundColor: C.border, color: C.bright }}>
                       {author.username?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                   )}
-                  <span className="text-3xl md:text-4xl leading-none break-words min-w-0" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{authorName}</span>
+                  <span className="text-2xl sm:text-3xl md:text-4xl leading-none break-words min-w-0" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{authorName}</span>
                 </button>
               )}
 
-              <div className="flex items-end gap-4 mt-5">
+              <div className="flex items-end gap-3 sm:gap-4 mt-4 sm:mt-5">
                 <p className="leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.gold }}>
-                  <span className="text-7xl">{visit.rating}</span><span className="text-2xl" style={{ color: C.muted }}>/10</span>
+                  <span className="text-5xl sm:text-7xl">{visit.rating}</span><span className="text-lg sm:text-2xl" style={{ color: C.muted }}>/10</span>
                 </p>
                 <div className="pb-1.5 space-y-1">
                   <StarRow rating={visit.rating / 2} size={18} />
-                  <p className="flex items-center gap-1.5 text-sm" style={{ color: C.muted }}><CalendarDays size={14} /> {formatLongDate(visit.visitDate)}</p>
+                  <p className="flex items-center gap-1.5 text-xs sm:text-sm" style={{ color: C.muted }}><CalendarDays size={14} /> {formatLongDate(visit.visitDate)}</p>
                 </div>
               </div>
 
               <button
                 onClick={() => onOpenStadium?.()}
                 disabled={!onOpenStadium}
-                className="mt-6 w-full flex items-center gap-3 p-3 rounded-2xl text-left gc-focus gc-tap disabled:cursor-default"
+                className="mt-5 sm:mt-6 w-full flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl text-left gc-focus gc-tap disabled:cursor-default"
                 style={{ backgroundColor: rgba(C.bg, 0.55), border: `1px solid ${C.border}` }}
               >
-                {stadium.clubLogoUrl && <img src={stadium.clubLogoUrl} alt="" className="w-11 h-11 object-contain shrink-0" />}
+                {stadium.clubLogoUrl && <img src={stadium.clubLogoUrl} alt="" className="w-9 h-9 sm:w-11 sm:h-11 object-contain shrink-0" />}
                 <div className="min-w-0 flex-1">
-                  <p className="text-lg font-semibold leading-tight break-words" style={{ color: C.bright }}>{stadium.name || 'Estadio'}</p>
+                  <p className="text-base sm:text-lg font-semibold leading-tight break-words" style={{ color: C.bright }}>{stadium.name || 'Estadio'}</p>
                   {stadium.locationLabel && <p className="flex items-start gap-1 text-xs mt-0.5" style={{ color: C.muted }}><MapPin size={12} className="shrink-0 mt-0.5" /> {stadium.locationLabel}</p>}
                 </div>
-                {onOpenStadium && <span className="text-xs font-semibold shrink-0" style={{ color: C.brandBright }}>Ver estadio →</span>}
+                {onOpenStadium && <span className="hidden sm:inline text-xs font-semibold shrink-0" style={{ color: C.brandBright }}>Ver estadio →</span>}
               </button>
 
               {(isOwn && (onEditVisit || onDeleteVisit)) || (canAdminDelete && !adminDeleteOpen) ? (
                 <div className="flex flex-wrap items-center gap-2 mt-4">
                   {isOwn && onEditVisit && (
-                    <button onClick={() => onEditVisit(visit)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap" style={{ border: `1px solid ${C.border}`, color: C.bright, backgroundColor: rgba(C.bg, 0.55) }}>
+                    <button onClick={() => onEditVisit(visit)} className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold gc-focus gc-tap" style={{ border: `1px solid ${C.border}`, color: C.bright, backgroundColor: rgba(C.bg, 0.55) }}>
                       <Pencil size={13} /> Editar reseña
                     </button>
                   )}
                   {isOwn && onDeleteVisit && (
-                    <button onClick={() => setOwnDeleteOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap" style={{ border: '1px solid #f85149', color: '#f85149' }}>
+                    <button onClick={() => setOwnDeleteOpen(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold gc-focus gc-tap" style={{ border: '1px solid #f85149', color: '#f85149' }}>
                       <Trash2 size={13} /> Eliminar reseña
                     </button>
                   )}
@@ -411,7 +411,7 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
               <h2 className="flex items-center gap-2 text-base font-semibold mb-3" style={{ color: C.bright }}>
                 <span className="text-4xl leading-none -mb-3" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>“</span> La reseña
               </h2>
-              <p className="text-base leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]" style={{ color: visit.reviewText?.trim() ? C.bright : C.muted }}>
+              <p className="text-sm sm:text-base leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]" style={{ color: visit.reviewText?.trim() ? C.bright : C.muted }}>
                 {visit.reviewText?.trim() || (isOwn ? 'Sin reseña escrita todavía.' : 'No se escribió una reseña.')}
               </p>
             </div>
@@ -488,7 +488,7 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
                 <div className="grid grid-cols-2 gap-3">
                   {images.map((src, i) => (
                     <button key={src} onClick={() => setPhotoIndex(i)} className="block rounded-xl overflow-hidden gc-focus gc-tap" style={{ border: `1px solid ${C.border}` }}>
-                      <img src={src} alt={`Foto ${i + 1} de la visita a ${stadium.name || 'el estadio'}`} className="w-full h-44 object-cover" />
+                      <img src={src} alt={`Foto ${i + 1} de la visita a ${stadium.name || 'el estadio'}`} className="w-full h-32 sm:h-44 object-cover" />
                     </button>
                   ))}
                 </div>
