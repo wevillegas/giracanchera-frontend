@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ChevronLeft, Users, LandPlot, Shield, Flag, Activity, ScrollText, PenLine } from 'lucide-react';
+import { ChevronLeft, Users, LandPlot, Shield, Flag, Activity, ScrollText, PenLine, LayoutDashboard } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import Navbar from '../Navbar';
+import AdminOverviewView from './AdminOverviewView';
 import AdminUsersView from './AdminUsersView';
 import AdminStadiumsView from './AdminStadiumsView';
 import AdminClubsView from './AdminClubsView';
@@ -11,6 +12,7 @@ import AdminStatsView from './AdminStatsView';
 import AdminAuditView from './AdminAuditView';
 
 const TABS = [
+  { key: 'overview', label: 'Resumen', Icon: LayoutDashboard },
   { key: 'users', label: 'Usuarios', Icon: Users },
   { key: 'stadiums', label: 'Estadios', Icon: LandPlot },
   { key: 'clubs', label: 'Clubes', Icon: Shield },
@@ -21,7 +23,9 @@ const TABS = [
 ];
 
 export default function AdminView({ onBackToMap, onToast, navbarProps }) {
-  const [tab, setTab] = useState('users');
+  const [tab, setTab] = useState('overview');
+  const [openStadiumId, setOpenStadiumId] = useState(null); // estadio a abrir al llegar desde el resumen
+  const editStadium = (id) => { setOpenStadiumId(id); setTab('stadiums'); };
 
   return (
     <div className="relative flex-1 overflow-y-auto gc-hide-scrollbar">
@@ -35,12 +39,12 @@ export default function AdminView({ onBackToMap, onToast, navbarProps }) {
           Panel de administrador
         </h1>
 
-        <div className="flex items-center gap-2 mt-5 mb-6">
+        <div className="flex items-center gap-2 mt-5 mb-6 overflow-x-auto gc-hide-scrollbar pb-1">
           {TABS.map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium gc-focus gc-tap"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap shrink-0 gc-focus gc-tap"
               style={{
                 backgroundColor: tab === key ? C.brandBright : C.surface,
                 color: tab === key ? C.bg : C.muted,
@@ -52,8 +56,9 @@ export default function AdminView({ onBackToMap, onToast, navbarProps }) {
           ))}
         </div>
 
+        {tab === 'overview' && <AdminOverviewView onGo={setTab} onEditStadium={editStadium} />}
         {tab === 'users' && <AdminUsersView onToast={onToast} />}
-        {tab === 'stadiums' && <AdminStadiumsView onToast={onToast} />}
+        {tab === 'stadiums' && <AdminStadiumsView onToast={onToast} openId={openStadiumId} onOpenHandled={() => setOpenStadiumId(null)} />}
         {tab === 'clubs' && <AdminClubsView onToast={onToast} />}
         {tab === 'reports' && <AdminReportsView onToast={onToast} />}
         {tab === 'suggestions' && <AdminSuggestionsView onToast={onToast} />}

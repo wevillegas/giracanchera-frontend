@@ -4,24 +4,11 @@ import { Pencil, Trash2, Plus, AlertCircle, Users, CheckCircle2, Sparkles } from
 import { C, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import StadiumFormModal from './StadiumFormModal';
+import { fichaChecks } from '../../utils/fichaChecks';
 import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminPagination';
 
 function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
-}
-
-// Qué le falta a la ficha del estadio (otros usos es opcional y no cuenta)
-function fichaChecks(s) {
-  return [
-    ['Apodo', Boolean(s.nickname)],
-    ['Año de inauguración', Boolean(s.openedYear)],
-    ['Estado', Boolean(s.status)],
-    ['Superficie', Boolean(s.surface)],
-    ['Medidas de la cancha', Boolean(s.pitch?.length && s.pitch?.width)],
-    ['Historia', Boolean(s.history)],
-    ['Datos curiosos', s.funFacts?.length > 0],
-    ['Fotos', s.photos?.length > 0 || Boolean(s.imageUrl)],
-  ];
 }
 
 function FichaBadge({ stadium }) {
@@ -41,7 +28,7 @@ function FichaBadge({ stadium }) {
   );
 }
 
-export default function AdminStadiumsView({ onToast }) {
+export default function AdminStadiumsView({ onToast, openId, onOpenHandled }) {
   const [stadiums, setStadiums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -131,6 +118,17 @@ export default function AdminStadiumsView({ onToast }) {
       onToast?.(err.response?.data?.message || 'No pudimos eliminar el estadio.');
     }
   }
+
+  // Llegar desde el resumen con un estadio elegido: abre su formulario apenas cargue la lista
+  useEffect(() => {
+    if (!openId || loading) return;
+    const target = stadiums.find((s) => s._id === openId);
+    if (target) {
+      setFormTarget(target);
+      setFormOpen(true);
+    }
+    onOpenHandled?.();
+  }, [openId, loading, stadiums, onOpenHandled]);
 
   function openCreate() {
     setFormTarget(null);
