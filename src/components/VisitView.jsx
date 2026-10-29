@@ -1,6 +1,6 @@
 import ConfirmModal from './ConfirmModal';
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, X, Star, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, Users, MapPin, Pencil, Heart, Bookmark, Flag, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, MapPin, Pencil, Heart, Bookmark, Flag, Trash2 } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { isAdminRole } from '../utils/roles';
@@ -8,7 +8,9 @@ import visitService from '../services/visitService';
 import userService from '../services/userService';
 import clubService from '../services/clubService';
 import { Logo } from './ClubPicker';
-import StadiumArt from './StadiumArt';
+import StarRow from './StarRow';
+import PostcardViewer, { PostcardFront } from './Postcard';
+import { useLogoColors } from '../utils/logoColors';
 import Navbar from './Navbar';
 
 const EXPENSE_ROWS = [
@@ -211,89 +213,129 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
   const hasMatch = match.homeTeam || match.awayTeam || match.score;
   const images = visit.images || [];
 
+  const logoColors = useLogoColors(stadium.clubLogoUrl);
+  const [postalA, postalB] = logoColors || ['#C8453B', '#2F5D9E'];
+  // La postal es la del estadio (igual que en su ficha), no la de la reseña
+  const stadiumPhotos = stadium.photos?.length ? stadium.photos : (stadium.imageUrl ? [{ url: stadium.imageUrl, credit: '' }] : []);
+  const [stadiumPhotoIndex, setStadiumPhotoIndex] = useState(0);
+  const [postalOpen, setPostalOpen] = useState(false);
+  const stadiumPhoto = stadiumPhotos[Math.min(stadiumPhotoIndex, stadiumPhotos.length - 1)];
+  const goStadiumPhoto = (step) => setStadiumPhotoIndex((stadiumPhotoIndex + step + stadiumPhotos.length) % stadiumPhotos.length);
+  const authorName = isOwn ? 'Vos' : author?.username;
+
   return (
     <div className="relative flex-1 overflow-y-auto gc-hide-scrollbar">
       <Navbar {...navbarProps} />
-      <div className="max-w-5xl mx-auto px-4 pt-32 pb-6">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-sm mb-4 gc-focus gc-tap" style={{ color: C.muted }}>
-          <ChevronLeft size={16} /> Volver
-        </button>
 
-        {/* Card del estadio, en lugar de la foto de portada */}
-        <button
-          onClick={() => onOpenStadium?.()}
-          disabled={!onOpenStadium}
-          className="w-full flex flex-col sm:flex-row gap-4 p-3 rounded-2xl text-left gc-focus gc-tap"
-          style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, cursor: onOpenStadium ? 'pointer' : 'default' }}
-        >
-          <div className="relative w-full sm:w-56 shrink-0 aspect-video rounded-xl overflow-hidden" style={{ backgroundColor: C.bg }}>
-            {stadium.imageUrl
-              ? <img src={stadium.imageUrl} alt={stadium.name} className="w-full h-full object-cover" />
-              : <StadiumArt tone={stadium.tone || 'brand'} uid={`visit-${visit._id}`} className="w-full h-full" />}
-          </div>
-          <div className="min-w-0 flex-1 flex flex-col justify-center">
-            <h1 className="text-3xl leading-none truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{stadium.name || 'Estadio'}</h1>
-            {stadium.clubName && (
-              <div className="flex items-center gap-2 mt-2">
-                {stadium.clubLogoUrl && <img src={stadium.clubLogoUrl} alt={stadium.clubName} className="w-6 h-6 rounded-full object-cover" />}
-                <span className="text-sm font-semibold truncate" style={{ color: C.bright }}>{stadium.clubName}</span>
-              </div>
-            )}
-            {(stadium.locationLabel || stadium.capacity) && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs" style={{ color: C.muted }}>
-                {stadium.locationLabel && <span className="flex items-center gap-1"><MapPin size={12} /> {stadium.locationLabel}</span>}
-                {stadium.capacity && <span className="flex items-center gap-1"><Users size={12} /> {Number(stadium.capacity).toLocaleString('es-AR')}</span>}
-              </div>
-            )}
-            {onOpenStadium && <span className="text-xs mt-2" style={{ color: C.brandBright }}>Ver estadio</span>}
-          </div>
-        </button>
+      {/* Portada: la foto de la reseña como postal y, a la derecha, quién la escribió y cómo puntuó */}
+      <div className="relative overflow-hidden" style={{ backgroundColor: C.surface }}>
+        {stadiumPhoto && <img src={stadiumPhoto.url} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-50" />}
+        <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, ${rgba(C.bg, 0.6)}, ${rgba(C.bg, 0.25)} 45%, ${C.bg})` }} />
+        <div aria-hidden="true" className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 25% 40%, ${rgba(postalA, 0.22)}, transparent 60%)` }} />
+        <div className="relative max-w-5xl mx-auto px-4 pt-28 pb-10">
+          <button onClick={onBack} aria-label="Volver" className="w-9 h-9 rounded-full flex items-center justify-center gc-focus" style={{ backgroundColor: rgba(C.bg, 0.6) }}>
+            <ChevronLeft size={18} color={C.bright} />
+          </button>
 
-        <div className="grid gap-8 md:grid-cols-[1fr_340px] mt-6">
-          <div className="min-w-0 space-y-4">
-            {author && (
-              <button
-                onClick={() => onOpenAuthor?.(author._id)}
-                disabled={!onOpenAuthor}
-                className="flex items-center gap-2 mb-2 rounded-lg gc-focus gc-tap"
+          <div className="mt-5 grid gap-10 md:grid-cols-2 items-center">
+            {/* Postal del estadio: la misma de su ficha; las fotos de la reseña van más abajo, en su sección */}
+            <div className="relative w-full max-w-xl mx-auto md:-rotate-1">
+              <span aria-hidden="true" className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 rotate-2 z-10" style={{ backgroundColor: rgba(postalA, 0.55) }} />
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Abrir la postal"
+                onClick={() => setPostalOpen(true)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPostalOpen(true); } }}
+                className="cursor-zoom-in transition-transform duration-200 hover:scale-[1.015] gc-focus rounded-md"
               >
-                {author.avatarUrl ? (
-                  <img src={author.avatarUrl} alt={author.username} className="w-7 h-7 rounded-full object-cover" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold" style={{ backgroundColor: C.border, color: C.bright }}>
-                    {author.username?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
-                )}
-                <span className="text-sm font-medium" style={{ color: C.bright }}>{isOwn ? 'Vos' : author.username}</span>
+                <PostcardFront
+                  stadium={stadium}
+                  photo={stadiumPhoto}
+                  a={postalA}
+                  b={postalB}
+                  className="aspect-[8/7]"
+                  photoOverlay={stadiumPhotos.length > 1 && [[-1, 'left-2', ChevronLeft, 'Foto anterior'], [1, 'right-2', ChevronRight, 'Foto siguiente']].map(([step, side, Icon, label]) => (
+                    <button key={step} onClick={(e) => { e.stopPropagation(); goStadiumPhoto(step); }} aria-label={label} className={`absolute ${side} top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center gc-focus`} style={{ backgroundColor: rgba(C.bg, 0.6) }}>
+                      <Icon size={18} color={C.bright} />
+                    </button>
+                  ))}
+                  captionRight={stadiumPhotos.length > 1 && (
+                    <div className="flex gap-1.5 shrink-0">
+                      {stadiumPhotos.map((p, i) => (
+                        <button key={p.url} onClick={(e) => { e.stopPropagation(); setStadiumPhotoIndex(i); }} aria-label={`Ver foto ${i + 1}`} className="w-2 h-2 rounded-full gc-focus" style={{ backgroundColor: i === stadiumPhotoIndex ? '#3B2F1E' : 'rgba(59,47,30,0.3)' }} />
+                      ))}
+                    </div>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="min-w-0">
+              <span className="inline-block px-3 py-1 mb-4 rounded-full text-xs font-semibold" style={{ backgroundColor: isOwn ? C.brand : rgba(C.bg, 0.7), color: C.bright }}>
+                {isOwn ? 'Tu reseña' : 'Reseña'}
+              </span>
+
+              {author && (
+                <button
+                  onClick={() => onOpenAuthor?.(author._id)}
+                  disabled={!onOpenAuthor}
+                  className="flex items-center gap-4 rounded-xl text-left gc-focus gc-tap disabled:cursor-default"
+                >
+                  {author.avatarUrl ? (
+                    <img src={author.avatarUrl} alt={author.username} className="w-16 h-16 rounded-full object-cover shrink-0" style={{ border: `3px solid ${C.surface}` }} />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full shrink-0 flex items-center justify-center text-2xl font-semibold" style={{ backgroundColor: C.border, color: C.bright }}>
+                      {author.username?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
+                  <span className="text-3xl md:text-4xl leading-none break-words min-w-0" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{authorName}</span>
+                </button>
+              )}
+
+              <div className="flex items-end gap-4 mt-5">
+                <p className="leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.gold }}>
+                  <span className="text-7xl">{visit.rating}</span><span className="text-2xl" style={{ color: C.muted }}>/10</span>
+                </p>
+                <div className="pb-1.5 space-y-1">
+                  <StarRow rating={visit.rating / 2} size={18} />
+                  <p className="flex items-center gap-1.5 text-sm" style={{ color: C.muted }}><CalendarDays size={14} /> {formatLongDate(visit.visitDate)}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => onOpenStadium?.()}
+                disabled={!onOpenStadium}
+                className="mt-6 w-full flex items-center gap-3 p-3 rounded-2xl text-left gc-focus gc-tap disabled:cursor-default"
+                style={{ backgroundColor: rgba(C.bg, 0.55), border: `1px solid ${C.border}` }}
+              >
+                {stadium.clubLogoUrl && <img src={stadium.clubLogoUrl} alt="" className="w-11 h-11 object-contain shrink-0" />}
+                <div className="min-w-0 flex-1">
+                  <p className="text-lg font-semibold leading-tight break-words" style={{ color: C.bright }}>{stadium.name || 'Estadio'}</p>
+                  {stadium.locationLabel && <p className="flex items-start gap-1 text-xs mt-0.5" style={{ color: C.muted }}><MapPin size={12} className="shrink-0 mt-0.5" /> {stadium.locationLabel}</p>}
+                </div>
+                {onOpenStadium && <span className="text-xs font-semibold shrink-0" style={{ color: C.brandBright }}>Ver estadio →</span>}
               </button>
-            )}
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <Star size={15} fill={C.gold} color={C.gold} />
-                <span className="text-sm font-semibold" style={{ color: C.gold }}>{visit.rating}/10</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CalendarDays size={15} color={C.muted} />
-                <span className="text-sm" style={{ color: C.muted }}>{formatLongDate(visit.visitDate)}</span>
-              </div>
-              {isOwn && onEditVisit && (
-                <button
-                  onClick={() => onEditVisit(visit)}
-                  className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap"
-                  style={{ border: `1px solid ${C.border}`, color: C.bright }}
-                >
-                  <Pencil size={13} /> Editar reseña
-                </button>
-              )}
-              {isOwn && onDeleteVisit && (
-                <button
-                  onClick={() => setOwnDeleteOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap"
-                  style={{ border: '1px solid #f85149', color: '#f85149' }}
-                >
-                  <Trash2 size={13} /> Eliminar reseña
-                </button>
-              )}
+
+              {(isOwn && (onEditVisit || onDeleteVisit)) || (canAdminDelete && !adminDeleteOpen) ? (
+                <div className="flex flex-wrap items-center gap-2 mt-4">
+                  {isOwn && onEditVisit && (
+                    <button onClick={() => onEditVisit(visit)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap" style={{ border: `1px solid ${C.border}`, color: C.bright, backgroundColor: rgba(C.bg, 0.55) }}>
+                      <Pencil size={13} /> Editar reseña
+                    </button>
+                  )}
+                  {isOwn && onDeleteVisit && (
+                    <button onClick={() => setOwnDeleteOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap" style={{ border: '1px solid #f85149', color: '#f85149' }}>
+                      <Trash2 size={13} /> Eliminar reseña
+                    </button>
+                  )}
+                  {canAdminDelete && !adminDeleteOpen && (
+                    <button onClick={() => setAdminDeleteOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap" style={{ border: '1px solid #f85149', color: '#f85149' }}>
+                      <Trash2 size={13} /> Eliminar como admin
+                    </button>
+                  )}
+                </div>
+              ) : null}
               {ownDeleteOpen && (
                 <ConfirmModal
                   danger
@@ -304,17 +346,14 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
                   onCancel={() => setOwnDeleteOpen(false)}
                 />
               )}
-              {canAdminDelete && !adminDeleteOpen && (
-                <button
-                  onClick={() => setAdminDeleteOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap"
-                  style={{ border: '1px solid #f85149', color: '#f85149' }}
-                >
-                  <Trash2 size={13} /> Eliminar como admin
-                </button>
-              )}
             </div>
+          </div>
+        </div>
+      </div>
 
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <div className="grid gap-8 md:grid-cols-[1fr_340px]">
+          <div className="min-w-0 space-y-4">
             {canAdminDelete && adminDeleteOpen && (
               <div className="p-4 rounded-2xl space-y-2" style={{ backgroundColor: C.surface, border: '1px solid #f85149' }}>
                 <p className="text-xs font-semibold" style={{ color: '#f85149' }}>Eliminar esta reseña</p>
@@ -369,8 +408,10 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
             )}
 
             <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-              <h2 className="text-sm font-semibold mb-2" style={{ color: C.bright }}>Reseña</h2>
-              <p className="text-sm leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]" style={{ color: visit.reviewText?.trim() ? C.bright : C.muted }}>
+              <h2 className="flex items-center gap-2 text-base font-semibold mb-3" style={{ color: C.bright }}>
+                <span className="text-4xl leading-none -mb-3" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>“</span> La reseña
+              </h2>
+              <p className="text-base leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]" style={{ color: visit.reviewText?.trim() ? C.bright : C.muted }}>
                 {visit.reviewText?.trim() || (isOwn ? 'Sin reseña escrita todavía.' : 'No se escribió una reseña.')}
               </p>
             </div>
@@ -493,6 +534,7 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
         </div>
       </div>
 
+      {postalOpen && <PostcardViewer stadium={stadium} photo={stadiumPhoto} a={postalA} b={postalB} onClose={() => setPostalOpen(false)} />}
       {photoIndex !== null && (
         <PhotoModal
           images={images}

@@ -64,7 +64,7 @@ export function PostcardBack({ stadium, a, b, className = '' }) {
     ['Nombre', stadium.name],
     ['Club', stadium.clubName],
     ['Lugar', stadium.locationLabel],
-    ['Espectadores', stadium.capacity.toLocaleString('es-AR')],
+    ['Espectadores', stadium.capacity ? Number(stadium.capacity).toLocaleString('es-AR') : null],
     ['Fundación', stadium.openedYear],
   ].filter(([, value]) => value);
   return (
