@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Search, ChevronDown, User, LogOut, ShieldCheck, Info, Activity, Menu } from 'lucide-react';
+import { Search, ChevronDown, User, UserPlus, LogOut, ShieldCheck, Info, Activity, Menu } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import { isAdminRole } from '../utils/roles';
 import { useAuth } from '../context/AuthContext';
@@ -9,7 +9,8 @@ import RegisterModal from './RegisterModal';
 import logoIcon from '../assets/giracanchera-icono.svg';
 import LogoutConfirmModal from './LogoutConfirmModal';
 import { Logo } from './ClubPicker';
-import FilterSwitch from './FilterSwitch';
+import FilterSwitch, { FilterPills } from './FilterSwitch';
+import { useLogoColors } from '../utils/logoColors';
 import useClickOutside from '../utils/useClickOutside';
 
 function initialsOf(name = '') {
@@ -18,14 +19,14 @@ function initialsOf(name = '') {
 
 const menuPanel = { backgroundColor: C.surface, border: `1px solid ${C.border}`, boxShadow: `0 12px 24px ${rgba('#000000', 0.35)}` };
 
-function MenuItem({ Icon, children, onClick, first = false }) {
+function MenuItem({ Icon, children, onClick, first = false, color = C.muted, active = false }) {
   return (
     <button
       onClick={onClick}
       className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left gc-focus gc-tap"
-      style={{ color: C.bright, borderTop: first ? 'none' : `1px solid ${C.border}` }}
+      style={{ color: active ? color : C.bright, backgroundColor: active ? rgba(color, 0.14) : 'transparent', borderTop: first ? 'none' : `1px solid ${C.border}` }}
     >
-      <Icon size={15} color={C.muted} /> {children}
+      <Icon size={15} color={active ? color : C.muted} /> {children}
     </button>
   );
 }
@@ -36,6 +37,11 @@ export default function Navbar({
 }) {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false); // menú de la cuenta
+  const burgerRef = useRef(null);
+  // Colores del escudo del club del usuario, para el degradado de la cabecera del menú
+  const clubColors = useLogoColors(user?.clubHincha?.logoUrl);
+  const [burgerOpen, setBurgerOpen] = useState(false); // celular: todo el navbar menos logo y buscador
+  useClickOutside(burgerRef, burgerOpen, () => setBurgerOpen(false));
   const [moreOpen, setMoreOpen] = useState(false); // Estadísticas y Acerca de, solo para quien no inició sesión en pantallas chicas
   const menuRef = useRef(null);
   const moreRef = useRef(null);
@@ -49,7 +55,7 @@ export default function Navbar({
   const [searchingUsers, setSearchingUsers] = useState(false);
   const isUsers = searchMode === 'users';
   const showResults = (isUsers ? userQuery : query).trim().length > 0;
-  const choose = (action) => () => { setMenuOpen(false); setMoreOpen(false); action?.(); };
+  const choose = (action) => () => { setMenuOpen(false); setMoreOpen(false); setBurgerOpen(false); action?.(); };
 
   useEffect(() => {
     if (!isUsers || !user || !userQuery.trim()) {
@@ -113,7 +119,7 @@ export default function Navbar({
         </button>
 
         {/* Buscador */}
-        <div className="relative flex-1 min-w-0 max-w-md">
+        <div className="relative flex-1 min-w-0 sm:max-w-md">
           <div className="gc-search-box flex items-center gap-2 rounded-full px-3 py-2" style={{ backgroundColor: C.surface }}>
             <Search size={16} color={C.muted} className="hidden sm:block shrink-0" />
             <button
@@ -160,12 +166,12 @@ export default function Navbar({
           )}
         </div>
 
-        <FilterSwitch filter={filter} onChange={onFilterChange} />
+        <div className="hidden sm:block"><FilterSwitch filter={filter} onChange={onFilterChange} /></div>
 
         <div className="hidden sm:block flex-1" />
 
         {user ? (
-          <div ref={menuRef} className="relative shrink-0">
+          <div ref={menuRef} className="relative shrink-0 hidden sm:block">
             <button
               onClick={() => setMenuOpen((v) => !v)}
               aria-expanded={menuOpen}
@@ -202,28 +208,20 @@ export default function Navbar({
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
             <button
               onClick={() => onAuthModalChange('login')}
-              className="hidden sm:block px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap"
+              className="px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap"
               style={{ backgroundColor: 'transparent', border: `1px solid ${C.border}`, color: C.bright }}
             >
               Iniciar sesión
             </button>
             <button
               onClick={() => onAuthModalChange('register')}
-              className="hidden sm:block px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap"
+              className="px-3 py-1.5 rounded-full text-xs font-semibold gc-focus gc-tap"
               style={{ backgroundColor: C.brand, color: C.bright }}
             >
               Registrarse
-            </button>
-            {/* Celular: un solo botón (el login ofrece pasar al registro) y un menú con las secciones */}
-            <button
-              onClick={() => onAuthModalChange('login')}
-              className="sm:hidden h-9 px-3.5 rounded-full text-xs font-semibold gc-focus gc-tap"
-              style={{ backgroundColor: C.brand, color: C.bright }}
-            >
-              Ingresar
             </button>
             <div ref={moreRef} className="relative min-[1100px]:hidden">
               <button
@@ -244,6 +242,81 @@ export default function Navbar({
             </div>
           </div>
         )}
+
+        {/* Celular: el navbar es solo logo y buscador; todo lo demás va en este menú */}
+        <div ref={burgerRef} className="relative sm:hidden shrink-0">
+          <button
+            onClick={() => setBurgerOpen((v) => !v)}
+            aria-label="Menú"
+            aria-expanded={burgerOpen}
+            className="w-10 h-10 flex items-center justify-center rounded-full gc-focus gc-tap"
+            style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+          >
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+            ) : user ? (
+              <span className="w-full h-full rounded-full flex items-center justify-center font-semibold text-sm" style={{ backgroundColor: C.brand, color: C.bright }}>
+                {initialsOf(user.username || user.nombre || user.email)}
+              </span>
+            ) : (
+              <Menu size={18} color={C.bright} />
+            )}
+          </button>
+          {burgerOpen && (
+            <div className="absolute right-0 mt-2 w-64 rounded-2xl overflow-hidden max-h-[75vh] overflow-y-auto gc-hide-scrollbar" style={menuPanel}>
+                {/* Cabecera: mini vista previa del perfil */}
+                {user ? (
+                  <button onClick={choose(onOpenProfile)} className="relative w-full text-left px-4 pt-4 pb-4 gc-focus" style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 85% 0%, ${rgba(clubColors?.[0] ?? C.brandBright, 0.3)}, transparent 60%)` }} />
+                    <div className="relative">
+                      <div className="relative w-16 h-16">
+                        {user.avatarUrl ? (
+                          <img src={user.avatarUrl} alt="" className="w-16 h-16 rounded-full object-cover" style={{ backgroundColor: C.brand }} />
+                        ) : (
+                          <span className="w-16 h-16 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: C.brand, color: C.bright, fontFamily: DISPLAY_FONT }}>
+                            {initialsOf(user.username || user.nombre || user.email)}
+                          </span>
+                        )}
+                        {user.clubHincha?.logoUrl && (
+                          <img src={user.clubHincha.logoUrl} alt="" className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full object-cover" style={{ backgroundColor: C.surface, border: `2px solid ${C.bg}` }} />
+                        )}
+                      </div>
+                      <p className="mt-3 text-2xl leading-none truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>{user.nombre || user.username}</p>
+                      <p className="text-sm mt-1 truncate" style={{ color: C.muted }}>@{user.username}</p>
+                      {user.clubHincha?.name && <p className="text-xs mt-2 truncate" style={{ color: C.brandBright }}>Hincha de {user.clubHincha.name}</p>}
+                      {user.bio?.trim() && (
+                        <p className="text-xs mt-2" style={{ color: C.muted, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{user.bio}</p>
+                      )}
+                    </div>
+                  </button>
+                ) : (
+                  <div className="px-4 pt-4 pb-4" style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <img src={logoIcon} alt="" className="w-12 h-12 object-contain" />
+                    <p className="mt-3 text-2xl leading-none uppercase" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>Gira<span style={{ color: C.brandBright }}>Canchera</span></p>
+                    <p className="text-xs mt-2" style={{ color: C.muted }}>Iniciá sesión para guardar tus visitas.</p>
+                  </div>
+                )}
+
+                <div className="p-3 flex justify-center" style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <FilterPills filter={filter} onChange={onFilterChange} />
+                </div>
+                <MenuItem Icon={Activity} first onClick={choose(onOpenStats)}>Estadísticas</MenuItem>
+                <MenuItem Icon={Info} onClick={choose(onOpenAbout)}>Acerca de</MenuItem>
+                {user ? (
+                  <>
+                    <MenuItem Icon={User} onClick={choose(onOpenProfile)}>Mi Perfil</MenuItem>
+                    {isAdminRole(user.rol) && <MenuItem Icon={ShieldCheck} onClick={choose(onOpenAdmin)}>Panel admin</MenuItem>}
+                    <MenuItem Icon={LogOut} onClick={choose(() => setLogoutConfirmOpen(true))}>Cerrar sesión</MenuItem>
+                  </>
+                ) : (
+                  <>
+                    <MenuItem Icon={User} onClick={choose(() => onAuthModalChange('login'))}>Iniciar sesión</MenuItem>
+                    <MenuItem Icon={UserPlus} onClick={choose(() => onAuthModalChange('register'))}>Registrarse</MenuItem>
+                  </>
+                )}
+            </div>
+          )}
+        </div>
 
         <button
           onClick={() => onOpenStats?.()}

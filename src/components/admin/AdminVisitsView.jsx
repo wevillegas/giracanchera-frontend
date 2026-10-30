@@ -3,6 +3,7 @@ import { Eye, EyeOff, Trash2, Flag, Heart, Images, AlertCircle, Star } from 'luc
 import { C, DISPLAY_FONT } from '../../theme';
 import visitService from '../../services/visitService';
 import AdminPagination, { filterFieldStyle } from './AdminPagination';
+import FilterDropdown from './FilterDropdown';
 
 const PAGE_SIZE = 15;
 const RATING_RANGES = [
@@ -90,14 +91,20 @@ export default function AdminVisitsView({ onToast }) {
           className="flex-1 min-w-[180px] px-3 py-2 rounded-xl text-sm outline-none gc-focus"
           style={filterFieldStyle}
         />
-        <select value={rating} onChange={(e) => { setRating(e.target.value); setPage(1); }} aria-label="Filtrar por puntaje" className="px-3 py-2 rounded-xl text-sm outline-none gc-focus" style={filterFieldStyle}>
-          {RATING_RANGES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-        </select>
-        <select value={hidden} onChange={(e) => { setHidden(e.target.value); setPage(1); }} aria-label="Filtrar por estado" className="px-3 py-2 rounded-xl text-sm outline-none gc-focus" style={filterFieldStyle}>
-          <option value="">Visibles y ocultas</option>
-          <option value="false">Solo visibles</option>
-          <option value="true">Solo ocultas</option>
-        </select>
+        <FilterDropdown
+          className="flex-1 min-w-[9rem] sm:flex-none"
+          value={rating}
+          onChange={(v) => { setRating(v); setPage(1); }}
+          ariaLabel="Filtrar por puntaje"
+          options={RATING_RANGES}
+        />
+        <FilterDropdown
+          className="flex-1 min-w-[9rem] sm:flex-none"
+          value={hidden}
+          onChange={(v) => { setHidden(v); setPage(1); }}
+          ariaLabel="Filtrar por estado"
+          options={[{ value: '', label: 'Visibles y ocultas' }, { value: 'false', label: 'Solo visibles' }, { value: 'true', label: 'Solo ocultas' }]}
+        />
       </div>
 
       {error ? (

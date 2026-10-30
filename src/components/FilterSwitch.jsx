@@ -4,7 +4,7 @@ import { C, rgba } from '../theme';
 import useClickOutside from '../utils/useClickOutside';
 
 // Los colores son los mismos de los pines del mapa: verde = visitado, dorado = próximamente
-const OPTIONS = [
+export const OPTIONS = [
   { key: 'all', label: 'Todos', Icon: Globe, color: C.brandBright },
   { key: 'visited', label: 'Mis visitas', Icon: CheckCircle2, color: C.brandBright },
   { key: 'wishlist', label: 'Próximamente', Icon: Star, color: C.gold },
@@ -15,6 +15,37 @@ const tint = (option, active) => ({
   color: active ? option.color : C.muted,
   boxShadow: active ? `inset 0 0 0 1px ${rgba(option.color, 0.55)}` : 'none',
 });
+
+// Interruptor de tres opciones: la elegida muestra su nombre, las otras quedan como íconos
+export function FilterPills({ filter, onChange, className = '' }) {
+  return (
+    <div role="radiogroup" aria-label="Filtrar estadios" className={`flex items-center gap-0.5 p-1 rounded-full ${className}`} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+      {OPTIONS.map((option) => {
+        const active = option.key === filter;
+        return (
+          <button
+            key={option.key}
+            role="radio"
+            aria-checked={active}
+            aria-label={option.label}
+            title={option.label}
+            onClick={() => onChange(option.key)}
+            className="h-7 flex items-center px-2 rounded-full text-xs font-semibold gc-focus gc-tap"
+            style={tint(option, active)}
+          >
+            <option.Icon size={15} />
+            <span
+              className="grid transition-[grid-template-columns,opacity] duration-300 ease-out motion-reduce:transition-none"
+              style={{ gridTemplateColumns: active ? '1fr' : '0fr', opacity: active ? 1 : 0 }}
+            >
+              <span className="overflow-hidden whitespace-nowrap pl-1.5">{option.label}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // Interruptor de un toque: la opción elegida se "abre" y muestra su nombre, las otras quedan como íconos.
 // En pantallas chicas es un solo botón que despliega las tres opciones.
@@ -27,31 +58,7 @@ export default function FilterSwitch({ filter, onChange }) {
   return (
     <div ref={ref} className="relative shrink-0 z-[1000]">
       {/* Pantallas medianas y grandes: interruptor siempre a la vista */}
-      <div role="radiogroup" aria-label="Filtrar estadios" className="hidden sm:flex items-center gap-0.5 p-1 rounded-full" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-        {OPTIONS.map((option) => {
-          const active = option.key === filter;
-          return (
-            <button
-              key={option.key}
-              role="radio"
-              aria-checked={active}
-              aria-label={option.label}
-              title={option.label}
-              onClick={() => onChange(option.key)}
-              className="h-7 flex items-center px-2 rounded-full text-xs font-semibold gc-focus gc-tap"
-              style={tint(option, active)}
-            >
-              <option.Icon size={15} />
-              <span
-                className="grid transition-[grid-template-columns,opacity] duration-300 ease-out motion-reduce:transition-none"
-                style={{ gridTemplateColumns: active ? '1fr' : '0fr', opacity: active ? 1 : 0 }}
-              >
-                <span className="overflow-hidden whitespace-nowrap pl-1.5">{option.label}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <FilterPills filter={filter} onChange={onChange} className="hidden sm:flex" />
 
       {/* Celular: un botón con el filtro actual que despliega las opciones */}
       <button

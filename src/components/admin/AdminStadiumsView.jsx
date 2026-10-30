@@ -6,6 +6,10 @@ import adminService from '../../services/adminService';
 import StadiumFormModal from './StadiumFormModal';
 import { fichaChecks } from '../../utils/fichaChecks';
 import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminPagination';
+import FilterDropdown from './FilterDropdown';
+
+// En celular cada filtro crece hasta completar la fila
+const GROW = 'flex-1 min-w-[9rem] sm:flex-none';
 
 function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
@@ -58,7 +62,7 @@ function WikidataImport({ onDone, onToast }) {
 
   const percent = job.total ? Math.round((job.done / job.total) * 100) : 0;
   return (
-    <div className="flex flex-wrap items-center gap-3 p-3 mb-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 mb-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold" style={{ color: C.bright }}>Datos de Wikidata</p>
         {running ? (
@@ -79,7 +83,7 @@ function WikidataImport({ onDone, onToast }) {
       <button
         onClick={start}
         disabled={running}
-        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold shrink-0 gc-focus gc-tap disabled:opacity-50"
+        className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold w-full sm:w-auto shrink-0 gc-focus gc-tap disabled:opacity-50"
         style={{ border: `1px solid ${C.brandBright}`, color: C.brandBright }}
       >
         {running ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {running ? 'Buscando...' : 'Buscar en Wikidata'}
@@ -265,46 +269,36 @@ export default function AdminStadiumsView({ onToast, openId, onOpenHandled }) {
           className="flex-1 min-w-[180px] px-3 py-2 rounded-xl text-sm outline-none gc-focus"
           style={filterFieldStyle}
         />
-        <select
+        <FilterDropdown
+          className={GROW}
           value={countryFilter}
-          onChange={(e) => changeCountry(e.target.value)}
-          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
-          style={filterFieldStyle}
-        >
-          <option value="">Todos los países</option>
-          {countries.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select
+          onChange={changeCountry}
+          ariaLabel="Filtrar por país"
+          options={[{ value: '', label: 'Todos los países' }, ...countries.map((c) => ({ value: c, label: c }))]}
+        />
+        <FilterDropdown
+          className={GROW}
           value={provinceFilter}
-          onChange={(e) => changeProvince(e.target.value)}
+          onChange={changeProvince}
           disabled={!countryFilter}
-          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus disabled:opacity-40"
-          style={filterFieldStyle}
-        >
-          <option value="">{countryFilter ? 'Todas las provincias' : 'Elegí un país primero'}</option>
-          {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <select
+          ariaLabel="Filtrar por provincia"
+          options={[{ value: '', label: countryFilter ? 'Todas las provincias' : 'Elegí un país primero' }, ...provinces.map((p) => ({ value: p, label: p }))]}
+        />
+        <FilterDropdown
+          className={GROW}
           value={cityFilter}
-          onChange={(e) => changeCity(e.target.value)}
+          onChange={changeCity}
           disabled={!provinceFilter}
-          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus disabled:opacity-40"
-          style={filterFieldStyle}
-        >
-          <option value="">{provinceFilter ? 'Todas las ciudades' : 'Elegí una provincia primero'}</option>
-          {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select
+          ariaLabel="Filtrar por ciudad"
+          options={[{ value: '', label: provinceFilter ? 'Todas las ciudades' : 'Elegí una provincia primero' }, ...cities.map((c) => ({ value: c, label: c }))]}
+        />
+        <FilterDropdown
+          className={GROW}
           value={missingFilter}
-          onChange={(e) => { setMissingFilter(e.target.value); setPage(1); }}
-          aria-label="Filtrar por datos que faltan"
-          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
-          style={filterFieldStyle}
-        >
-          <option value="">Toda la ficha</option>
-          <option value="*">Con datos faltantes</option>
-          {MISSING_FILTERS.map((label) => <option key={label} value={label}>Sin {label.toLowerCase()}</option>)}
-        </select>
+          onChange={(v) => { setMissingFilter(v); setPage(1); }}
+          ariaLabel="Filtrar por datos que faltan"
+          options={[{ value: '', label: 'Toda la ficha' }, { value: '*', label: 'Con datos faltantes' }, ...MISSING_FILTERS.map((label) => ({ value: label, label: `Sin ${label.toLowerCase()}` }))]}
+        />
       </div>
 
       <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>

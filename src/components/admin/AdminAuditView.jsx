@@ -3,6 +3,7 @@ import { AlertCircle, Download, ArrowRight } from 'lucide-react';
 import { C } from '../../theme';
 import adminService from '../../services/adminService';
 import AdminPagination, { filterFieldStyle } from './AdminPagination';
+import FilterDropdown from './FilterDropdown';
 
 const ENTITY_LABELS = {
   stadium: 'Estadio',
@@ -70,7 +71,6 @@ export default function AdminAuditView() {
     }
   }
 
-  const selectClass = 'px-3 py-2 rounded-xl text-sm outline-none gc-focus';
   return (
     <div>
       <div className="flex items-center justify-between mb-4 gap-2">
@@ -86,26 +86,35 @@ export default function AdminAuditView() {
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <select value={filters.entity} onChange={(e) => setFilter('entity', e.target.value)} aria-label="Filtrar por sección" className={selectClass} style={filterFieldStyle}>
-          <option value="">Toda sección</option>
-          {Object.entries(ENTITY_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-        </select>
-        <select value={filters.action} onChange={(e) => setFilter('action', e.target.value)} aria-label="Filtrar por acción" className={selectClass} style={filterFieldStyle}>
-          <option value="">Toda acción</option>
-          {Object.entries(ACTION_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-        </select>
-        <select value={filters.actor} onChange={(e) => setFilter('actor', e.target.value)} aria-label="Filtrar por administrador" className={selectClass} style={filterFieldStyle}>
-          <option value="">Todo administrador</option>
-          {actors.map((name) => <option key={name} value={name}>@{name}</option>)}
-        </select>
-        <label className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
-          Desde
-          <input type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => setFilter('from', e.target.value)} className={selectClass} style={{ ...filterFieldStyle, colorScheme: 'dark' }} />
-        </label>
-        <label className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
-          Hasta
-          <input type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilter('to', e.target.value)} className={selectClass} style={{ ...filterFieldStyle, colorScheme: 'dark' }} />
-        </label>
+        <FilterDropdown
+          className="flex-1 min-w-[9rem] sm:flex-none"
+          value={filters.entity}
+          onChange={(v) => setFilter('entity', v)}
+          ariaLabel="Filtrar por sección"
+          options={[{ value: '', label: 'Toda sección' }, ...Object.entries(ENTITY_LABELS).map(([key, label]) => ({ value: key, label }))]}
+        />
+        <FilterDropdown
+          className="flex-1 min-w-[9rem] sm:flex-none"
+          value={filters.action}
+          onChange={(v) => setFilter('action', v)}
+          ariaLabel="Filtrar por acción"
+          options={[{ value: '', label: 'Toda acción' }, ...Object.entries(ACTION_LABELS).map(([key, label]) => ({ value: key, label }))]}
+        />
+        <FilterDropdown
+          className="flex-1 min-w-[9rem] sm:flex-none"
+          value={filters.actor}
+          onChange={(v) => setFilter('actor', v)}
+          ariaLabel="Filtrar por administrador"
+          options={[{ value: '', label: 'Todo administrador' }, ...actors.map((name) => ({ value: name, label: `@${name}` }))]}
+        />
+        <div className="flex gap-2 w-full sm:w-auto">
+          {[['Desde', 'from', { max: filters.to || undefined }], ['Hasta', 'to', { min: filters.from || undefined }]].map(([label, key, limit]) => (
+            <label key={key} className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 text-xs" style={{ color: C.muted }}>
+              {label}
+              <input type="date" value={filters[key]} {...limit} onChange={(e) => setFilter(key, e.target.value)} className="w-full min-w-0 px-3 py-2 rounded-xl text-sm outline-none gc-focus" style={{ ...filterFieldStyle, colorScheme: 'dark' }} />
+            </label>
+          ))}
+        </div>
         {hasFilters && (
           <button onClick={() => { setFilters(NO_FILTERS); setPage(1); }} className="text-xs underline gc-focus rounded" style={{ color: C.muted }}>Limpiar filtros</button>
         )}

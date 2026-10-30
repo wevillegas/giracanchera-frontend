@@ -9,6 +9,7 @@ import { useLogoColors } from '../utils/logoColors';
 import { stadiumPath } from '../utils/stadiumUrl';
 import StadiumArt from './StadiumArt';
 import PostcardViewer, { PostcardFront } from './Postcard';
+import PhotoLightbox from './PhotoLightbox';
 import StarRow from './StarRow';
 import ScoreDistribution from './ScoreDistribution';
 import Navbar from './Navbar';
@@ -77,6 +78,8 @@ export default function StadiumView({
   const setPhotoIndex = (index) => setPhotoPick({ id: stadium.id, index });
   // La pestaña también se guarda con el id del estadio: al cambiar de estadio vuelve a "Resumen"
   const [postalOpen, setPostalOpen] = useState(false);
+  // Índice de la foto de hincha abierta en el visor (null = cerrado)
+  const [lightbox, setLightbox] = useState(null);
   const [tabPick, setTabPick] = useState({ id: stadium.id, tab: 'resumen' });
 
   useEffect(() => {
@@ -435,8 +438,8 @@ export default function StadiumView({
                   <button onClick={() => setTabPick({ id: stadium.id, tab: 'fotos' })} className="text-xs gc-focus rounded" style={{ color: C.brandBright }}>Ver todas</button>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  {stats.fanPhotos.slice(0, 6).map(({ url, visit }) => (
-                    <button key={url} onClick={() => onOpenVisit(visit, stadium)} aria-label="Ver la reseña de esta foto" className="aspect-square rounded-lg overflow-hidden gc-focus gc-tap">
+                  {stats.fanPhotos.slice(0, 6).map(({ url }, i) => (
+                    <button key={`${url}-${i}`} onClick={() => setLightbox(i)} aria-label="Abrir la foto" className="aspect-square rounded-lg overflow-hidden gc-focus gc-tap">
                       <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
                     </button>
                   ))}
@@ -579,8 +582,8 @@ export default function StadiumView({
               <div>
                 <h2 className="flex items-center gap-2 text-base font-semibold mb-3" style={{ color: C.bright }}><Images size={15} color={C.muted} /> Fotos de hinchas</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {stats.fanPhotos.map(({ url, visit }) => (
-                    <button key={url} onClick={() => onOpenVisit(visit, stadium)} aria-label="Ver la reseña de esta foto" className="aspect-square rounded-xl overflow-hidden gc-focus gc-tap">
+                  {stats.fanPhotos.map(({ url }, i) => (
+                    <button key={`${url}-${i}`} onClick={() => setLightbox(i)} aria-label="Abrir la foto" className="aspect-square rounded-xl overflow-hidden gc-focus gc-tap">
                       <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
                     </button>
                   ))}
@@ -619,6 +622,14 @@ export default function StadiumView({
           </div>
         )}
       </div>
+      {lightbox !== null && (
+        <PhotoLightbox
+          photos={stats.fanPhotos}
+          startIndex={lightbox}
+          onClose={() => setLightbox(null)}
+          onOpenVisit={(visit) => { setLightbox(null); onOpenVisit(visit, stadium); }}
+        />
+      )}
       {postalOpen && <PostcardViewer stadium={stadium} photo={photo} a={postalA} b={postalB} onClose={() => setPostalOpen(false)} />}
       {suggestOpen && <SuggestionModal stadium={stadium} onClose={() => setSuggestOpen(false)} onToast={onToast} />}
     </div>

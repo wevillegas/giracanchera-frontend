@@ -34,6 +34,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cur
 
 .gc-tap { transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease; }
 .gc-tap:active { transform: scale(0.95); }
+/* Tarjetas del perfil: al pasar el mouse suben un poco y toman el color de marca */
+.gc-card { transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease, box-shadow 0.2s ease; }
+@media (hover: hover) {
+  .gc-card:hover { transform: translateY(-3px); border-color: #3FB950 !important; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35); }
+}
 @media (prefers-reduced-motion: reduce) {
   .gc-tap, .gc-tap:active { transition: none; transform: none; }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Search, Shield } from 'lucide-react';
 import { C, rgba } from '../theme';
 import { plain } from '../utils/text';
+import useDropUp from '../utils/useDropUp';
 
 // Selector con escudo: un <select> nativo no puede mostrar imágenes.
 // Se puede buscar escribiendo (también con el botón enfocado, sin abrirlo antes); ↑ ↓ mueven, Enter elige, Esc cierra.
@@ -13,6 +14,7 @@ export default function ClubPicker({ value, onChange, options, placeholder = 'El
   const ref = useRef(null);
   const listRef = useRef(null);
   const buttonRef = useRef(null);
+  const dropUp = useDropUp(open, ref, 340);
   const selected = options.find((o) => o.value === value);
 
   const q = plain(query);
@@ -90,7 +92,7 @@ export default function ClubPicker({ value, onChange, options, placeholder = 'El
 
       {open && (
         <div
-          className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-10"
+          className={`absolute left-0 right-0 rounded-xl overflow-hidden z-10 ${dropUp ? 'bottom-full mb-1' : 'mt-1'}`}
           style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, boxShadow: `0 12px 24px ${rgba('#000000', 0.35)}` }}
         >
           <div className="flex items-center gap-2 px-3 py-2">

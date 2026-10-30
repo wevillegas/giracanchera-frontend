@@ -8,6 +8,7 @@ import userService from '../services/userService';
 import visitService from '../services/visitService';
 import StadiumArt from './StadiumArt';
 import EditProfileModal from './EditProfileModal';
+import PhotoLightbox from './PhotoLightbox';
 import Navbar from './Navbar';
 import AdminPagination, { paginate, clampPage } from './admin/AdminPagination';
 import { useLogoColors } from '../utils/logoColors';
@@ -16,12 +17,14 @@ import { useLogoColors } from '../utils/logoColors';
 const REVIEWS_PAGE_SIZE = 6;
 const LIST_PAGE_SIZE = 8; // Me gusta, Guardadas, Seguidores y Seguidos
 const STADIUMS_PAGE_SIZE = 6;
+const PHOTOS_PAGE_SIZE = 8; // grilla de 2 por 4, igual que las reseñas
 // En las pestañas Visitados y Por visitar se muestran de a 9
 const STADIUMS_TAB_PAGE_SIZE = 9;
 
 const TABS = [
   { key: 'perfil', label: 'Perfil' },
   { key: 'resenas', label: 'Reseñas' },
+  { key: 'fotos', label: 'Fotos' },
   { key: 'visitados', label: 'Visitados' },
   { key: 'porvisitar', label: 'Por visitar' },
   { key: 'seguidores', label: 'Seguidores' },
@@ -40,8 +43,8 @@ const SPEND_LABELS = { ticket: 'Entradas', food: 'Comida', parking: 'Estacionami
 // Tarjeta de un número en la vista de estadísticas personales
 function StatTile({ label, value, className = '' }) {
   return (
-    <div className={`flex flex-col items-center justify-center text-center px-2 py-4 rounded-2xl min-h-[88px] ${className}`} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-      <span className="text-2xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{value}</span>
+    <div className={`relative overflow-hidden flex flex-col items-center justify-center text-center px-2 py-4 rounded-3xl min-h-[96px] ${className}`} style={{ ...cardStyle, backgroundImage: `radial-gradient(circle at 50% 0%, ${rgba(C.brandBright, 0.16)}, transparent 70%)` }}>
+      <span className="text-3xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>{value}</span>
       <span className="text-[10px] uppercase tracking-widest mt-2 leading-tight" style={{ color: C.muted }}>{label}</span>
     </div>
   );
@@ -52,17 +55,17 @@ function VisitMiniCard({ visit, onOpen }) {
   return (
     <button
       onClick={() => onOpen(visit)}
-      className="flex flex-col w-full h-full text-left p-3.5 rounded-2xl gc-focus gc-tap"
-      style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+      className="flex flex-col w-full h-full text-left p-4 rounded-3xl gc-focus gc-card"
+      style={{ ...cardStyle, backgroundImage: `radial-gradient(circle at 100% 0%, ${rgba(C.gold, 0.1)}, transparent 55%)` }}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 min-w-0">
           {visit.stadium?.mainClub?.logoUrl && (
             <img src={visit.stadium.mainClub.logoUrl} alt={visit.stadium.mainClub.name} className="w-8 h-8 object-contain shrink-0" />
           )}
-          <span className="text-sm font-semibold truncate" style={{ color: C.bright }}>{visit.stadium?.name || 'Estadio'}</span>
+          <span className="text-lg leading-none truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>{visit.stadium?.name || 'Estadio'}</span>
         </span>
-        <span className="flex items-center gap-1 shrink-0">
+        <span className="flex items-center gap-1 shrink-0 px-2 py-1 rounded-full" style={{ backgroundColor: rgba(C.gold, 0.14) }}>
           <Star size={12} fill={C.gold} color={C.gold} />
           <span className="text-xs font-medium" style={{ color: C.gold }}>{visit.rating}/10</span>
         </span>
@@ -91,13 +94,13 @@ function UserCard({ user, onOpen }) {
   return (
     <button
       onClick={onOpen}
-      className="flex flex-col w-full h-full text-left p-4 rounded-2xl gc-focus gc-tap"
-      style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+      className="flex flex-col w-full h-full text-left p-4 rounded-3xl gc-focus gc-card"
+      style={{ ...cardStyle, backgroundImage: `radial-gradient(circle at 100% 0%, ${rgba(C.brandBright, 0.14)}, transparent 55%)` }}
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className="relative shrink-0">
           {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.username} className="w-14 h-14 rounded-full object-cover" />
+            <img src={user.avatarUrl} alt={user.username} className="w-14 h-14 rounded-full object-cover" style={{ border: `2px solid ${C.brandBright}` }} />
           ) : (
             <div className="w-14 h-14 rounded-full flex items-center justify-center text-base" style={{ backgroundColor: C.brand, color: C.bright }}>
               {initialsOf(user.username || '?')}
@@ -115,7 +118,7 @@ function UserCard({ user, onOpen }) {
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-semibold truncate" style={{ color: C.bright }}>@{user.username || '...'}</span>
+            <span className="text-lg leading-none truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>@{user.username || '...'}</span>
             {user.followsViewer && (
               <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
                 Te sigue
@@ -135,6 +138,12 @@ function UserCard({ user, onOpen }) {
   );
 }
 
+const cardStyle = { backgroundColor: C.surface, border: `1px solid ${C.border}` };
+
+function AsideTitle({ children }) {
+  return <h2 className="text-2xl sm:text-3xl leading-none pb-3 mb-3 box-content h-[2.25rem] flex items-end" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em', borderBottom: `1px solid ${C.border}` }}>{children}</h2>;
+}
+
 function initialsOf(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
 }
@@ -151,10 +160,11 @@ function formatVisitDate(value) {
 
 function SectionTitle({ children, count }) {
   return (
-    <div className="flex items-center justify-between pb-2 mb-4" style={{ borderBottom: `1px solid ${C.border}` }}>
-      <h2 className="text-xl font-semibold" style={{ color: C.bright }}>
-        {children}{count !== undefined && <span className="font-normal" style={{ color: C.muted }}> {count}</span>}
-      </h2>
+    <div className="flex items-baseline gap-3 pb-3 mb-4" style={{ borderBottom: `1px solid ${C.border}` }}>
+      <h2 className="text-2xl sm:text-3xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>{children}</h2>
+      {count !== undefined && (
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: rgba(C.brandBright, 0.14), color: C.brandBright }}>{count}</span>
+      )}
     </div>
   );
 }
@@ -172,11 +182,11 @@ function StadiumCard({ stadium, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center text-center gap-2 p-3 rounded-2xl gc-focus gc-tap"
-      style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, ...background }}
+      className="flex flex-col items-center text-center gap-2 px-3 py-5 rounded-3xl gc-focus gc-card"
+      style={{ ...cardStyle, ...background }}
     >
       {clubLogoUrl ? (
-        <img src={clubLogoUrl} alt={club} className="w-16 h-16 object-contain" />
+        <img src={clubLogoUrl} alt={club} className="w-20 h-20 object-contain drop-shadow-lg" />
       ) : mainClubId ? (
         <div className="w-16 h-16 rounded-full flex items-center justify-center text-sm" style={{ backgroundColor: C.border, color: C.bright, fontFamily: DISPLAY_FONT }}>
           {initialsOf(club)}
@@ -187,7 +197,7 @@ function StadiumCard({ stadium, onClick }) {
         </div>
       )}
       <div className="w-full min-w-0">
-        <p className="text-sm font-semibold truncate" style={{ color: C.bright }}>{name}</p>
+        <p className="text-lg leading-tight truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>{name}</p>
         {place && <p className="text-xs truncate" style={{ color: C.muted }}>{place}</p>}
       </div>
     </button>
@@ -214,6 +224,8 @@ export default function ProfileView({
     setViewUserId(initialViewUserId ?? null);
     setTab('perfil');
   }, [initialViewUserId, openCount]);
+  // Al pasar de un perfil a otro (o volver al propio) también se arranca en la pestaña Perfil
+  useEffect(() => { setTab('perfil'); }, [viewUserId]);
   const [viewedProfile, setViewedProfile] = useState(null);
   const [viewedVisits, setViewedVisits] = useState([]);
   const [viewedLoading, setViewedLoading] = useState(false);
@@ -229,6 +241,9 @@ export default function ProfileView({
   const [followersPage, setFollowersPage] = useState(1);
   const [followingPage, setFollowingPage] = useState(1);
   const [wishPage, setWishPage] = useState(1);
+  const [photosPage, setPhotosPage] = useState(1);
+  // Índice (en la lista completa de fotos) de la foto abierta en el visor; null = cerrado
+  const [photoView, setPhotoView] = useState(null);
 
   useEffect(() => {
     // La sesión es una cookie: sin usuario (y con la sesión ya consultada) se pide iniciar sesión
@@ -287,6 +302,21 @@ export default function ProfileView({
   }, [viewUserId, onToast]);
 
   const [visitToDelete, setVisitToDelete] = useState(null);
+  const [unfollowOpen, setUnfollowOpen] = useState(false);
+
+  function toggleFollow() {
+    const wasFollowing = (profile?.following || []).some((f) => (f._id || f) === viewUserId);
+    setUnfollowOpen(false);
+    userService.toggleFollow(viewUserId).then(() => {
+      setProfile((p) => ({
+        ...p,
+        following: wasFollowing
+          ? (p.following || []).filter((f) => (f._id || f) !== viewUserId)
+          : [...(p.following || []), viewUserId],
+      }));
+      onToast?.(wasFollowing ? 'Dejaste de seguir' : '¡Ahora lo seguís!');
+    }).catch(() => onToast?.('No pudimos procesar la acción.'));
+  }
 
   function handleDeleteVisit(visitId) {
     setVisitToDelete(visitId);
@@ -329,13 +359,16 @@ export default function ProfileView({
     return () => { cancelled = true; };
   }, [tab, viewUserId]);
 
+  // Colores del escudo del club del que es hincha, para el fondo de la cabecera (hook: va antes de los returns tempranos)
+  const headerColors = useLogoColors((viewUserId ? viewedProfile : profile)?.clubHincha?.logoUrl);
+
   if (!user) return null;
 
   if (loading) {
     return (
       <div className="relative flex-1 overflow-y-auto gc-hide-scrollbar">
         <Navbar {...navbarProps} />
-        <div className="max-w-5xl mx-auto px-4 pt-32 pb-6 animate-pulse">
+        <div className="max-w-5xl mx-auto px-4 pt-24 sm:pt-32 pb-6 animate-pulse">
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-full" style={{ backgroundColor: C.surface }} />
             <div className="h-6 w-40 rounded" style={{ backgroundColor: C.surface }} />
@@ -405,6 +438,9 @@ export default function ProfileView({
   const visitedPageSafe = clampPage(visitedPage, visitedStadiumTiles.length, stadiumPageSize);
   const reviewsPageSafe = clampPage(reviewsPage, displayedVisits.length, REVIEWS_PAGE_SIZE);
   const wishPageSafe = clampPage(wishPage, wishlistStadiums.length, stadiumPageSize);
+  // Todas las fotos que subió, cada una con la reseña (y el estadio) de la que sale; el autor es siempre este perfil
+  const allPhotos = displayedVisits.flatMap((v) => (v.images || []).map((url) => ({ url, visit: { ...v, user: displayedProfile || v.user } })));
+  const photosPageSafe = clampPage(photosPage, allPhotos.length, PHOTOS_PAGE_SIZE);
 
   const show = (key) => tab === 'perfil' || tab === key;
 
@@ -412,7 +448,7 @@ export default function ProfileView({
     return (
       <div className="relative flex-1 overflow-y-auto gc-hide-scrollbar">
         <Navbar {...navbarProps} />
-        <div className="max-w-5xl mx-auto px-4 pt-32 pb-6 flex items-center justify-center" style={{ color: C.muted }}>
+        <div className="max-w-5xl mx-auto px-4 pt-24 sm:pt-32 pb-6 flex items-center justify-center" style={{ color: C.muted }}>
           Cargando perfil...
         </div>
       </div>
@@ -457,7 +493,7 @@ export default function ProfileView({
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto px-4 pt-32 pb-6">
+      <div className="max-w-5xl mx-auto px-4 pt-24 sm:pt-32 pb-6">
         <button
           onClick={() => (isOwn ? onBackToMap() : setViewUserId(null))}
           className="flex items-center gap-1.5 text-sm mb-4 gc-focus gc-tap"
@@ -467,8 +503,9 @@ export default function ProfileView({
         </button>
 
         {/* Cabecera: avatar + nombre a la izquierda, estadísticas en fila a la derecha */}
-        <header className="flex flex-col md:flex-row md:items-center gap-6 pb-6" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <div className="flex items-center gap-4 min-w-0 flex-1">
+        <header className="relative flex flex-col md:flex-row md:items-center gap-6 rounded-3xl overflow-hidden p-5 sm:p-8" style={cardStyle}>
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: headerColors ? `linear-gradient(135deg, ${rgba(headerColors[0], 0.55)}, ${rgba(headerColors[1], 0.55)})` : `radial-gradient(circle at 85% 0%, ${rgba(C.brandBright, 0.22)}, transparent 55%), radial-gradient(circle at 0% 100%, ${rgba(C.gold, 0.1)}, transparent 50%)` }} />
+          <div className="relative flex items-center gap-4 min-w-0 flex-1">
             <div className="relative shrink-0">
               {displayedProfile?.avatarUrl ? (
                 <button type="button" onClick={() => setPhotoOpen(true)} className="block rounded-full gc-focus gc-tap" aria-label="Ver foto de perfil">
@@ -485,37 +522,29 @@ export default function ProfileView({
                   alt={`Hincha de ${club.name}`}
                   title={club.name}
                   className="absolute -bottom-1 -right-1 w-11 h-11 rounded-full object-cover"
-                  style={{ backgroundColor: C.surface, border: `3px solid ${C.bg}` }}
+                  style={{ backgroundColor: C.surface, border: `3px solid ${C.surface}` }}
                 />
               )}
             </div>
             <div className="min-w-0">
-              <h1 className="text-3xl truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>
+              <h1 className="text-3xl sm:text-4xl leading-none truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>
                 {displayName}
               </h1>
               {displayedProfile?.username && (
-                <p className="text-sm" style={{ color: C.muted }}>@{displayedProfile.username}</p>
+                <p className="text-sm mt-1.5" style={{ color: C.bright, opacity: 0.85, textShadow: `0 1px 4px ${rgba(C.bg, 0.8)}` }}>@{displayedProfile.username}</p>
               )}
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {isOwn ? (
                   <button
                     onClick={() => setEditOpen(true)}
                     className="px-4 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap flex items-center gap-1.5"
-                    style={{ border: `1px solid ${C.border}`, color: C.bright }}
+                    style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, color: C.bright }}
                   >
                     <Edit3 size={13} /> Editar perfil
                   </button>
                 ) : (
                   <button
-                    onClick={() => userService.toggleFollow(viewUserId).then(() => {
-                      setProfile((p) => ({
-                        ...p,
-                        following: isFollowing
-                          ? (p.following || []).filter((f) => (f._id || f) !== viewUserId)
-                          : [...(p.following || []), viewUserId],
-                      }));
-                      onToast?.(isFollowing ? 'Dejaste de seguir' : '¡Ahora lo seguís!');
-                    }).catch(() => onToast?.('No pudimos procesar la acción.'))}
+                    onClick={() => (isFollowing ? setUnfollowOpen(true) : toggleFollow())}
                     className="px-4 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap flex items-center gap-1.5"
                     style={{
                       backgroundColor: isFollowing ? 'transparent' : C.brand,
@@ -530,7 +559,7 @@ export default function ProfileView({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full md:w-auto md:shrink-0">
+          <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-2 w-full md:w-auto md:shrink-0">
             {stats.map(({ label, value, Icon, onClick }) => {
               const Tag = onClick ? 'button' : 'div';
               return (
@@ -538,10 +567,10 @@ export default function ProfileView({
                   key={label}
                   onClick={onClick}
                   className={`flex flex-col items-center px-2 sm:px-4 py-2.5 sm:py-3 rounded-2xl gc-focus min-w-0 ${onClick ? 'gc-tap' : ''}`}
-                  style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+                  style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}
                 >
-                  <span className="text-xl sm:text-2xl" style={{ fontFamily: DISPLAY_FONT, color: C.bright }}>{value}</span>
-                  <span className="text-[10px] uppercase tracking-widest mt-0.5 flex items-center gap-1 text-center" style={{ color: C.muted }}>
+                  <span className="text-2xl sm:text-3xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>{value}</span>
+                  <span className="text-[10px] uppercase tracking-widest mt-1.5 flex items-center gap-1 text-center" style={{ color: C.muted }}>
                     <Icon size={10} className="shrink-0" /> <span className="truncate">{label}</span>
                   </span>
                 </Tag>
@@ -551,14 +580,14 @@ export default function ProfileView({
         </header>
 
         {/* Pestañas: "Perfil" muestra todo, las demás filtran */}
-        <nav className="flex gap-1.5 overflow-x-auto gc-hide-scrollbar mt-6 pb-1">
+        <nav className="flex gap-2 overflow-x-auto gc-hide-scrollbar mt-5 pb-1">
           {[...TABS, ...(isOwn ? OWN_ONLY_TABS : [])].map((t) => {
             const active = tab === t.key;
             return (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className="shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium gc-focus gc-tap"
+                className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold gc-focus gc-tap"
                 style={{
                   backgroundColor: active ? C.brandBright : rgba(C.surface, 0.9),
                   color: active ? C.bg : C.muted,
@@ -571,7 +600,7 @@ export default function ProfileView({
           })}
         </nav>
 
-        <div className="grid md:grid-cols-[1fr_280px] gap-8 mt-6 items-start">
+        <div className="grid md:grid-cols-[1fr_280px] gap-8 mt-8 items-start">
           <main className="min-w-0 space-y-10">
             {show('resenas') && (
               <section>
@@ -596,10 +625,14 @@ export default function ProfileView({
                             tabIndex={0}
                             onClick={() => onOpenVisit(v)}
                             onKeyDown={(e) => { if (e.key === 'Enter') onOpenVisit(v); }}
-                            className="rounded-2xl overflow-hidden cursor-pointer gc-focus gc-tap"
+                            className="rounded-3xl overflow-hidden cursor-pointer gc-focus gc-card"
                             style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
                           >
-                            <div className="relative w-full h-36 overflow-hidden flex flex-col items-center justify-center gap-1.5 px-3">
+                            <div className="relative w-full h-40 overflow-hidden flex flex-col items-center justify-center gap-1.5 px-3">
+                              <div aria-hidden="true" className="absolute inset-0 z-[1]" style={{ backgroundImage: `linear-gradient(transparent 40%, ${rgba(C.surface, 0.9)})` }} />
+                              <span className="absolute z-[3] top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: rgba(C.bg, 0.75), color: C.gold }}>
+                                <Star size={12} fill={C.gold} color={C.gold} /> {v.rating}/10
+                              </span>
                               {v.stadium?.imageUrl ? (
                                 <img src={v.stadium.imageUrl} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-sm scale-110" />
                               ) : (
@@ -610,9 +643,9 @@ export default function ProfileView({
                                   <img
                                     src={v.stadium.mainClub.logoUrl}
                                     alt={v.stadium.mainClub.name}
-                                    className="relative w-16 h-16 object-contain"
+                                    className="relative z-[2] w-16 h-16 object-contain"
                                   />
-                                  <span className="relative text-xs font-semibold truncate max-w-full" style={{ color: C.bright, textShadow: `0 1px 4px ${rgba(C.bg, 0.9)}` }}>
+                                  <span className="relative z-[2] text-xs font-semibold truncate max-w-full" style={{ color: C.bright, textShadow: `0 1px 4px ${rgba(C.bg, 0.9)}` }}>
                                     {v.stadium.mainClub.name}
                                   </span>
                                 </>
@@ -630,17 +663,13 @@ export default function ProfileView({
                               <button
                                 onClick={(e) => { e.stopPropagation(); stadiumId && onOpenStadiumFromId(stadiumId); }}
                                 disabled={!stadiumId}
-                                className="text-sm font-semibold truncate text-left w-full gc-focus"
-                                style={{ color: C.bright, cursor: stadiumId ? 'pointer' : 'default' }}
+                                className="text-xl leading-none truncate text-left w-full gc-focus"
+                                style={{ fontFamily: DISPLAY_FONT, letterSpacing: '0.02em', color: C.bright, cursor: stadiumId ? 'pointer' : 'default' }}
                               >
                                 {v.stadium?.name || 'Estadio'}
                               </button>
                               <div className="block w-full text-left">
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Star size={12} fill={C.gold} color={C.gold} />
-                                  <span className="text-xs font-medium" style={{ color: C.gold }}>{v.rating}/10</span>
-                                  <span className="text-xs ml-auto" style={{ color: C.muted }}>{formatVisitDate(v.visitDate)}</span>
-                                </div>
+                                <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: C.muted }}><CalendarDays size={11} /> {formatVisitDate(v.visitDate)}</p>
                                 <p
                                   className="text-xs mt-2 leading-snug"
                                   style={{ color: C.muted, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
@@ -772,7 +801,7 @@ export default function ProfileView({
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-3">
-                      <div className="p-3 sm:p-5 rounded-2xl text-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                      <div className="p-3 sm:p-5 rounded-3xl text-center" style={{ ...cardStyle, backgroundImage: `radial-gradient(circle at 50% 0%, ${rgba(C.gold, 0.12)}, transparent 60%)` }}>
                         <p className="text-[10px] uppercase tracking-widest mb-4" style={{ color: C.muted }}>Estadio favorito</p>
                         {myStats.favoriteStadium ? (
                           <div className="flex flex-col items-center">
@@ -807,7 +836,7 @@ export default function ProfileView({
                         )}
                       </div>
 
-                      <div className="p-3 sm:p-5 rounded-2xl text-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                      <div className="p-3 sm:p-5 rounded-3xl text-center" style={{ ...cardStyle, backgroundImage: `radial-gradient(circle at 50% 0%, ${rgba(C.brandBright, 0.14)}, transparent 60%)` }}>
                         <p className="text-[10px] uppercase tracking-widest" style={{ color: C.muted }}>Gasto total</p>
                         <p className="text-lg sm:text-2xl leading-none mt-2 mb-1" style={{ fontFamily: DISPLAY_FONT, color: C.brandBright }}>{formatMoney(myStats.totalSpent)}</p>
                         <p className="text-xs mb-5" style={{ color: C.muted }}>Promedio por visita con gastos: {formatMoney(myStats.avgSpent)}</p>
@@ -833,7 +862,7 @@ export default function ProfileView({
                   </div>
                 )}
                 {isAdminRole(user?.rol) && (
-                  <div className="mt-6 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                  <div className="mt-6 p-5 rounded-3xl flex flex-wrap items-center justify-between gap-3" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold" style={{ color: C.bright }}>Analíticas de la plataforma</p>
                       <p className="text-xs mt-0.5" style={{ color: C.muted }}>Usuarios, reseñas, denuncias y estadios de toda la comunidad.</p>
@@ -848,6 +877,58 @@ export default function ProfileView({
                   </div>
                 )}
                 <p className="text-xs mt-6" style={{ color: C.muted }}>Estas estadísticas son privadas: solo las ves vos.</p>
+              </section>
+            )}
+
+            {tab === 'fotos' && (
+              <section>
+                <SectionTitle count={allPhotos.length}>Fotos</SectionTitle>
+                {displayedVisitsLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-pulse">
+                    {[0, 1, 2].map((i) => <div key={i} className="h-48 rounded-3xl" style={{ backgroundColor: C.surface }} />)}
+                  </div>
+                ) : allPhotos.length === 0 ? (
+                  <p className="text-sm" style={{ color: C.muted }}>
+                    {isOwn ? 'Todavía no subiste ninguna foto.' : 'Todavía no subió ninguna foto.'}
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {paginate(allPhotos, photosPageSafe, PHOTOS_PAGE_SIZE).map(({ url, visit }, i) => {
+                        const index = (photosPageSafe - 1) * PHOTOS_PAGE_SIZE + i;
+                        const stadiumName = visit.stadium?.name || 'Estadio';
+                        return (
+                          <button
+                            key={`${url}-${index}`}
+                            onClick={() => setPhotoView(index)}
+                            aria-label={`Abrir la foto de ${stadiumName}`}
+                            className="flex flex-col text-left rounded-3xl overflow-hidden gc-focus gc-card"
+                            style={cardStyle}
+                          >
+                            <div className="relative w-full h-40 overflow-hidden">
+                              <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                              <span className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: rgba(C.bg, 0.75), color: C.gold }}>
+                                <Star size={11} fill={C.gold} color={C.gold} /> {visit.rating}/10
+                              </span>
+                            </div>
+                            <div className="p-3 flex items-center gap-2.5 min-w-0">
+                              {visit.stadium?.mainClub?.logoUrl && (
+                                <img src={visit.stadium.mainClub.logoUrl} alt="" className="w-9 h-9 object-contain shrink-0" />
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-lg leading-tight truncate" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>{stadiumName}</p>
+                                <p className="text-xs truncate flex items-center gap-1" style={{ color: C.muted }}>
+                                  <CalendarDays size={11} className="shrink-0" /> Reseña del {formatVisitDate(visit.visitDate)}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <AdminPagination page={photosPageSafe} total={allPhotos.length} onChange={setPhotosPage} pageSize={PHOTOS_PAGE_SIZE} />
+                  </>
+                )}
               </section>
             )}
 
@@ -890,16 +971,16 @@ export default function ProfileView({
 
           <aside className="space-y-6 md:sticky md:top-32">
             <section>
-              <h2 className="text-xl font-semibold pb-2 mb-3" style={{ color: C.bright, borderBottom: `1px solid ${C.border}` }}>Biografía</h2>
-              <p className="text-sm leading-relaxed" style={{ color: C.bright }}>{bio}</p>
+              <AsideTitle>Biografía</AsideTitle>
+              <p className="text-sm leading-relaxed p-4 rounded-3xl" style={{ color: C.bright, ...cardStyle }}>{bio}</p>
             </section>
 
             {clubStadium && (
               <section>
-                <h2 className="text-xl font-semibold pb-2 mb-3" style={{ color: C.bright, borderBottom: `1px solid ${C.border}` }}>Estadio del club</h2>
+                <AsideTitle>Estadio del club</AsideTitle>
                 <button
                   onClick={() => onOpenStadiumFromId(clubStadium.id)}
-                  className="w-full text-left rounded-2xl overflow-hidden gc-focus gc-tap"
+                  className="w-full text-left rounded-3xl overflow-hidden gc-focus gc-card"
                   style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
                 >
                   <div className="relative">
@@ -919,7 +1000,7 @@ export default function ProfileView({
                     )}
                   </div>
                   <div className="p-3">
-                    <p className="text-sm font-semibold" style={{ color: C.bright }}>{clubStadium.name}</p>
+                    <p className="text-lg leading-tight" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>{clubStadium.name}</p>
                     <p className="text-xs mt-1" style={{ color: C.muted }}>{clubStadium.city}</p>
                     {clubStadium.capacity > 0 && (
                       <p className="text-xs mt-1 flex items-center gap-1" style={{ color: C.muted }}>
@@ -932,8 +1013,8 @@ export default function ProfileView({
             )}
 
             <section>
-              <h2 className="text-xl font-semibold pb-2 mb-3" style={{ color: C.bright, borderBottom: `1px solid ${C.border}` }}>Datos</h2>
-              <ul className="space-y-2 text-sm">
+              <AsideTitle>Datos</AsideTitle>
+              <ul className="space-y-2.5 text-sm p-4 rounded-3xl" style={cardStyle}>
                 {joinDate && (
                   <li className="flex items-center gap-2" style={{ color: C.muted }}><CalendarDays size={13} /> Se unió en {joinDate}</li>
                 )}
@@ -959,6 +1040,26 @@ export default function ProfileView({
         </div>
 
       </div>
+
+      {photoView !== null && (
+        <PhotoLightbox
+          photos={allPhotos}
+          startIndex={photoView}
+          onClose={() => setPhotoView(null)}
+          onOpenVisit={(visit) => { setPhotoView(null); onOpenVisit(visit); }}
+        />
+      )}
+
+      {unfollowOpen && (
+        <ConfirmModal
+          danger
+          title={`¿Dejar de seguir a @${displayedProfile?.username || 'este usuario'}?`}
+          message="Dejás de ver su actividad entre tus seguidos. Podés volver a seguirlo cuando quieras."
+          confirmLabel="Dejar de seguir"
+          onConfirm={toggleFollow}
+          onCancel={() => setUnfollowOpen(false)}
+        />
+      )}
 
       {editOpen && (
         <EditProfileModal

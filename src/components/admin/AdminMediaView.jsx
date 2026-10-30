@@ -4,6 +4,7 @@ import { C } from '../../theme';
 import adminService from '../../services/adminService';
 import { SHARP_WIDTH } from '../../utils/photoQuality';
 import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminPagination';
+import FilterDropdown from './FilterDropdown';
 
 const PAGE = 12;
 const SHIELD_MIN_WIDTH = 200; // un escudo se ve en tamaños chicos: con menos de esto se nota borroso
@@ -181,11 +182,13 @@ export default function AdminMediaView({ onToast }) {
           className="flex-1 min-w-[180px] px-3 py-2 rounded-xl text-sm outline-none gc-focus"
           style={filterFieldStyle}
         />
-        <select value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }} aria-label="Filtrar imágenes" className="px-3 py-2 rounded-xl text-sm outline-none gc-focus" style={filterFieldStyle}>
-          <option value="">Todas</option>
-          <option value="missing">Sin imagen ({counts.missing})</option>
-          <option value="small">Chicas ({counts.small})</option>
-        </select>
+        <FilterDropdown
+          className="flex-1 min-w-[9rem] sm:flex-none"
+          value={filter}
+          onChange={(v) => { setFilter(v); setPage(1); }}
+          ariaLabel="Filtrar imágenes"
+          options={[{ value: '', label: 'Todas' }, { value: 'missing', label: `Sin imagen (${counts.missing})` }, { value: 'small', label: `Chicas (${counts.small})` }]}
+        />
       </div>
       <p className="text-xs mb-4" style={{ color: C.muted }}>
         Se considera chica una {kind === 'stadiums' ? 'foto' : 'imagen'} de menos de {minWidth} px de ancho. El tamaño se mide al cargar cada imagen, así que el conteo de chicas crece a medida que recorres las páginas.

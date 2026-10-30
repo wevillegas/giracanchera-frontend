@@ -34,7 +34,8 @@ const SPIN_RESUME_MS = 2500;
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Cuanto más lejos el destino, más largo el viaje (entre FOCUS_MS y FOCUS_MAX_MS)
 const focusDuration = (from, to) => FOCUS_MS + (FOCUS_MAX_MS - FOCUS_MS) * Math.min(1, distanceKm(from, to) / FOCUS_FAR_KM);
-const minZoomFor = (el) => Math.log2((Math.PI * GLOBE_FILL * Math.min(el.clientWidth, el.clientHeight)) / 512);
+// MapLibre exige minZoom >= -2: con el contenedor en 0 px (ventana en plena transición) el logaritmo daría -Infinity
+const minZoomFor = (el) => Math.max(-2, Math.log2((Math.PI * GLOBE_FILL * Math.min(el.clientWidth, el.clientHeight)) / 512));
 
 // Vite no deja a MapLibre ubicar su worker por la URL del módulo (en desarrollo lo transforma y falla).
 // Se carga su código como texto, en un chunk aparte, y se le pasa como Blob. Una sola vez por sesión.

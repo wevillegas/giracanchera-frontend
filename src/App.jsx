@@ -180,6 +180,10 @@ export default function App() {
 
   function selectFilterFromElsewhere(f) {
     applyFilter(f);
+    // El mapa se vuelve a armar desde la posición inicial: sin esto viajaría al último estadio visto
+    setFlyTarget(null);
+    setActiveStadium(null);
+    setSheet(null);
     goToMap();
   }
 
@@ -605,7 +609,8 @@ export default function App() {
 
       <Toast message={toast} />
 
-      {view !== 'admin' && (
+      {/* El + es la acción del mapa; en las demás páginas (ficha, perfil, reseña...) tapa contenido o repite otros botones */}
+      {view === 'map' && (
         <AddVisitButton onClick={() => (user ? setPickerOpen(true) : setAuthModal('login'))} />
       )}
     </div>

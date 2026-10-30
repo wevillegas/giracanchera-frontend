@@ -30,16 +30,19 @@ async function loadOverview() {
 function PendingCard({ Icon, label, count, goLabel, onClick }) {
   const pending = count > 0;
   return (
-    <button onClick={onClick} className="text-left p-4 rounded-2xl gc-focus gc-tap" style={{ ...card, border: `1px solid ${pending ? C.gold : C.border}` }}>
-      <div className="flex items-center justify-between">
+    <button onClick={onClick} className="text-left px-3 py-2.5 sm:p-4 rounded-2xl flex items-center gap-3 sm:block gc-focus gc-tap" style={{ ...card, border: `1px solid ${pending ? C.gold : C.border}` }}>
+      <div className="hidden sm:flex items-center justify-between">
         <Icon size={16} color={pending ? C.gold : C.muted} />
         <ChevronRight size={14} color={C.muted} />
       </div>
-      <p className="text-4xl leading-none mt-3" style={{ fontFamily: DISPLAY_FONT, color: pending ? C.gold : C.bright }}>{count ?? '—'}</p>
-      <p className="text-sm font-semibold mt-1.5" style={{ color: C.bright }}>{label}</p>
-      <p className="text-xs mt-0.5" style={{ color: pending ? C.gold : C.muted }}>
-        {count === null ? 'No se pudo cargar' : pending ? goLabel : 'Todo al día'}
-      </p>
+      <p className="text-3xl sm:text-4xl leading-none sm:mt-3 shrink-0 min-w-[2ch] text-center sm:text-left" style={{ fontFamily: DISPLAY_FONT, color: pending ? C.gold : C.bright }}>{count ?? '—'}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold sm:mt-1.5" style={{ color: C.bright }}>{label}</p>
+        <p className="text-xs mt-0.5" style={{ color: pending ? C.gold : C.muted }}>
+          {count === null ? 'No se pudo cargar' : pending ? goLabel : 'Todo al día'}
+        </p>
+      </div>
+      <ChevronRight size={14} color={C.muted} className="sm:hidden shrink-0" />
     </button>
   );
 }
@@ -82,7 +85,7 @@ export default function AdminOverviewView({ onGo, onEditStadium }) {
     <div className="space-y-6">
       <section>
         <h2 className="text-sm font-semibold mb-3" style={{ color: C.bright }}>Pendiente de revisar</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-2 sm:gap-3 sm:grid-cols-3">
           <PendingCard Icon={Flag} label="Denuncias abiertas" count={count(data.reports)} goLabel="Revisar denuncias" onClick={() => onGo('reports')} />
           <PendingCard Icon={PenLine} label="Correcciones sugeridas" count={count(data.suggestions)} goLabel="Revisar correcciones" onClick={() => onGo('suggestions')} />
           <PendingCard Icon={Sparkles} label="Borradores de Wikidata" count={count(data.drafts)} goLabel="Revisar en Estadios" onClick={() => onGo('stadiums')} />

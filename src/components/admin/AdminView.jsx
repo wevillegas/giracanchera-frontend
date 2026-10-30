@@ -55,7 +55,7 @@ function TabStrip({ tabs, active, onChange }) {
     <button
       onClick={() => scrollBy(direction)}
       aria-label={label}
-      className={`absolute ${side}-0 top-0 bottom-1 w-12 flex items-center ${side === 'left' ? 'justify-start' : 'justify-end'} z-10 gc-focus`}
+      className={`absolute ${side}-0 top-0 bottom-1 w-12 hidden sm:flex items-center ${side === 'left' ? 'justify-start' : 'justify-end'} z-10 gc-focus`}
       style={{ background: `linear-gradient(to ${side === 'left' ? 'right' : 'left'}, ${C.bg} 55%, transparent)` }}
     >
       <span className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>

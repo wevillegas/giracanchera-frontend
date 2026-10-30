@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X, Search, SearchX, Globe, MapPin, Building2, ChevronDown } from 'lucide-react';
+import FilterDropdown from './admin/FilterDropdown';
 import { C, rgba, DISPLAY_FONT } from '../theme';
 import { Logo } from './ClubPicker';
 import StadiumArt from './StadiumArt';
@@ -15,27 +16,7 @@ const matchesProvince = (stadium, province) => {
 };
 
 function FilterSelect({ Icon, value, onChange, disabled, placeholder, options }) {
-  return (
-    <label
-      className="flex items-center gap-2 px-3 py-2.5 rounded-xl min-w-0 transition-opacity"
-      style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, opacity: disabled ? 0.45 : 1 }}
-    >
-      <Icon size={14} color={C.muted} className="shrink-0" />
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="bg-transparent outline-none text-sm flex-1 min-w-0 gc-focus disabled:cursor-not-allowed appearance-none"
-        style={{ color: C.bright, colorScheme: 'dark' }}
-      >
-        <option value="" style={{ backgroundColor: C.surface }}>{placeholder}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value} style={{ backgroundColor: C.surface }}>{o.label}</option>
-        ))}
-      </select>
-      <ChevronDown size={14} color={C.muted} className="shrink-0" />
-    </label>
-  );
+  return <FilterDropdown Icon={Icon} value={value} onChange={onChange} disabled={disabled} ariaLabel={placeholder} options={[{ value: '', label: placeholder }, ...options]} />;
 }
 
 export default function StadiumPickerModal({ stadiums, onClose, onSelect, onAddWishlist, onOpenStadium }) {

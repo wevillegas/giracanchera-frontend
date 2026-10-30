@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { C, rgba } from '../theme';
 import { plain } from '../utils/text';
+import useDropUp from '../utils/useDropUp';
 
 // Campo de texto con menú de sugerencias: se elige de la lista o se escribe un valor nuevo.
 // options: lista de textos ya existentes. Teclado: escribir filtra, ↑ ↓ mueven, Enter elige, Esc cierra.
@@ -11,6 +12,7 @@ export default function ComboInput({ value, onChange, options, placeholder, requ
   const [navigated, setNavigated] = useState(false); // el usuario movió la selección con las flechas
   const ref = useRef(null);
   const listRef = useRef(null);
+  const dropUp = useDropUp(open, ref, 300);
 
   const query = plain(value);
   const exact = options.some((o) => plain(o) === query);
@@ -87,7 +89,7 @@ export default function ComboInput({ value, onChange, options, placeholder, requ
 
       {open && (shown.length > 0 || isNew) && (
         <div
-          className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-10"
+          className={`absolute left-0 right-0 rounded-xl overflow-hidden z-10 ${dropUp ? 'bottom-full mb-1' : 'mt-1'}`}
           style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, boxShadow: `0 12px 24px ${rgba('#000000', 0.35)}` }}
         >
           <div ref={listRef} role="listbox" className="overflow-y-auto gc-hide-scrollbar" style={{ maxHeight: '200px' }}>

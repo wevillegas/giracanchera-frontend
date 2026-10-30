@@ -8,7 +8,8 @@ import Navbar from './Navbar';
 import { Logo } from './ClubPicker';
 import StadiumArt from './StadiumArt';
 import AdminStatsView from './admin/AdminStatsView';
-import AdminPagination, { paginate, clampPage, filterFieldStyle } from './admin/AdminPagination';
+import AdminPagination, { paginate, clampPage } from './admin/AdminPagination';
+import FilterDropdown from './admin/FilterDropdown';
 import { useAuth } from '../context/AuthContext';
 
 // Elementos por página de cada lista, para que no crezcan sin límite cuando haya más datos
@@ -197,17 +198,13 @@ export default function StatsView({ onBackToMap, navbarProps }) {
           <>
             <Section title="Hinchas por club" subtitle="Cuántos hinchas se anotaron con cada club en su perfil.">
               {(fansCountries.length > 1 || hasNoCountry) && (
-                <select
+                <FilterDropdown
+                  className="mb-5 inline-block"
                   value={fansCountry}
-                  onChange={(e) => { setFansCountry(e.target.value); setFansPage(1); }}
-                  aria-label="Filtrar por país"
-                  className="mb-5 px-3 py-2 rounded-xl text-sm gc-focus"
-                  style={filterFieldStyle}
-                >
-                  <option value="">Todos los países</option>
-                  {fansCountries.map((country) => <option key={country} value={country}>{country}</option>)}
-                  {hasNoCountry && <option value={NO_COUNTRY}>Sin país</option>}
-                </select>
+                  onChange={(v) => { setFansCountry(v); setFansPage(1); }}
+                  ariaLabel="Filtrar por país"
+                  options={[{ value: '', label: 'Todos los países' }, ...fansCountries.map((country) => ({ value: country, label: country })), ...(hasNoCountry ? [{ value: NO_COUNTRY, label: 'Sin país' }] : [])]}
+                />
               )}
 
               {withFans.length === 0 ? (

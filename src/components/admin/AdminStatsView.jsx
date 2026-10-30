@@ -48,7 +48,7 @@ function formatShortDate(label) {
 }
 
 const Card = ({ title, children }) => (
-  <div className="p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+  <div className="p-4 rounded-2xl min-w-0" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
     <p className="text-xs uppercase tracking-widest mb-3" style={{ color: C.muted }}>{title}</p>
     {children}
   </div>
@@ -101,8 +101,8 @@ export default function AdminStatsView() {
   const maxTop = Math.max(1, ...stats.topStadiums.map((s) => s.reviews));
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex gap-2" role="group" aria-label="Período">
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex gap-2 justify-center" role="group" aria-label="Período">
           {PERIODS.map((d) => (
             <button
               key={d}
@@ -115,7 +115,7 @@ export default function AdminStatsView() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-1">
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-1">
           <p className="text-sm" style={{ color: C.bright }}>Reseñas: <strong>{period.visits}</strong> <Delta now={period.visits} prev={period.visitsPrev} /></p>
           <p className="text-sm" style={{ color: C.bright }}>Usuarios nuevos: <strong>{period.newUsers}</strong> <Delta now={period.newUsers} prev={period.newUsersPrev} /></p>
         </div>

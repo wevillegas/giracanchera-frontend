@@ -7,6 +7,7 @@ import adminService from '../../services/adminService';
 import AdminUserEditModal from './AdminUserEditModal';
 import UserActivityModal from './UserActivityModal';
 import AdminPagination, { paginate, clampPage, filterFieldStyle } from './AdminPagination';
+import FilterDropdown from './FilterDropdown';
 import { isAdminRole } from '../../utils/roles';
 
 function initialsOf(name = '') {
@@ -119,25 +120,25 @@ export default function AdminUsersView({ onToast }) {
           className="flex-1 min-w-[180px] px-3 py-2 rounded-xl text-sm outline-none gc-focus"
           style={filterFieldStyle}
         />
-        <select
+        <FilterDropdown
+          className="flex-1 min-w-[9rem] sm:flex-none"
           value={rolFilter}
-          onChange={(e) => { setRolFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 rounded-xl text-sm outline-none gc-focus"
-          style={filterFieldStyle}
-        >
-          <option value="all">Todos</option>
-          <option value="user">Usuarios</option>
-          <option value="admin">Admins</option>
-          <option value="muted">Silenciados</option>
-        </select>
+          onChange={(v) => { setRolFilter(v); setPage(1); }}
+          ariaLabel="Filtrar por tipo de usuario"
+          options={[{ value: 'all', label: 'Todos' }, { value: 'user', label: 'Usuarios' }, { value: 'admin', label: 'Admins' }, { value: 'muted', label: 'Silenciados' }]}
+        />
       </div>
 
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 p-3 mb-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.brandBright}` }}>
           <span className="text-sm font-semibold" style={{ color: C.bright }}>{selected.size} {selected.size === 1 ? 'seleccionado' : 'seleccionados'}</span>
-          <select value={bulkDays} onChange={(e) => setBulkDays(e.target.value)} aria-label="Días de silencio" className="px-2.5 py-1.5 rounded-lg text-xs outline-none gc-focus" style={filterFieldStyle}>
-            {[1, 7, 30, 90].map((d) => <option key={d} value={d}>{d} {d === 1 ? 'día' : 'días'}</option>)}
-          </select>
+          <FilterDropdown
+            compact
+            value={String(bulkDays)}
+            onChange={setBulkDays}
+            ariaLabel="Días de silencio"
+            options={[1, 7, 30, 90].map((d) => ({ value: String(d), label: `${d} ${d === 1 ? 'día' : 'días'}` }))}
+          />
           <button onClick={() => bulkMute(Number(bulkDays))} disabled={bulkBusy} className="px-3 py-1.5 rounded-lg text-xs font-semibold gc-focus disabled:opacity-40" style={{ backgroundColor: '#f85149', color: C.bright }}>Silenciar</button>
           <button onClick={() => bulkMute(0)} disabled={bulkBusy} className="px-3 py-1.5 rounded-lg text-xs font-semibold gc-focus disabled:opacity-40" style={{ border: `1px solid ${C.border}`, color: C.bright }}>Levantar silencio</button>
           <button onClick={() => setSelected(new Set())} className="text-xs ml-auto gc-focus rounded" style={{ color: C.muted }}>Cancelar</button>
