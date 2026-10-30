@@ -66,6 +66,10 @@ export default function StadiumView({
   const [stadiumReviews, setStadiumReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [reviewsPage, setReviewsPage] = useState(1);
+  // Filtro por estrellas (0 = todas); se guarda con el id del estadio para que al cambiar de estadio vuelva a "todas"
+  const [starPick, setStarPick] = useState({ id: stadium.id, stars: 0 });
+  const starFilter = starPick.id === stadium.id ? starPick.stars : 0;
+  const chooseStars = (stars) => { setStarPick({ id: stadium.id, stars }); setReviewsPage(1); };
   const [suggestOpen, setSuggestOpen] = useState(false);
   // La foto elegida se guarda con el id del estadio: al cambiar de estadio vuelve sola a la portada
   const [photoPick, setPhotoPick] = useState({ id: stadium.id, index: 0 });
@@ -89,7 +93,10 @@ export default function StadiumView({
   const isMine = (r) => Boolean(me?._id) && r.user?._id === me._id;
   const myReviews = stadiumReviews.filter(isMine);
   const otherReviews = stadiumReviews.filter((r) => !isMine(r));
-  const orderedReviews = [...myReviews, ...otherReviews];
+  // Las estrellas son las del resumen del estadio: 1-2 puntos = 1 estrella, 3-4 = 2, y así hasta 9-10 = 5
+  const starsOf = (r) => Math.min(5, Math.max(1, Math.ceil((r.rating || 1) / 2)));
+  const starCounts = [1, 2, 3, 4, 5].map((n) => stadiumReviews.filter((r) => starsOf(r) === n).length);
+  const orderedReviews = [...myReviews, ...otherReviews].filter((r) => !starFilter || starsOf(r) === starFilter);
   const reviewsPageSafe = clampPage(reviewsPage, orderedReviews.length, REVIEWS_PAGE_SIZE);
   const pageReviews = paginate(orderedReviews, reviewsPageSafe, REVIEWS_PAGE_SIZE);
 
@@ -499,6 +506,31 @@ export default function StadiumView({
             </div>
 
             <div className="min-w-0">
+              {stadiumReviews.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filtrar reseñas por estrellas">
+                  {[0, 5, 4, 3, 2, 1].map((n) => {
+                    const count = n === 0 ? stadiumReviews.length : starCounts[n - 1];
+                    const active = starFilter === n;
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => chooseStars(n)}
+                        disabled={count === 0 && !active}
+                        aria-pressed={active}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium gc-focus gc-tap disabled:opacity-40"
+                        style={{
+                          backgroundColor: active ? C.brandBright : C.surface,
+                          color: active ? C.bg : C.bright,
+                          border: `1px solid ${active ? C.brandBright : C.border}`,
+                        }}
+                      >
+                        {n === 0 ? 'Todas' : <>{n} <Star size={13} fill={active ? C.bg : C.gold} color={active ? C.bg : C.gold} /></>}
+                        <span className="text-xs font-normal" style={{ color: active ? C.bg : C.muted }}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div className="space-y-3">
                 {reviewsLoading ? (
                   <p className="text-sm text-center py-4" style={{ color: C.muted }}>Cargando reseñas...</p>
@@ -508,6 +540,11 @@ export default function StadiumView({
                 {!reviewsLoading && stadiumReviews.length === 0 && (
                   <p className="text-sm text-center py-6" style={{ color: C.muted }}>
                     Aún no hay reseñas para este estadio. ¡Sé el primero!
+                  </p>
+                )}
+                {!reviewsLoading && stadiumReviews.length > 0 && orderedReviews.length === 0 && (
+                  <p className="text-sm text-center py-6" style={{ color: C.muted }}>
+                    No hay reseñas de {starFilter} {starFilter === 1 ? 'estrella' : 'estrellas'}.
                   </p>
                 )}
               </div>
