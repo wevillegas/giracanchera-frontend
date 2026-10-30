@@ -547,7 +547,7 @@ export default function ProfileView({
                     onClick={() => (isFollowing ? setUnfollowOpen(true) : toggleFollow())}
                     className="px-4 py-1.5 rounded-xl text-xs font-semibold gc-focus gc-tap flex items-center gap-1.5"
                     style={{
-                      backgroundColor: isFollowing ? 'transparent' : C.brand,
+                      backgroundColor: isFollowing ? C.bg : C.brand,
                       border: isFollowing ? `1px solid ${C.border}` : 'none',
                       color: C.bright,
                     }}
