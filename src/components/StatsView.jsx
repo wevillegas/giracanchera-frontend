@@ -8,14 +8,25 @@ import Navbar from './Navbar';
 import { Logo } from './ClubPicker';
 import StadiumArt from './StadiumArt';
 import AdminStatsView from './admin/AdminStatsView';
-import AdminPagination, { paginate, filterFieldStyle } from './admin/AdminPagination';
+import AdminPagination, { paginate, clampPage, filterFieldStyle } from './admin/AdminPagination';
 import { useAuth } from '../context/AuthContext';
 
+// Elementos por página de cada lista, para que no crezcan sin límite cuando haya más datos
 const FANS_PAGE_SIZE = 10;
+const EMPTY_CLUBS_PAGE_SIZE = 30;
+const STADIUMS_PAGE_SIZE = 6; // grilla de 3 por 2
+const RANKING_PAGE_SIZE = 5;
+const PLACES_PAGE_SIZE = 8;
 const NO_COUNTRY = '__none__';
 const card = { backgroundColor: C.surface, border: `1px solid ${C.border}` };
 const SILVER = '#C0C7D0';
 const BRONZE = '#CD7F32';
+// Cada puesto tiene su tamaño: el 1.º es el más grande, el 2.º intermedio y el 3.º el más chico
+const PODIUM_SIZE = {
+  1: { box: 'pt-6 pb-6 sm:pt-8 sm:pb-8', shield: 'w-16 h-16 sm:w-28 sm:h-28', fans: 'text-5xl sm:text-7xl', name: 'text-sm sm:text-lg' },
+  2: { box: 'pt-5 pb-5 sm:pt-7 sm:pb-7', shield: 'w-14 h-14 sm:w-24 sm:h-24', fans: 'text-4xl sm:text-6xl', name: 'text-xs sm:text-base' },
+  3: { box: 'pt-3.5 pb-3.5 sm:pt-5 sm:pb-5', shield: 'w-11 h-11 sm:w-[4.5rem] sm:h-[4.5rem]', fans: 'text-3xl sm:text-5xl', name: 'text-xs sm:text-sm' },
+};
 
 const Section = ({ title, subtitle, children }) => (
   <section className="mt-12">
@@ -42,10 +53,11 @@ function Shield2({ club, className }) {
 // Podio: el primero al centro y más grande, el segundo a su izquierda y el tercero a su derecha
 function PodiumCard({ club, place }) {
   const first = place === 1;
+  const size = PODIUM_SIZE[place];
   const accent = { 1: C.gold, 2: SILVER, 3: BRONZE }[place];
   return (
     <div
-      className={`relative rounded-2xl text-center flex flex-col items-center justify-end px-2 sm:px-4 ${first ? 'pt-6 pb-6 sm:pt-8 sm:pb-8' : 'pt-4 pb-4 sm:pt-6 sm:pb-6'}`}
+      className={`relative rounded-2xl text-center flex flex-col items-center justify-end px-2 sm:px-4 ${size.box}`}
       style={{ backgroundColor: C.surface, border: `1px solid ${first ? accent : C.border}`, boxShadow: first ? `0 0 40px ${rgba(accent, 0.18)}` : 'none' }}
     >
       <span
@@ -54,10 +66,10 @@ function PodiumCard({ club, place }) {
       >
         {place}
       </span>
-      <Shield2 club={club} className={first ? 'w-16 h-16 sm:w-28 sm:h-28' : 'w-12 h-12 sm:w-20 sm:h-20'} />
-      <p className={`mt-3 leading-none ${first ? 'text-5xl sm:text-7xl' : 'text-4xl sm:text-5xl'}`} style={{ fontFamily: DISPLAY_FONT, color: accent }}>{club.fans}</p>
+      <Shield2 club={club} className={size.shield} />
+      <p className={`mt-3 leading-none ${size.fans}`} style={{ fontFamily: DISPLAY_FONT, color: accent }}>{club.fans}</p>
       <p className="text-xs mt-1" style={{ color: C.muted }}>{club.fans === 1 ? 'hincha' : 'hinchas'}</p>
-      <p className={`mt-2 font-semibold leading-tight break-words ${first ? 'text-sm sm:text-lg' : 'text-xs sm:text-sm'}`} style={{ color: C.bright }}>{club.name}</p>
+      <p className={`mt-2 font-semibold leading-tight break-words ${size.name}`} style={{ color: C.bright }}>{club.name}</p>
     </div>
   );
 }
@@ -101,6 +113,10 @@ export default function StatsView({ onBackToMap, navbarProps }) {
   const [fansPage, setFansPage] = useState(1);
   const [fansCountry, setFansCountry] = useState('');
   const [showEmpty, setShowEmpty] = useState(false);
+  const [emptyPage, setEmptyPage] = useState(1);
+  const [stadiumsPage, setStadiumsPage] = useState(1);
+  const [ratedPage, setRatedPage] = useState(1);
+  const [placesPage, setPlacesPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,8 +140,17 @@ export default function StatsView({ onBackToMap, navbarProps }) {
   const podium = withFans.slice(0, 3);
   const rest = withFans.slice(3);
   const maxFans = Math.max(1, ...withFans.map((c) => c.fans));
-  const maxPlaceReviews = Math.max(1, ...(stats?.byPlace || []).map((p) => p.reviews));
   const clubsWithFans = clubFans.filter((c) => c.fans > 0).length;
+  const topReviewed = stats?.topReviewed || [];
+  const topRated = stats?.topRated || [];
+  const byPlace = stats?.byPlace || [];
+  const maxPlaceReviews = Math.max(1, ...byPlace.map((p) => p.reviews));
+  // Página efectiva de cada lista: nunca pasa de la última aunque los datos cambien
+  const pageOf = (page, total, size) => clampPage(page, total, size);
+  const emptyPageNow = pageOf(emptyPage, withoutFans.length, EMPTY_CLUBS_PAGE_SIZE);
+  const stadiumsPageNow = pageOf(stadiumsPage, topReviewed.length, STADIUMS_PAGE_SIZE);
+  const ratedPageNow = pageOf(ratedPage, topRated.length, RANKING_PAGE_SIZE);
+  const placesPageNow = pageOf(placesPage, byPlace.length, PLACES_PAGE_SIZE);
 
   const tiles = [
     { label: 'Hinchas', value: totals?.users, Icon: Users, big: true },
@@ -212,7 +237,7 @@ export default function StatsView({ onBackToMap, navbarProps }) {
               {withoutFans.length > 0 && (
                 <div className="mt-5">
                   <button
-                    onClick={() => setShowEmpty((v) => !v)}
+                    onClick={() => { setShowEmpty((v) => !v); setEmptyPage(1); }}
                     aria-expanded={showEmpty}
                     className="flex items-center gap-1.5 text-sm gc-focus rounded-lg"
                     style={{ color: C.muted }}
@@ -221,22 +246,28 @@ export default function StatsView({ onBackToMap, navbarProps }) {
                     {showEmpty ? 'Ocultar' : 'Ver'} los {withoutFans.length} clubes sin hinchas todavía
                   </button>
                   {showEmpty && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {withoutFans.map((club) => (
-                        <span key={club.id} className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full text-xs" style={{ ...card, color: C.bright }}>
-                          <Logo url={club.logoUrl} size={22} /> {club.name}
-                        </span>
-                      ))}
-                    </div>
+                    <>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {paginate(withoutFans, emptyPageNow, EMPTY_CLUBS_PAGE_SIZE).map((club) => (
+                          <span key={club.id} className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full text-xs" style={{ ...card, color: C.bright }}>
+                            <Logo url={club.logoUrl} size={22} /> {club.name}
+                          </span>
+                        ))}
+                      </div>
+                      <AdminPagination page={emptyPageNow} total={withoutFans.length} pageSize={EMPTY_CLUBS_PAGE_SIZE} onChange={setEmptyPage} />
+                    </>
                   )}
                 </div>
               )}
             </Section>
 
             <Section title="Estadios más reseñados">
-              {stats.topReviewed.length === 0 ? <Empty /> : (
+              {topReviewed.length === 0 ? <Empty /> : (
+                <>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {stats.topReviewed.map((s, i) => (
+                  {paginate(topReviewed, stadiumsPageNow, STADIUMS_PAGE_SIZE).map((s, index) => {
+                    const i = (stadiumsPageNow - 1) * STADIUMS_PAGE_SIZE + index; // puesto real, no el de la página
+                    return (
                     <div key={s.id} className="rounded-2xl overflow-hidden flex flex-col" style={card}>
                       <div className="relative h-28 shrink-0" style={{ backgroundColor: C.bg }}>
                         {s.imageUrl
@@ -258,46 +289,33 @@ export default function StatsView({ onBackToMap, navbarProps }) {
                         </p>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
+                <AdminPagination page={stadiumsPageNow} total={topReviewed.length} pageSize={STADIUMS_PAGE_SIZE} onChange={setStadiumsPage} />
+                </>
               )}
             </Section>
 
-            <div className="grid md:grid-cols-2 gap-x-6">
-              <Section title="Mejor puntuados" subtitle="Estadios con al menos 3 reseñas.">
-                <div className="rounded-2xl overflow-hidden" style={card}>
-                  {stats.topRated.length === 0 ? <div className="p-4"><Empty /></div> : stats.topRated.map((s, i) => (
-                    <RankRow
-                      key={s.id}
-                      position={i + 1}
-                      title={s.name}
-                      subtitle={`${s.reviews} reseñas`}
-                      logoUrl={s.clubLogoUrl || undefined}
-                      value={`${s.avgRating}/10`}
-                    />
-                  ))}
-                </div>
-              </Section>
-
-              <Section title="Clubes con más reseñas" subtitle="Suma de las reseñas de sus estadios.">
-                <div className="rounded-2xl overflow-hidden" style={card}>
-                  {stats.topClubs.length === 0 ? <div className="p-4"><Empty /></div> : stats.topClubs.map((c, i) => (
-                    <RankRow
-                      key={c.name}
-                      position={i + 1}
-                      title={c.name}
-                      subtitle={`${c.stadiums} ${c.stadiums === 1 ? 'estadio' : 'estadios'}`}
-                      logoUrl={c.logoUrl || undefined}
-                      value={`${c.reviews} reseñas`}
-                    />
-                  ))}
-                </div>
-              </Section>
-            </div>
+            <Section title="Mejor puntuados" subtitle="Estadios con al menos 3 reseñas.">
+              <div className="rounded-2xl overflow-hidden" style={card}>
+                {topRated.length === 0 ? <div className="p-4"><Empty /></div> : paginate(topRated, ratedPageNow, RANKING_PAGE_SIZE).map((s, i) => (
+                  <RankRow
+                    key={s.id}
+                    position={(ratedPageNow - 1) * RANKING_PAGE_SIZE + i + 1}
+                    title={s.name}
+                    subtitle={`${s.reviews} reseñas`}
+                    logoUrl={s.clubLogoUrl || undefined}
+                    value={`${s.avgRating}/10`}
+                  />
+                ))}
+              </div>
+              <AdminPagination page={ratedPageNow} total={topRated.length} pageSize={RANKING_PAGE_SIZE} onChange={setRatedPage} />
+            </Section>
 
             <Section title="Por provincia y ciudad">
               <div className="rounded-2xl p-4 sm:p-5 space-y-4" style={card}>
-                {stats.byPlace.length === 0 ? <Empty /> : stats.byPlace.map((p) => (
+                {byPlace.length === 0 ? <Empty /> : paginate(byPlace, placesPageNow, PLACES_PAGE_SIZE).map((p) => (
                   <div key={p.place}>
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span className="flex items-center gap-1.5 min-w-0" style={{ color: C.bright }}><MapPin size={13} color={C.muted} className="shrink-0" /> {p.place}</span>
@@ -309,6 +327,7 @@ export default function StatsView({ onBackToMap, navbarProps }) {
                   </div>
                 ))}
               </div>
+              <AdminPagination page={placesPageNow} total={byPlace.length} pageSize={PLACES_PAGE_SIZE} onChange={setPlacesPage} />
             </Section>
           </>
         )}

@@ -12,9 +12,9 @@ export function clampPage(page, total, size = PAGE_SIZE) {
   return Math.min(page, Math.max(1, Math.ceil(total / size)));
 }
 
-// Se muestra desde pageSize elementos en adelante
+// Solo se muestra si hay más de una página
 export default function AdminPagination({ page, total, onChange, pageSize = PAGE_SIZE }) {
-  if (total < pageSize) return null;
+  if (total <= pageSize) return null;
 
   const pages = Math.ceil(total / pageSize);
   const btnStyle = { color: C.brandBright, border: `1px solid ${C.border}`, backgroundColor: C.surface };
