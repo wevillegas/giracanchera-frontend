@@ -4,12 +4,15 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Minus, Plus } from 'lucide-react';
 import { C, rgba } from '../theme';
 import { userCountryCode, sameCountry } from '../utils/userCountry';
+import { distanceKm } from '../utils/distance';
 
 // MapLibre usa [lng, lat] y su zoom va uno por debajo del de Leaflet (tiles de 512 px)
 const ARGENTINA_CENTER = [-58.38, -34.6];
 const ARGENTINA_ZOOM = 3.7;
 const FOCUS_ZOOM = 16; // se ve el estadio y sus alrededores inmediatos, para ubicarlo en el barrio
-const FOCUS_MS = 1500; // viaje al estadio y a un grupo: suave pero ágil
+const FOCUS_MS = 1800; // viaje corto al estadio o a un grupo: pausado, para dar tiempo a que carguen los mosaicos
+const FOCUS_MAX_MS = 2800; // viaje largo (otro país): hasta esta duración
+const FOCUS_FAR_KM = 2000; // a partir de esta distancia el viaje dura lo máximo
 const FOCUS_CURVE = 1.1; // más bajo = menos "salto" de alejar y volver a acercar (por defecto 1.42)
 const BUTTON_ZOOM_MS = 600; // botones + y −
 // Arranque y llegada suaves (ease in-out cúbico): el movimiento nunca empieza ni termina de golpe
@@ -29,6 +32,8 @@ const SPIN_DEGREES = 20;
 const SPIN_MS = 8000;
 const SPIN_RESUME_MS = 2500;
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Cuanto más lejos el destino, más largo el viaje (entre FOCUS_MS y FOCUS_MAX_MS)
+const focusDuration = (from, to) => FOCUS_MS + (FOCUS_MAX_MS - FOCUS_MS) * Math.min(1, distanceKm(from, to) / FOCUS_FAR_KM);
 const minZoomFor = (el) => Math.log2((Math.PI * GLOBE_FILL * Math.min(el.clientWidth, el.clientHeight)) / 512);
 
 // Vite no deja a MapLibre ubicar su worker por la URL del módulo (en desarrollo lo transforma y falla).
@@ -234,7 +239,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
       }
       for (const [key, { f, cluster, count }] of visible) {
         if (markers.has(key)) continue;
-        const [lng, lat] = f.geometry.coordinates;
+        let [lng, lat] = f.geometry.coordinates;
         let el;
         if (cluster) {
           el = buildClusterElement(count);
@@ -246,6 +251,9 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
         } else {
           const stadium = latest.current.stadiums.find((s) => String(s.id) === String(f.properties.id));
           if (!stadium) continue;
+          // Las coordenadas de los mosaicos vienen redondeadas según el zoom en que se leyeron (de cientos de metros
+          // a baja altura): un pin creado con ellas queda corrido al acercarse. Se usan las reales del estadio.
+          ({ lng, lat } = stadium.location.coordinates);
           el = buildStadiumElement(stadium);
           el.addEventListener('click', () => latest.current.onOpenStadium(stadium));
         }
@@ -331,7 +339,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
     map.flyTo({
       center: [flyTarget.lng, flyTarget.lat],
       zoom: Math.max(map.getZoom(), FOCUS_ZOOM),
-      duration: reducedMotion() ? 0 : FOCUS_MS,
+      duration: reducedMotion() ? 0 : focusDuration({ lat, lng }, flyTarget),
       curve: FOCUS_CURVE,
       easing: smooth,
     });
