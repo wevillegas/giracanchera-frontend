@@ -596,6 +596,10 @@ export default function App() {
             setPickerOpen(false);
             toggleWishlist(s.id);
           }}
+          onOpenStadium={(s) => {
+            setPickerOpen(false);
+            openStadiumPage(s, 'map');
+          }}
         />
       )}
 
