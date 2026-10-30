@@ -504,7 +504,7 @@ export default function ProfileView({
 
         {/* Cabecera: avatar + nombre a la izquierda, estadísticas en fila a la derecha */}
         <header className="relative flex flex-col md:flex-row md:items-center gap-6 rounded-3xl overflow-hidden p-5 sm:p-8" style={cardStyle}>
-          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: headerColors ? `linear-gradient(135deg, ${rgba(headerColors[0], 0.55)}, ${rgba(headerColors[1], 0.55)})` : `radial-gradient(circle at 85% 0%, ${rgba(C.brandBright, 0.22)}, transparent 55%), radial-gradient(circle at 0% 100%, ${rgba(C.gold, 0.1)}, transparent 50%)` }} />
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: headerColors ? `linear-gradient(135deg, ${rgba(headerColors[0], 0.28)}, ${rgba(headerColors[1], 0.28)})` : `radial-gradient(circle at 85% 0%, ${rgba(C.brandBright, 0.22)}, transparent 55%), radial-gradient(circle at 0% 100%, ${rgba(C.gold, 0.1)}, transparent 50%)` }} />
           <div className="relative flex items-center gap-4 min-w-0 flex-1">
             <div className="relative shrink-0">
               {displayedProfile?.avatarUrl ? (
