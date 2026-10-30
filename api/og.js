@@ -2,7 +2,7 @@
 // Las personas siguen recibiendo la app normal. Necesita la variable de entorno API_URL (la URL del backend, sin / final).
 import { buildOgHtml } from './_og.js';
 
-const ID = /^[a-f\d]{24}$/i;
+const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; // id de estadio (UUID)
 
 export default async function handler(req, res) {
   const { id } = req.query;
