@@ -33,7 +33,7 @@ export default function AdminClubsView({ onToast }) {
     const q = query.trim().toLowerCase();
     const loc = locationQuery.trim().toLowerCase();
     return clubs.filter((c) => {
-      const matchesText = !q || c.name?.toLowerCase().includes(q) || c.shortName?.toLowerCase().includes(q);
+      const matchesText = !q || c.name?.toLowerCase().includes(q);
       const matchesLocation = !loc || c.location?.toLowerCase().includes(loc);
       return matchesText && matchesLocation;
     });
@@ -135,13 +135,13 @@ export default function AdminClubsView({ onToast }) {
                 <img src={club.logoUrl} alt={club.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
               ) : (
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style={{ backgroundColor: C.brand, color: C.bright }}>
-                  {club.shortName?.charAt(0)?.toUpperCase() || club.name.charAt(0).toUpperCase()}
+                  {club.name.charAt(0).toUpperCase()}
                 </div>
               )}
 
               <div className="min-w-0 flex-1">
                 <span className="block text-sm font-medium truncate" style={{ color: C.bright }}>
-                  {club.name}{club.shortName ? ` · ${club.shortName}` : ''}
+                  {club.name}
                 </span>
                 {club.location && (
                   <span className="flex items-center gap-1 text-xs truncate" style={{ color: C.muted }}>

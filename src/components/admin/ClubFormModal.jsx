@@ -4,13 +4,12 @@ import { X, AlertCircle, Camera } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 
-const emptyForm = { name: '', shortName: '', location: '' };
+const emptyForm = { name: '', location: '' };
 
 function toFormState(club) {
   if (!club) return emptyForm;
   return {
     name: club.name || '',
-    shortName: club.shortName || '',
     location: club.location || '',
   };
 }
@@ -52,7 +51,6 @@ export default function ClubFormModal({ club, onClose, onSaved }) {
 
     const formData = new FormData();
     formData.append('name', name);
-    formData.append('shortName', form.shortName.trim());
     formData.append('location', form.location.trim());
     if (logoFile) {
       formData.append('logo', logoFile);
@@ -128,17 +126,6 @@ export default function ClubFormModal({ club, onClose, onSaved }) {
               value={form.name}
               onChange={(e) => update('name', e.target.value)}
               required
-              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
-              style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium" style={{ color: C.muted }}>Apodo / nombre corto</span>
-            <input
-              value={form.shortName}
-              onChange={(e) => update('shortName', e.target.value)}
-              placeholder="Ej: Boca"
               className="w-full px-3 py-2.5 rounded-xl text-sm outline-none gc-focus"
               style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.bright }}
             />

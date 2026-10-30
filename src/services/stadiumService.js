@@ -17,7 +17,7 @@ function normalizeStadium(raw) {
     mainClubId: raw.mainClub?._id ?? raw.mainClub ?? null,
     imageUrl: raw.imageUrl ?? '',
     name: raw.name,
-    club: raw.club ?? raw.mainClub?.shortName ?? raw.mainClub?.name ?? '',
+    club: raw.club ?? raw.mainClub?.name ?? '',
     clubLogoUrl: raw.clubLogoUrl ?? raw.mainClub?.logoUrl ?? '',
     city: buildCityLabel(raw),
     province: raw.location?.province ?? '',
