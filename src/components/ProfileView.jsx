@@ -1,6 +1,6 @@
 import ConfirmModal from './ConfirmModal';
 import { useEffect, useState } from 'react';
-import { ChevronLeft, MapPin, Edit3, Users, UserPlus, Star, AlertCircle, Cake, CalendarDays, Landmark, Pencil, Trash2, Search, Check, X } from 'lucide-react';
+import { ChevronLeft, EyeOff, MapPin, Edit3, Users, UserPlus, Star, AlertCircle, Cake, CalendarDays, Landmark, Pencil, Trash2, Search, Check, X } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney } from '../theme';
 import { isAdminRole } from '../utils/roles';
 import { useAuth } from '../context/AuthContext';
@@ -633,6 +633,11 @@ export default function ProfileView({
                               <span className="absolute z-[3] top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: rgba(C.bg, 0.75), color: C.gold }}>
                                 <Star size={12} fill={C.gold} color={C.gold} /> {v.rating}/10
                               </span>
+                              {v.hidden && (
+                                <span className="absolute z-[3] top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: rgba('#f85149', 0.9), color: C.bright }}>
+                                  <EyeOff size={12} /> Oculta
+                                </span>
+                              )}
                               {v.stadium?.imageUrl ? (
                                 <img src={v.stadium.imageUrl} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-sm scale-110" />
                               ) : (
@@ -670,6 +675,11 @@ export default function ProfileView({
                               </button>
                               <div className="block w-full text-left">
                                 <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: C.muted }}><CalendarDays size={11} /> {formatVisitDate(v.visitDate)}</p>
+                                {v.hidden && (
+                                  <p className="text-xs mt-2 leading-snug" style={{ color: '#f85149' }}>
+                                    Un administrador ocultó esta reseña{v.hiddenReason ? `: ${v.hiddenReason}` : '.'} Solo la ves vos.
+                                  </p>
+                                )}
                                 <p
                                   className="text-xs mt-2 leading-snug"
                                   style={{ color: C.muted, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}

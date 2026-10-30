@@ -1,6 +1,6 @@
 import ConfirmModal from './ConfirmModal';
 import { Fragment, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, MapPin, Pencil, Heart, Bookmark, Flag, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, EyeOff, CalendarDays, Trophy, Ticket, UtensilsCrossed, Car, Bus, Images, MapPin, Pencil, Heart, Bookmark, Flag, Trash2 } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT, formatMoney, sumExpenses } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { isAdminRole } from '../utils/roles';
@@ -292,6 +292,17 @@ export default function VisitView({ visit, stadium: stadiumData, onBack, onOpenS
                     {adminDeleting ? 'Eliminando...' : 'Confirmar eliminación'}
                   </button>
                   <button onClick={() => { setAdminDeleteOpen(false); setAdminDeleteError(''); }} className="text-xs" style={{ color: C.muted }}>Cancelar</button>
+                </div>
+              </div>
+            )}
+
+            {visit.hidden && isOwn && (
+              <div className="flex items-start gap-3 p-4 rounded-3xl" style={{ backgroundColor: rgba('#f85149', 0.1), border: `1px solid ${rgba('#f85149', 0.5)}` }}>
+                <EyeOff size={18} color="#f85149" className="shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: C.bright }}>Un administrador ocultó esta reseña</p>
+                  {visit.hiddenReason && <p className="text-sm mt-1 [overflow-wrap:anywhere]" style={{ color: C.muted }}>Motivo: {visit.hiddenReason}</p>}
+                  <p className="text-xs mt-1.5" style={{ color: C.muted }}>Solo la ves vos: no aparece en la ficha del estadio ni en las estadísticas. Si no estás de acuerdo, podés editarla o eliminarla.</p>
                 </div>
               </div>
             )}
