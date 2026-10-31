@@ -162,6 +162,13 @@ export default function RegisterModal({ onClose, onSwitchToLogin, onSuccess }) {
             {submitting ? 'Creando cuenta...' : 'Crear cuenta'}
           </button>
 
+          <p className="text-center text-xs leading-relaxed" style={{ color: C.muted }}>
+            Al crear tu cuenta, tu perfil y tus reseñas son públicos.{' '}
+            <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2 gc-focus rounded" style={{ color: C.brandBright }}>
+              Qué datos guardamos
+            </a>
+          </p>
+
           <p className="text-center text-sm" style={{ color: C.muted }}>
             ¿Ya tenés cuenta?{' '}
             <button type="button" onClick={onSwitchToLogin} className="font-semibold gc-focus" style={{ color: C.brandBright }}>

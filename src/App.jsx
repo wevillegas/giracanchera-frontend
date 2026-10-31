@@ -10,6 +10,7 @@ import userService from './services/userService';
 import MapSection from './components/MapSection';
 import ProfileView from './components/ProfileView';
 import AboutView from './components/AboutView';
+import PrivacyView from './components/PrivacyView';
 import StatsView from './components/StatsView';
 import StadiumView from './components/StadiumView';
 import VisitView from './components/VisitView';
@@ -27,9 +28,12 @@ const expenseFields = [
   { key: 'transporte', label: 'Transporte / otros', Icon: Bus },
 ];
 
+const PRIVACY_PATH = '/privacidad';
+
 export default function App() {
   const { user } = useAuth();
-  const [view, setView] = useState('map'); // 'map' | 'profile' | 'stadium' | 'visit'
+  // 'map' | 'profile' | 'stadium' | 'visit' | 'about' | 'privacy'... La privacidad tiene su propia dirección (/privacidad)
+  const [view, setView] = useState(() => (window.location.pathname === PRIVACY_PATH ? 'privacy' : 'map'));
   const [cameFrom, setCameFrom] = useState('map');
   const [activeVisit, setActiveVisit] = useState(null);
   const [profileOpenCount, setProfileOpenCount] = useState(0); // cambia cada vez que se elige un usuario en el buscador, aunque sea el mismo
@@ -94,7 +98,7 @@ export default function App() {
   // La URL sigue a la página del estadio: al abrirla pasa a /estadio/<id> y al salir vuelve a /
   useEffect(() => {
     if (deepLinkId.current) return;
-    const path = view === 'stadium' && activeStadium ? stadiumPath(activeStadium.id) : '/';
+    const path = view === 'stadium' && activeStadium ? stadiumPath(activeStadium.id) : view === 'privacy' ? PRIVACY_PATH : '/';
     if (path !== window.location.pathname) window.history.pushState(null, '', path);
   }, [view, activeStadium]);
 
@@ -104,7 +108,8 @@ export default function App() {
       const id = stadiumIdFromPath(window.location.pathname);
       const match = id && stadiums.find((s) => s.id === id);
       if (match) openStadiumPage(match, 'map');
-      else if (view === 'stadium') goToMap();
+      else if (window.location.pathname === PRIVACY_PATH) setView('privacy');
+      else if (view === 'stadium' || view === 'privacy') goToMap();
     }
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -422,6 +427,30 @@ export default function App() {
 
       {view === 'about' && (
         <AboutView
+          onBackToMap={goToMap}
+          onOpenPrivacy={() => setView('privacy')}
+          navbarProps={{
+            query,
+            onQueryChange: setQuery,
+            filter,
+            onFilterChange: selectFilterFromElsewhere,
+            onOpenProfile: () => setView('profile'),
+            onOpenUserProfile: openUserProfile,
+            searchResults,
+            onSelectSearchResult: selectSearchResult,
+            onGoHome: goToMap,
+            onOpenAdmin: () => setView('admin'),
+            onOpenAbout: () => setView('about'),
+            onOpenStats: () => setView('stats'),
+            onAuthSuccess: setToast,
+            authModal,
+            onAuthModalChange: setAuthModal,
+          }}
+        />
+      )}
+
+      {view === 'privacy' && (
+        <PrivacyView
           onBackToMap={goToMap}
           navbarProps={{
             query,

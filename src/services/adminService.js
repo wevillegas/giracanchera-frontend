@@ -10,6 +10,12 @@ async function updateUser(id, updates) {
   return data;
 }
 
+// Devuelve { tempPassword }: contraseña temporal para pasarle al usuario (se muestra una sola vez)
+async function resetUserPassword(id) {
+  const { data } = await api.post(`/users/admin/${id}/reset-password`);
+  return data;
+}
+
 async function deleteUser(id) {
   const { data } = await api.delete(`/users/admin/${id}`);
   return data;
@@ -115,7 +121,7 @@ async function getUserActivity(id) {
 }
 
 const adminService = {
-  getUsers, updateUser, deleteUser,
+  getUsers, updateUser, deleteUser, resetUserPassword,
   getSuggestions, resolveSuggestion, startWikidataImport, getWikidataImport,
   getStadiums, getStadiumDrafts, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,
@@ -124,7 +130,7 @@ const adminService = {
 
 export default adminService;
 export {
-  getUsers, updateUser, deleteUser,
+  getUsers, updateUser, deleteUser, resetUserPassword,
   getSuggestions, resolveSuggestion,
   getStadiums, getStadiumDrafts, uploadStadiumImage, createStadium, updateStadium, deleteStadium,
   getClubs, createClub, updateClub, deleteClub,

@@ -42,9 +42,9 @@ const COMING = [
   { title: 'Avisos de moderación', text: 'Que te avisen si una reseña tuya fue ocultada o tu cuenta silenciada, con la opción de apelar.', Icon: Bell },
 ];
 
-const card = { backgroundColor: C.surface, border: `1px solid ${C.border}` };
+export const card = { backgroundColor: C.surface, border: `1px solid ${C.border}` };
 
-const Section = ({ title, subtitle, children }) => (
+export const Section = ({ title, subtitle, children }) => (
   <section className="mt-12">
     <h2 className="text-2xl sm:text-3xl leading-none" style={{ fontFamily: DISPLAY_FONT, color: C.bright, letterSpacing: '0.02em' }}>{title}</h2>
     {subtitle && <p className="text-sm mt-2" style={{ color: C.muted }}>{subtitle}</p>}
@@ -52,13 +52,13 @@ const Section = ({ title, subtitle, children }) => (
   </section>
 );
 
-const IconBadge = ({ Icon }) => (
+export const IconBadge = ({ Icon }) => (
   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: rgba(C.brandBright, 0.12), color: C.brandBright }}>
     <Icon size={18} />
   </div>
 );
 
-export default function AboutView({ onBackToMap, navbarProps }) {
+export default function AboutView({ onBackToMap, onOpenPrivacy, navbarProps }) {
   // Números del proyecto tomados de la base, para que se actualicen solos
   const [totals, setTotals] = useState(null);
 
@@ -205,6 +205,13 @@ export default function AboutView({ onBackToMap, navbarProps }) {
             </div>
           </div>
         </Section>
+
+        <p className="mt-10 text-center text-sm" style={{ color: C.muted }}>
+          ¿Qué datos guarda la app y quién los ve?{' '}
+          <button type="button" onClick={onOpenPrivacy} className="font-semibold underline underline-offset-2 gc-focus rounded" style={{ color: C.brandBright }}>
+            Privacidad
+          </button>
+        </p>
       </div>
     </div>
   );

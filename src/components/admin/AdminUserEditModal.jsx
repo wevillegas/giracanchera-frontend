@@ -1,6 +1,6 @@
 import ConfirmModal from '../ConfirmModal';
 import { useEffect, useState } from 'react';
-import { X, AlertCircle, Shield } from 'lucide-react';
+import { X, AlertCircle, Shield, KeyRound, Copy, Check } from 'lucide-react';
 import { C, rgba, DISPLAY_FONT } from '../../theme';
 import adminService from '../../services/adminService';
 import clubService from '../../services/clubService';
@@ -29,6 +29,30 @@ export default function AdminUserEditModal({ user, onClose, onSaved }) {
   }, []);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Reiniciar la contraseña: mismos límites que el backend (no la propia, no un superadmin, un admin solo si soy superadmin)
+  const canResetPassword = user._id !== me?._id && user.rol !== 'superadmin' && (user.rol !== 'admin' || isSuperAdmin(me?.rol));
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [tempPassword, setTempPassword] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  async function resetPassword() {
+    setError('');
+    setResetting(true);
+    try {
+      const { tempPassword: password } = await adminService.resetUserPassword(user._id);
+      setTempPassword(password);
+    } catch (err) {
+      setError(err.response?.data?.message || 'No pudimos reiniciar la contraseña.');
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  function copyPassword() {
+    navigator.clipboard?.writeText(tempPassword).then(() => setCopied(true)).catch(() => {});
+  }
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -66,6 +90,16 @@ export default function AdminUserEditModal({ user, onClose, onSaved }) {
           </button>
         </div>
 
+        {resetConfirmOpen && (
+          <ConfirmModal
+            danger
+            title={`¿Reiniciar la contraseña de @${user.username}?`}
+            message="Se genera una contraseña temporal y se cierran sus sesiones abiertas. La contraseña actual deja de funcionar."
+            confirmLabel="Reiniciar contraseña"
+            onConfirm={() => { setResetConfirmOpen(false); resetPassword(); }}
+            onCancel={() => setResetConfirmOpen(false)}
+          />
+        )}
         {confirmOpen && (
           <ConfirmModal
             title="¿Guardar cambios de este usuario?"
@@ -171,6 +205,43 @@ export default function AdminUserEditModal({ user, onClose, onSaved }) {
                 ))}
               </select>
             </label>
+          )}
+
+          {canResetPassword && (
+            <div className="flex flex-col gap-2 p-4 rounded-2xl" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+              <span className="text-xs font-medium flex items-center gap-1.5" style={{ color: C.muted }}><KeyRound size={13} /> Contraseña</span>
+              {tempPassword ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 min-w-0 px-3 py-2.5 rounded-xl text-base tracking-wider select-all break-all" style={{ backgroundColor: C.bg, border: `1px solid ${C.brandBright}`, color: C.bright }}>
+                      {tempPassword}
+                    </code>
+                    <button type="button" onClick={copyPassword} aria-label="Copiar contraseña" className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center gc-focus gc-tap" style={{ backgroundColor: C.brand }}>
+                      {copied ? <Check size={16} color={C.bright} /> : <Copy size={16} color={C.bright} />}
+                    </button>
+                  </div>
+                  <p className="text-xs leading-relaxed" style={{ color: C.muted }}>
+                    Pasásela a @{user.username} por un medio privado. <strong style={{ color: C.bright }}>Se muestra una sola vez.</strong> Al entrar,
+                    que la cambie por una propia desde Editar perfil.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs leading-relaxed" style={{ color: C.muted }}>
+                    Si olvidó su contraseña, generá una temporal para pasársela. Sus sesiones abiertas se cierran.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setResetConfirmOpen(true)}
+                    disabled={resetting}
+                    className="self-start px-4 py-2 rounded-xl text-sm font-semibold gc-focus gc-tap disabled:opacity-50"
+                    style={{ border: `1px solid ${C.border}`, color: C.bright }}
+                  >
+                    {resetting ? 'Reiniciando...' : 'Reiniciar contraseña'}
+                  </button>
+                </>
+              )}
+            </div>
           )}
 
           <button
