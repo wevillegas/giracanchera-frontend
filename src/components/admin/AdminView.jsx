@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Users, LandPlot, Shield, Flag, Activity, ScrollText, PenLine, LayoutDashboard, MessageSquareText, Images } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, Users, LandPlot, Shield, Flag, Activity, ScrollText, PenLine, LayoutDashboard, MessageSquareText, Images } from 'lucide-react';
 import { C, DISPLAY_FONT } from '../../theme';
 import Navbar from '../Navbar';
+import ScrollStrip from '../ScrollStrip';
 import AdminOverviewView from './AdminOverviewView';
 import AdminMediaView from './AdminMediaView';
 import AdminVisitsView from './AdminVisitsView';
@@ -26,67 +27,27 @@ const TABS = [
   { key: 'audit', label: 'Auditoría', Icon: ScrollText },
 ];
 
-// Pestañas en una fila que se desplaza; las flechas de los costados aparecen solo cuando hay más botones fuera de la vista
+// Pestañas del panel en una fila que se desplaza (con flechas cuando no entran todas)
 function TabStrip({ tabs, active, onChange }) {
-  const ref = useRef(null);
-  const [edges, setEdges] = useState({ left: false, right: false });
-
-  const update = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    setEdges({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
-  }, []);
-
-  useEffect(() => {
-    const el = ref.current;
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [update]);
-
-  // La pestaña elegida (por ejemplo desde el resumen) se trae a la vista
-  useEffect(() => {
-    ref.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
-  }, [active]);
-
-  const scrollBy = (direction) => ref.current.scrollBy({ left: direction * ref.current.clientWidth * 0.6, behavior: 'smooth' });
-  const arrow = (side, Icon, label, direction) => (
-    <button
-      onClick={() => scrollBy(direction)}
-      aria-label={label}
-      className={`absolute ${side}-0 top-0 bottom-1 w-12 hidden sm:flex items-center ${side === 'left' ? 'justify-start' : 'justify-end'} z-10 gc-focus`}
-      style={{ background: `linear-gradient(to ${side === 'left' ? 'right' : 'left'}, ${C.bg} 55%, transparent)` }}
-    >
-      <span className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-        <Icon size={16} color={C.bright} />
-      </span>
-    </button>
-  );
-
   return (
-    <div className="relative mt-5 mb-6">
-      {edges.left && arrow('left', ChevronLeft, 'Ver pestañas anteriores', -1)}
-      <div ref={ref} onScroll={update} role="tablist" className="flex items-center gap-2 overflow-x-auto gc-hide-scrollbar pb-1">
-        {tabs.map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={active === key}
-            onClick={() => onChange(key)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap shrink-0 gc-focus gc-tap"
-            style={{
-              backgroundColor: active === key ? C.brandBright : C.surface,
-              color: active === key ? C.bg : C.muted,
-              border: `1px solid ${active === key ? C.brandBright : C.border}`,
-            }}
-          >
-            <Icon size={14} /> {label}
-          </button>
-        ))}
-      </div>
-      {edges.right && arrow('right', ChevronRight, 'Ver más pestañas', 1)}
-    </div>
+    <ScrollStrip active={active} className="mt-5 mb-6">
+      {tabs.map(({ key, label, Icon }) => (
+        <button
+          key={key}
+          role="tab"
+          aria-selected={active === key}
+          onClick={() => onChange(key)}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap shrink-0 gc-focus gc-tap"
+          style={{
+            backgroundColor: active === key ? C.brandBright : C.surface,
+            color: active === key ? C.bg : C.muted,
+            border: `1px solid ${active === key ? C.brandBright : C.border}`,
+          }}
+        >
+          <Icon size={14} /> {label}
+        </button>
+      ))}
+    </ScrollStrip>
   );
 }
 

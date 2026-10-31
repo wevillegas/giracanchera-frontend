@@ -10,6 +10,7 @@ import StadiumArt from './StadiumArt';
 import EditProfileModal from './EditProfileModal';
 import PhotoLightbox from './PhotoLightbox';
 import Navbar from './Navbar';
+import ScrollStrip from './ScrollStrip';
 import AdminPagination, { paginate, clampPage } from './admin/AdminPagination';
 import { useLogoColors } from '../utils/logoColors';
 
@@ -580,14 +581,16 @@ export default function ProfileView({
         </header>
 
         {/* Pestañas: "Perfil" muestra todo, las demás filtran */}
-        <nav className="flex gap-2 overflow-x-auto gc-hide-scrollbar mt-5 pb-1">
+        <ScrollStrip active={tab} className="mt-5">
           {[...TABS, ...(isOwn ? OWN_ONLY_TABS : [])].map((t) => {
             const active = tab === t.key;
             return (
               <button
                 key={t.key}
+                role="tab"
+                aria-selected={active}
                 onClick={() => setTab(t.key)}
-                className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold gc-focus gc-tap"
+                className="shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold gc-focus gc-tap"
                 style={{
                   backgroundColor: active ? C.brandBright : rgba(C.surface, 0.9),
                   color: active ? C.bg : C.muted,
@@ -598,7 +601,7 @@ export default function ProfileView({
               </button>
             );
           })}
-        </nav>
+        </ScrollStrip>
 
         <div className="grid md:grid-cols-[1fr_280px] gap-8 mt-8 items-start">
           <main className="min-w-0 space-y-10">
