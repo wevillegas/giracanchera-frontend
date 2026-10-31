@@ -35,7 +35,7 @@ export default function Footer({ onOpenAbout }) {
 
         <div className="flex flex-col gap-2 text-xs">
           <span className="font-semibold uppercase tracking-wide" style={{ color: C.muted, fontSize: '11px' }}>Stack</span>
-          <span style={{ color: C.bright }}>MongoDB · Express</span>
+          <span style={{ color: C.bright }}>PostgreSQL · Express</span>
           <span style={{ color: C.bright }}>React · Node.js</span>
         </div>
       </div>

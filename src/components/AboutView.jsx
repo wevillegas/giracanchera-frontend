@@ -24,13 +24,13 @@ const FEATURES = [
 ];
 
 const STACK = [
-  { group: 'Frontend', Icon: Code2, items: ['React 19', 'Vite 8', 'Tailwind CSS 3', 'MapLibre GL', 'Lucide'] },
-  { group: 'Backend', Icon: Server, items: ['Node.js', 'Express 5', 'JWT y bcrypt', 'Helmet', 'Cloudinary'] },
-  { group: 'Datos', Icon: Database, items: ['MongoDB Atlas', 'Mongoose 9', 'Wikidata'] },
+  { group: 'Frontend', Icon: Code2, items: ['React 19', 'Vite 8', 'Tailwind CSS 3', 'MapLibre GL', 'Lucide', 'Vercel'] },
+  { group: 'Backend', Icon: Server, items: ['Node.js', 'Express 5', 'JWT y bcrypt', 'Helmet', 'Cloudinary', 'Render'] },
+  { group: 'Datos', Icon: Database, items: ['PostgreSQL', 'Neon', 'Prisma 7', 'Docker', 'Wikidata'] },
 ];
 
 const PILLARS = [
-  { title: 'Universidad', text: 'Nació como proyecto de Ingeniería Informática en la Universidad del Norte Santo Tomás de Aquino (UNSTA), para practicar el desarrollo full-stack con MongoDB, Express, React y Node.js.', Icon: GraduationCap },
+  { title: 'Universidad', text: 'Nació como proyecto de Ingeniería Informática en la Universidad del Norte Santo Tomás de Aquino (UNSTA), para practicar el desarrollo full-stack con MongoDB, Express, React y Node.js. Más adelante la base de datos pasó a PostgreSQL.', Icon: GraduationCap },
   { title: 'Agentes de IA', text: 'Se usó IA como parte del flujo de trabajo diario: para explorar ideas, escribir código y revisar cambios, siempre con una persona decidiendo.', Icon: Bot },
   { title: 'Historial en Git', text: 'Todo el desarrollo se versionó con Git, con un historial de commits que documenta la evolución desde el primer scaffold hasta cada nueva funcionalidad.', Icon: GitBranch },
 ];
