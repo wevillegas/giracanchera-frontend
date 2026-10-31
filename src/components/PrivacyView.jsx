@@ -62,7 +62,7 @@ const POINTS = [
   {
     title: 'Cookies',
     Icon: Cookie,
-    text: 'Una sola: la de tu sesión, para que no tengas que iniciar sesión en cada página. Dura 7 días y el código de la página no puede leerla. No hay cookies de publicidad ni de seguimiento. Si el servidor falla, se registra el error (sin tus datos personales) para poder arreglarlo.',
+    text: 'Una sola: la de tu sesión, para que no tengas que iniciar sesión en cada página. Dura 7 días y el código de la página no puede leerla. No hay cookies de publicidad ni de seguimiento. Si la app falla, en el servidor o en tu navegador, se registra el error en Sentry (sin tus datos personales ni lo que escribís) para poder arreglarlo.',
   },
   {
     title: 'Cuánto tiempo',
