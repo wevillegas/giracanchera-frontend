@@ -13,7 +13,7 @@
     },
     {
       "source": "/api/:path((?!og$).*)",
-      "destination": "https://TU-API.onrender.com/api/:path*"
+      "destination": "https://giracanchera-backend.onrender.com/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
