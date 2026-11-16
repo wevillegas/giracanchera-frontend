@@ -371,7 +371,7 @@ export default function MapScreen({ stadiums, onOpenStadium, flyTarget, onFlyEnd
           <span className="gc-meteor" style={{ top: '62%', left: '70%', animationDelay: '4s', animationDuration: '21s' }} />
           <span className="gc-meteor" style={{ top: '30%', left: '35%', animationDelay: '18s', animationDuration: '16s' }} />
         </div>
-        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+        <div ref={containerRef} data-testid="map" style={{ width: '100%', height: '100%' }} />
       </div>
       <ZoomControls map={map} />
       {/* Atribución de Esri: abajo al centro, libre de los botones laterales */}
