@@ -1,9 +1,11 @@
 # GiraCanchera · Frontend
 
+[![QA](https://github.com/wevillegas/giracanchera-qa/actions/workflows/qa.yml/badge.svg?branch=main)](https://github.com/wevillegas/giracanchera-qa/actions/workflows/qa.yml)
+
 **GiraCanchera** es una bitácora de estadios de fútbol. Recorrés un planeta en 3D con imágenes satelitales, registrás cada cancha
 que pisaste, contás cómo la viviste y descubrís cuánto cuesta y cómo es ir a cada estadio, con la mirada de otros hinchas.
 
-🌐 **App:** https://giracanchera.vercel.app · ⚙️ **Backend:** [giracanchera-backend](https://github.com/wevillegas/giracanchera-backend)
+🌐 **App:** https://giracanchera.vercel.app · ⚙️ **Backend:** [giracanchera-backend](https://github.com/wevillegas/giracanchera-backend) · 🧪 **QA:** [giracanchera-qa](https://github.com/wevillegas/giracanchera-qa)
 
 ---
 
@@ -95,6 +97,18 @@ cookie de sesión queda en el mismo origen.
 | `npm run preview` | Sirve el build de producción |
 | `npm run lint` | Revisión del código con oxlint |
 | `npm test` | Tests de las utilidades |
+
+## QA y testing
+
+El repo [giracanchera-qa](https://github.com/wevillegas/giracanchera-qa) prueba esta app de punta a punta en cada push y pull
+request (GitHub Actions), contra el backend real y una base de datos de prueba:
+
+- **E2E con Playwright + TypeScript:** el mapa se renderiza, buscar un estadio y abrir su ficha, login correcto y con error,
+  crear una reseña con sesión, acciones protegidas sin sesión y la vista mobile (Pixel 7). Usa Page Object Model y
+  selectores por rol y label; el único `data-testid` está en el contenedor del mapa, que no tiene rol accesible.
+- **API con Postman/Newman:** 54 requests y 371 aserciones sobre el backend.
+
+El estado está en el badge.
 
 ## Seguridad
 
